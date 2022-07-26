@@ -1,0 +1,92 @@
+openapi: 3.0.0
+info:
+  title: API Overview
+  version: 1.0.0
+  description: Server API
+  contact:
+    email: hello@contact.co
+    url: 'https://contact.co/'
+paths:
+  /graphql:
+    post:
+      summary: GraphQL Endpoint
+      description: GraphQL Endpoint
+      operationId: post-graphql
+      responses:
+        '200':
+          description: Successful Query
+          content:
+            application/json:
+              schema:
+                type: object
+          headers: { }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+  /health:
+    get:
+      summary: Health Endpoint
+      tags: [ ]
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { }
+        '500':
+          description: Unhealthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { }
+      operationId: get-health
+  /:
+    get:
+      summary: Root Endpoint
+      tags: [ ]
+      responses:
+        '200':
+          description: Live
+        '503':
+          description: Not alive
+      operationId: get-root
+  /live:
+    get:
+      summary: Liveliness Endpoint
+      tags: [ ]
+      responses:
+        '200':
+          description: Live
+        '503':
+          description: Not alive
+      operationId: get-live
+  /ready:
+    get:
+      summary: Readiness Endpoint
+      tags: [ ]
+      responses:
+        '200':
+          description: Ready
+        '503':
+          description: Not ready
+      operationId: get-ready
+  /metrics:
+    get:
+      summary: Metrics Endpoint
+      tags: [ ]
+      responses:
+        '200':
+          description: Metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+      operationId: get-metrics

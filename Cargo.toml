@@ -1,0 +1,36 @@
+[package]
+name = "fregate"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace]
+members = ["examples/*"]
+
+[dependencies]
+async-graphql =  { version = "3.0.38", features = ["tracing"] }
+async-trait = "0.1"
+axum = { version = "0.5.7", features = ["headers", "http1", "http2", "json", "matched-path", "original-uri"] }
+axum-extra = "0.3.4"
+bytes = "1"
+config = "0.13.1"
+http-body = "0.4.4"
+hyper = { version = "0.14", features = ["full"] }
+lazy_static = "1"
+metrics = "0.18.1"
+metrics-exporter-prometheus = "0"
+mime = "0.3.16"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_macros = "0.8.9"
+serde_with = "1.13.0"
+prost = "0.10.1"
+tokio = { version = "1.0", features = ["full"] }
+tokio-metrics = "0.1.0"
+tonic = "0.7.1"
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.2", features = ["full"] }
+tracing = "0.1"
+tracing-futures = "0.2.5"
+tracing-subscriber = { version = "0.3.11", features = ["env-filter", "fmt", "json", "time", "tracing-log"] }
+wyz = "0.5.0"
