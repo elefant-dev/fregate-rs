@@ -1,7 +1,6 @@
 use axum::routing::get;
 use axum::Router;
 use std::sync::Arc;
-use tracing::info;
 
 use fregate::application::Application;
 use fregate::health::{HealthIndicatorRef, UpHealth};

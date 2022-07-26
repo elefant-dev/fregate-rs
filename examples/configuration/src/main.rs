@@ -12,7 +12,7 @@ async fn main() {
         .configuration_environment(ApplicationConfigurationEnvironment::Prefix("APP"))
         .configuration_file("examples/configuration/app");
 
-    let s = builder.conf().get_string("aaa");
+    let _s = builder.conf().get_string("aaa");
 
     let app = builder
         .rest_router(Router::new().route("/", get(handler)))

@@ -27,17 +27,11 @@ pub trait HealthIndicator {
     fn health(&self) -> HealthStatus;
 
     fn live(&self) -> bool {
-        match self.health() {
-            HealthStatus::UP(_) => true,
-            _ => false,
-        }
+        matches!(self.health(), HealthStatus::UP(_))
     }
 
     fn ready(&self) -> bool {
-        match self.health() {
-            HealthStatus::UP(_) => true,
-            _ => false,
-        }
+        matches!(self.health(), HealthStatus::UP(_))
     }
 }
 

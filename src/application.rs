@@ -1,27 +1,32 @@
 use core::fmt;
-use std::future::Future;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
-use axum::body::{BoxBody, Bytes};
-use axum::{Extension, Json, Router};
-
-use axum::http::{Request, StatusCode};
-use axum::routing::{get, IntoMakeService};
+use crate::{
+    axum_ext::response::{png, yaml},
+    health::{HealthIndicator, HealthIndicatorRef, HealthStatus, UpHealth},
+    telemetry,
+    telemetry::get_metrics,
+};
+use axum::{
+    body::Bytes,
+    http::StatusCode,
+    routing::{get, IntoMakeService},
+    Extension, Json, Router,
+};
 use config::Config;
-use hyper::server::conn::AddrIncoming;
-use hyper::{Body, http, Server};
+use hyper::{server::conn::AddrIncoming, Server};
 use serde::Serialize;
 use tokio::signal;
-use tower::util::ServiceFn;
 use tower_http::trace::TraceLayer;
 use tracing::{info, warn};
 
-use crate::axum_ext::response::{png, yaml};
-use crate::health::{HealthIndicator, HealthIndicatorRef, HealthStatus, UpHealth};
-use crate::telemetry;
-use crate::telemetry::get_metrics;
+static FAVICON: Bytes = Bytes::from_static(include_bytes!("resources/favicon.png"));
 
 const DEFAULT_PORT: u16 = 8000;
+const API_PATH: &str = "/v1";
+const OPENAPI_PATH: &str = "/openapi";
+const OPENAPI: &str = include_str!("resources/openapi.yaml");
+const FAVICON_PATH: &str = "/favicon.ico";
 
 #[derive(Serialize, Debug)]
 pub enum ApplicationStatus {
@@ -39,8 +44,8 @@ impl fmt::Display for ApplicationStatus {
 }
 
 pub struct ApplicationContext<H = UpHealth>
-    where
-        H: HealthIndicator,
+where
+    H: HealthIndicator,
 {
     pub conf: String,
     pub health: H,
@@ -63,7 +68,6 @@ pub struct Transport {
 
 //type Svs = ServiceFn<dyn FnMut(Request<Body>) -> dyn Future<Output=Result<http::Response<BoxBody>, hyper::Error>>>;
 
-
 pub struct Application {
     pub conf: Config,
     server: Box<InnerServer>,
@@ -80,12 +84,6 @@ impl Application {
         self.server.with_graceful_shutdown(shutdown_signal()).await
     }
 }
-
-const API_PATH: &str = "/v1";
-const OPENAPI_PATH: &str = "/openapi";
-const OPENAPI: &str = include_str!("resources/openapi.yaml");
-const FAVICON_PATH: &str = "/favicon.ico";
-const FAVICON: Bytes = Bytes::from_static(include_bytes!("resources/favicon.png"));
 
 pub enum ApplicationConfigurationEnvironment {
     Simple,
@@ -129,14 +127,15 @@ impl ApplicationBuilder {
                 let ip4 = a.parse::<Ipv4Addr>();
                 let ip6 = a.parse::<Ipv6Addr>();
 
-                if ip4.is_ok() {
-                    IpAddr::V4(ip4.unwrap())
-                } else if ip6.is_ok() {
-                    IpAddr::V6(ip6.unwrap())
+                if let Ok(ip4) = ip4 {
+                    IpAddr::V4(ip4)
+                } else if let Ok(ip6) = ip6 {
+                    IpAddr::V6(ip6)
                 } else {
                     IpAddr::V4(Ipv4Addr::UNSPECIFIED)
                 }
             }
+
             Err(_) => IpAddr::V4(Ipv4Addr::UNSPECIFIED),
         };
 
@@ -206,7 +205,7 @@ impl ApplicationBuilder {
                     .route("/", get(live_handler))
                     .layer(Extension(h))
             })
-            .unwrap_or(Router::new())
+            .unwrap_or_default()
     }
 
     fn metrics_router(&self) -> Router {
@@ -240,7 +239,7 @@ impl ApplicationBuilder {
             warn!("Configuration error: {:?}", err);
         }
 
-        conf.unwrap_or(Config::default())
+        conf.unwrap_or_default()
     }
 
     pub fn address(mut self, address: impl Into<IpAddr>) -> Self {
@@ -295,7 +294,7 @@ async fn shutdown_signal() {
     };
 
     #[cfg(unix)]
-        let terminate = async {
+    let terminate = async {
         signal::unix::signal(signal::unix::SignalKind::terminate())
             .expect("failed to install signal handler")
             .recv()
@@ -303,7 +302,7 @@ async fn shutdown_signal() {
     };
 
     #[cfg(not(unix))]
-        let terminate = std::future::pending::<()>();
+    let terminate = std::future::pending::<()>();
 
     tokio::select! {
         _ = ctrl_c => {},
