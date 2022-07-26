@@ -12,7 +12,6 @@ async fn main() {
     let app = Application::builder()
         .telemetry(true)
         .port(8000u16)
-        .telemetry(true)
         .health(Some(health))
         .rest_router(Router::new().route("/", get(handler)))
         .build();
