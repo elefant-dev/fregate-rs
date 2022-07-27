@@ -1,21 +1,18 @@
-#![feature(type_alias_impl_trait)]
-
-use axum::routing::get;
-use axum::Router;
 use axum::{
     body::{self, Body},
-    http::{Method, Request, StatusCode},
+    http::{Request, StatusCode},
     response::{IntoResponse, Response},
+    routing::get,
+    Router,
 };
 use hyper::upgrade::Upgraded;
 use std::future::Future;
 use tokio::net::TcpStream;
 use tower::util::ServiceFn;
-use tower::{make::Shared, ServiceExt};
 
 use fregate::application::Application;
 
-type Svs = ServiceFn<dyn FnOnce(Request<Body>) -> dyn Future<Output = Response>>;
+type _Svs = ServiceFn<dyn FnOnce(Request<Body>) -> dyn Future<Output = Response>>;
 
 #[tokio::main]
 async fn main() {
@@ -35,7 +32,7 @@ async fn main() {
     let app = Application::builder()
         .telemetry(true)
         .rest_router(router)
-//        .service(service)
+        //        .service(service)
         .build();
 
     app.run().await.unwrap();
@@ -45,14 +42,14 @@ async fn handler() -> &'static str {
     "Hello, Proxy!"
 }
 
-async fn proxy(req: Request<Body>) -> Result<Response, hyper::Error> {
+async fn _proxy(req: Request<Body>) -> Result<Response, hyper::Error> {
     tracing::trace!(?req);
 
     if let Some(host_addr) = req.uri().authority().map(|auth| auth.to_string()) {
         tokio::task::spawn(async move {
             match hyper::upgrade::on(req).await {
                 Ok(upgraded) => {
-                    if let Err(e) = tunnel(upgraded, host_addr).await {
+                    if let Err(e) = _tunnel(upgraded, host_addr).await {
                         tracing::warn!("server io error: {}", e);
                     };
                 }
@@ -71,7 +68,7 @@ async fn proxy(req: Request<Body>) -> Result<Response, hyper::Error> {
     }
 }
 
-async fn tunnel(mut upgraded: Upgraded, addr: String) -> std::io::Result<()> {
+async fn _tunnel(mut upgraded: Upgraded, addr: String) -> std::io::Result<()> {
     let mut server = TcpStream::connect(addr).await?;
 
     let (from_client, from_server) =

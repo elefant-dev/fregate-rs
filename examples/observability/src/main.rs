@@ -1,10 +1,11 @@
 use axum::routing::get;
 use axum::Router;
 use std::sync::Arc;
-use tracing::info;
 
-use fregate::application::Application;
-use fregate::health::{HealthIndicatorRef, UpHealth};
+use fregate::{
+    application::Application,
+    health::{HealthIndicatorRef, UpHealth},
+};
 
 #[tokio::main]
 async fn main() {

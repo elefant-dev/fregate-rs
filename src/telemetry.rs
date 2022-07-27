@@ -1,4 +1,4 @@
-use metrics::{register_counter, register_histogram, Unit};
+// use metrics::{register_counter, register_histogram, Unit};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusRecorder};
 use tracing::Level;
 use tracing_subscriber::filter::FromEnvError;
@@ -7,7 +7,7 @@ use tracing_subscriber::fmt::time::UtcTime;
 use tracing_subscriber::EnvFilter;
 
 lazy_static::lazy_static! {
-    static ref RECORDER: PrometheusRecorder = PrometheusBuilder::new().build();
+    static ref RECORDER: PrometheusRecorder = PrometheusBuilder::new().build_recorder();
 }
 
 pub fn init() {
@@ -45,7 +45,7 @@ pub fn init() {
     }));
 
     // Init metrics
-   //  metrics::set_recorder(&*RECORDER).unwrap();
+    metrics::set_recorder(&*RECORDER).unwrap();
 
     register_metrics()
 }
@@ -64,8 +64,8 @@ pub fn get_metrics() -> String {
     RECORDER.handle().render()
 }
 
-fn register_metrics() -> () {
+fn register_metrics() {
     // register_counter!("http_requests_total", "Incoming Requests");
     // register_counter!("http_requests", "Incoming Requests");
-//    register_histogram!("http_response_time", Unit::Seconds, "Response Times");
+    //    register_histogram!("http_response_time", Unit::Seconds, "Response Times");
 }

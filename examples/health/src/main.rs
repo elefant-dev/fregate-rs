@@ -1,7 +1,6 @@
 use axum::routing::get;
 use axum::Router;
 use std::sync::Arc;
-use tracing::info;
 
 use fregate::application::Application;
 use fregate::health::{HealthIndicatorRef, UpHealth};
@@ -13,7 +12,6 @@ async fn main() {
     let app = Application::builder()
         .telemetry(true)
         .port(8000u16)
-        .telemetry(true)
         .health(Some(health))
         .rest_router(Router::new().route("/", get(handler)))
         .build();
