@@ -41,7 +41,7 @@ impl<'a, H: Health> ApplicationBuilder<'a, H> {
         let health_indicator = self
             .health_indicator
             .take()
-            .unwrap_or(Arc::new(H::default()));
+            .unwrap_or_else(|| Arc::new(H::default()));
 
         self.router_builder.set_health_indicator(health_indicator);
 
