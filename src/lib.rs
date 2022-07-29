@@ -1,5 +1,5 @@
-mod extentions;
 mod builder;
+mod extensions;
 
 use axum::{routing::IntoMakeService, Router};
 use config::Config;

@@ -3,8 +3,8 @@ use bytes::Bytes;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
-use crate::extentions::{png, yaml};
 use crate::builder::{health::Health, metrics::get_metrics};
+use crate::extensions::{png, yaml};
 
 const API_PATH: &str = "/v1";
 const OPENAPI_PATH: &str = "/openapi";
