@@ -1,22 +1,17 @@
 use axum::routing::get;
 use axum::Router;
-use std::sync::Arc;
+use std::net::Ipv4Addr;
 
-use fregate::{
-    application::Application,
-    health::{HealthIndicatorRef, UpHealth},
-};
+use fregate::{Application, DefaultHealth};
 
 #[tokio::main]
 async fn main() {
-    let health = Arc::new(UpHealth::default()) as HealthIndicatorRef;
-
-    let app = Application::builder()
-        .telemetry(true)
-        .port(8000u16)
-        .telemetry(true)
-        .health(Some(health))
-        .rest_router(Router::new().route("/", get(handler)))
+    let app = Application::builder::<DefaultHealth>()
+        .init_metrics()
+        .init_tracing()
+        .set_rest_routes(Router::new().route("/", get(handler)))
+        .set_address(Ipv4Addr::new(0, 0, 0, 0))
+        .set_port(8000u16)
         .build();
 
     app.run().await.unwrap();

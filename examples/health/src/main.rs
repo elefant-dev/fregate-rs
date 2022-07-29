@@ -1,24 +1,31 @@
-use axum::routing::get;
-use axum::Router;
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 
-use fregate::application::Application;
-use fregate::health::{HealthIndicatorRef, UpHealth};
+use fregate::{Application, Health, HealthStatus};
+
+#[derive(Default, Debug)]
+pub struct CustomHealth {
+    status: AtomicU8,
+}
+
+impl Health for CustomHealth {
+    fn check(&self) -> HealthStatus {
+        match self.status.fetch_add(1, Ordering::SeqCst) {
+            0..=2 => HealthStatus::DOWN,
+            _ => HealthStatus::UP,
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() {
-    let health = Arc::new(UpHealth::default()) as HealthIndicatorRef;
+    let health = Arc::new(CustomHealth::default());
 
     let app = Application::builder()
-        .telemetry(true)
-        .port(8000u16)
-        .health(Some(health))
-        .rest_router(Router::new().route("/", get(handler)))
+        .init_tracing()
+        .set_configuration_file("./src/resources/default_conf.toml")
+        .set_health_indicator(health)
         .build();
 
     app.run().await.unwrap();
-}
-
-async fn handler() -> &'static str {
-    "Hello, World!"
 }
