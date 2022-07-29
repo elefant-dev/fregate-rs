@@ -8,13 +8,13 @@ pub trait Health: Default + Send + Sync + 'static {
 
 #[derive(Serialize, Debug, Clone, Copy)]
 pub enum HealthStatus {
-    Up,
-    Down,
+    UP,
+    DOWN,
 }
 
 impl Default for HealthStatus {
     fn default() -> Self {
-        HealthStatus::Down
+        HealthStatus::DOWN
     }
 }
 
@@ -29,6 +29,6 @@ pub struct DefaultHealth {}
 
 impl Health for DefaultHealth {
     fn check(&self) -> HealthStatus {
-        HealthStatus::Up
+        HealthStatus::UP
     }
 }

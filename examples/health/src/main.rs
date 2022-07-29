@@ -11,8 +11,8 @@ pub struct CustomHealth {
 impl Health for CustomHealth {
     fn check(&self) -> HealthStatus {
         match self.status.fetch_add(1, Ordering::SeqCst) {
-            0..=2 => HealthStatus::Down,
-            _ => HealthStatus::Up,
+            0..=2 => HealthStatus::DOWN,
+            _ => HealthStatus::UP,
         }
     }
 }
