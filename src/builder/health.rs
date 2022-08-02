@@ -2,8 +2,9 @@ use serde::Serialize;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
+#[async_trait::async_trait]
 pub trait Health: Default + Send + Sync + 'static {
-    fn check(&self) -> HealthStatus;
+    async fn check(&self) -> HealthStatus;
 }
 
 #[derive(Serialize, Debug, Clone, Copy)]
@@ -25,10 +26,11 @@ impl Display for HealthStatus {
 }
 
 #[derive(Default)]
-pub struct DefaultHealth {}
+pub struct AlwaysHealthy {}
 
-impl Health for DefaultHealth {
-    fn check(&self) -> HealthStatus {
+#[async_trait::async_trait]
+impl Health for AlwaysHealthy {
+    async fn check(&self) -> HealthStatus {
         HealthStatus::UP
     }
 }

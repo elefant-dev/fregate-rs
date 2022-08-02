@@ -63,7 +63,7 @@ impl<H: Health> RouterBuilder<H> {
 
     fn get_health_router(health_indicator: Arc<H>) -> Router {
         let health_handler =
-            |Extension(health): Extension<Arc<H>>| async move { Json(health.check()) };
+            |Extension(health): Extension<Arc<H>>| async move { Json(health.check().await) };
 
         Router::new()
             .route(HEALTH_PATH, get(health_handler))

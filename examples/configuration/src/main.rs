@@ -1,14 +1,14 @@
 use axum::routing::get;
 use axum::Router;
 
-use fregate::{Application, DefaultHealth, Environment};
+use fregate::{AlwaysHealthy, Application, Environment};
 
 #[tokio::main]
 async fn main() {
     std::env::set_var("APP_SERVER_HOST", "0.0.0.0");
     std::env::set_var("APP_SERVER_PORT", "8005");
 
-    let app = Application::builder::<DefaultHealth>()
+    let app = Application::builder::<AlwaysHealthy>()
         .init_tracing()
         .set_configuration_environment(Environment::Prefixed("APP"))
         .set_rest_routes(Router::new().route("/", get(handler)))

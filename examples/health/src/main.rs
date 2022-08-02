@@ -8,8 +8,9 @@ pub struct CustomHealth {
     status: AtomicU8,
 }
 
+#[async_trait::async_trait]
 impl Health for CustomHealth {
-    fn check(&self) -> HealthStatus {
+    async fn check(&self) -> HealthStatus {
         match self.status.fetch_add(1, Ordering::SeqCst) {
             0..=2 => HealthStatus::DOWN,
             _ => HealthStatus::UP,
