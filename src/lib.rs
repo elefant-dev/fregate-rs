@@ -30,7 +30,8 @@ impl Application {
     pub async fn run(mut self) -> hyper::Result<()> {
         let rest = self.rest_router;
 
-        // TODO MAKE GRPC A FEATURE ?
+        // TODO: MAKE GRPC A FEATURE ?
+        // TODO: GENERIC FOR SERVER TYPE
         if let Some(grpc_router) = self.grpc_router.take() {
             let rest = rest.map_err(BoxError::from).boxed_clone();
 
