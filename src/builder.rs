@@ -4,10 +4,10 @@ mod metrics;
 mod router;
 mod tracing;
 
-use axum::Router;
-use hyper::Server;
+use axum::Router as AxumRouter;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
+use tonic::transport::server::Router as TonicRouter;
 
 use crate::{
     builder::{metrics::*, tracing::*},
@@ -17,9 +17,10 @@ use router::*;
 pub use {configuration::*, health::*};
 
 #[derive(Debug, Default)]
-pub struct ApplicationBuilder<'a, H: Health> {
+pub struct ApplicationBuilder<'a, H> {
     configuration: ConfigurationBuilder<'a>,
-    router_builder: RouterBuilder<H>,
+    rest_router: RouterBuilder<H>,
+    grpc_router: Option<TonicRouter>,
     health_indicator: Option<Arc<H>>,
     address: Option<IpAddr>,
     port: Option<u16>,
@@ -35,7 +36,7 @@ impl<'a, H: Health> ApplicationBuilder<'a, H> {
 
         if self.init_metrics {
             init_metrics();
-            self.router_builder.init_metrics();
+            self.rest_router.init_metrics();
         }
 
         let health_indicator = self
@@ -43,7 +44,7 @@ impl<'a, H: Health> ApplicationBuilder<'a, H> {
             .take()
             .unwrap_or_else(|| Arc::new(H::default()));
 
-        self.router_builder.set_health_indicator(health_indicator);
+        self.rest_router.set_health_indicator(health_indicator);
 
         let config = self.configuration.build();
 
@@ -54,11 +55,11 @@ impl<'a, H: Health> ApplicationBuilder<'a, H> {
             (None, None) => SocketAddr::new(get_address(&config), get_port(&config)),
         };
 
-        let router = self.router_builder.build();
-        let server = Server::bind(&socket).serve(router.into_make_service());
+        let router = self.rest_router.build();
 
         Application {
-            server,
+            rest_router: router,
+            grpc_router: self.grpc_router.take(),
             socket,
             _config: config,
         }
@@ -77,8 +78,13 @@ impl<'a, H: Health> ApplicationBuilder<'a, H> {
         self
     }
 
-    pub fn set_rest_routes(&mut self, router: Router) -> &mut Self {
-        self.router_builder.set_rest_routes(router);
+    pub fn set_rest_routes(&mut self, router: AxumRouter) -> &mut Self {
+        self.rest_router.set_rest_routes(router);
+        self
+    }
+
+    pub fn set_grpc_routes(&mut self, router: TonicRouter) -> &mut Self {
+        self.grpc_router = Some(router);
         self
     }
 
