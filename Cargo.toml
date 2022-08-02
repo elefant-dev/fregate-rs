@@ -23,10 +23,10 @@ metrics-exporter-prometheus = "0"
 mime = "0.3.16"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-prost = "0.10.1"
+prost = "0.11.0"
 tokio = { version = "1.0", features = ["full"] }
 tokio-metrics = "0.1.0"
-tonic = "0.7.1"
+tonic = "0.8.0"
 tower = { version = "0.4", features = ["full"] }
 tower-http = { version = "0.3", features = ["full"] }
 tracing = "0.1"
