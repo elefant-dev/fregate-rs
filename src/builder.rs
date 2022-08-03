@@ -110,7 +110,7 @@ async fn shutdown_signal() {
 }
 
 async fn run_rest_only(socket: &SocketAddr, rest: AxumRouter) -> hyper::Result<()> {
-    let server = Server::bind(&socket).serve(rest.into_make_service());
+    let server = Server::bind(socket).serve(rest.into_make_service());
 
     info!("Start Listening on {:?}", socket);
     server.with_graceful_shutdown(shutdown_signal()).await
