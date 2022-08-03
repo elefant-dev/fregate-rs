@@ -2,11 +2,11 @@ use axum::routing::get;
 use axum::Router;
 use std::net::Ipv4Addr;
 
-use fregate::{Application, DefaultHealth};
+use fregate::{AlwaysHealthy, Application};
 
 #[tokio::main]
 async fn main() {
-    let app = Application::builder::<DefaultHealth>()
+    let app = Application::builder::<AlwaysHealthy>()
         .init_metrics()
         .init_tracing()
         .set_rest_routes(Router::new().route("/", get(handler)))

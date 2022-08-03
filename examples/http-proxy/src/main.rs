@@ -10,7 +10,7 @@ use std::future::Future;
 use tokio::net::TcpStream;
 use tower::util::ServiceFn;
 
-use fregate::{Application, DefaultHealth};
+use fregate::{AlwaysHealthy, Application};
 
 type _Svs = ServiceFn<dyn FnOnce(Request<Body>) -> dyn Future<Output = Response>>;
 
@@ -29,7 +29,7 @@ async fn main() {
     //     }
     // });
 
-    let app = Application::builder::<DefaultHealth>()
+    let app = Application::builder::<AlwaysHealthy>()
         .set_configuration_file("./src/resources/default_conf.toml")
         .init_metrics()
         .set_rest_routes(router)

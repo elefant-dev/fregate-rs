@@ -16,7 +16,7 @@ static FAVICON: Bytes = Bytes::from_static(include_bytes!("../../src/resources/f
 const OPENAPI: &str = include_str!("../../src/resources/openapi.yaml");
 
 #[derive(Debug, Default)]
-pub struct RouterBuilder<H: Health> {
+pub struct RouterBuilder<H> {
     rest_routes: Option<Router>,
     health_indicator: Option<Arc<H>>,
     init_metrics: bool,
@@ -63,7 +63,7 @@ impl<H: Health> RouterBuilder<H> {
 
     fn get_health_router(health_indicator: Arc<H>) -> Router {
         let health_handler =
-            |Extension(health): Extension<Arc<H>>| async move { Json(health.check()) };
+            |Extension(health): Extension<Arc<H>>| async move { Json(health.check().await) };
 
         Router::new()
             .route(HEALTH_PATH, get(health_handler))
