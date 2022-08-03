@@ -10,13 +10,13 @@ This crate relies on multiple external crates:
 ```rust
 #[tokio::main]
 async fn main() {
-    let app = Application::builder::<DefaultHealth>()
-        .init_tracing()
-        .set_configuration_file("./src/resources/default_conf.toml")
-        .set_rest_routes(Router::new().route("/", get(handler)))
-        .build();
+    init_tracing();
 
-    app.run().await.unwrap();
+    Application::new_with_health(Arc::new(AlwaysHealthy::default()))
+        .rest_router(Router::new().route("/", get(handler)))
+        .run()
+        .await
+        .unwrap();
 }
 
 async fn handler() -> &'static str {
