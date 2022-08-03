@@ -7,7 +7,4 @@ edition = "2021"
 
 [dependencies]
 fregate = { path = "../.." }
-async-trait = "0.1.57"
-axum  = '0.5.1'
 tokio = { version = "1.0", features = ["full"] }
-tracing = "0.1.29"

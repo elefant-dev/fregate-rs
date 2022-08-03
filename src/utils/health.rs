@@ -2,7 +2,7 @@ use serde::Serialize;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
-#[async_trait::async_trait]
+#[axum::async_trait]
 pub trait Health: Send + Sync + 'static {
     async fn check(&self) -> HealthStatus;
 }
@@ -28,7 +28,7 @@ impl Display for HealthStatus {
 #[derive(Default)]
 pub struct AlwaysHealthy {}
 
-#[async_trait::async_trait]
+#[axum::async_trait]
 impl Health for AlwaysHealthy {
     async fn check(&self) -> HealthStatus {
         HealthStatus::UP
@@ -38,7 +38,7 @@ impl Health for AlwaysHealthy {
 #[derive(Default)]
 pub struct NoHealth {}
 
-#[async_trait::async_trait]
+#[axum::async_trait]
 impl Health for NoHealth {
     async fn check(&self) -> HealthStatus {
         HealthStatus::DOWN

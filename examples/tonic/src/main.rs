@@ -1,13 +1,14 @@
-use axum::routing::get;
-use axum::Router;
-use fregate::{AlwaysHealthy, Application};
+use fregate::axum::routing::get;
+use fregate::axum::Router;
+use fregate::tonic::transport::Server;
+use fregate::tonic::{Request, Response, Status};
+use fregate::{init_tracing, AlwaysHealthy, Application};
 use proto::{
     echo_server::{Echo, EchoServer},
     hello_server::{Hello, HelloServer},
     EchoRequest, EchoResponse, HelloRequest, HelloResponse,
 };
-use tonic::transport::Server;
-use tonic::{Request, Response, Status};
+use std::sync::Arc;
 
 mod proto {
     tonic::include_proto!("hello");
@@ -51,6 +52,8 @@ async fn handler() -> &'static str {
 
 #[tokio::main]
 async fn main() {
+    init_tracing();
+
     let echo_service = EchoServer::new(MyEcho);
     let hello_service = HelloServer::new(MyHello);
 
@@ -58,18 +61,17 @@ async fn main() {
         .add_service(echo_service)
         .add_service(hello_service);
 
-    let app = Application::builder::<AlwaysHealthy>()
-        .init_tracing()
-        .set_configuration_file("./src/resources/default_conf.toml")
-        .set_rest_routes(Router::new().route("/", get(handler)))
-        .set_grpc_routes(grpc_router)
-        .build();
-
-    app.run().await.unwrap();
+    Application::new_with_health(Arc::new(AlwaysHealthy::default()))
+        .rest_router(Router::new().route("/", get(handler)))
+        .grpc_router(grpc_router)
+        .run()
+        .await
+        .unwrap();
 }
 
 /*
-    grpcurl -plaintext -import-path ./proto -proto hello.proto -d '{"name": "Tonic"}' 0.0.0.0:5000 hello.Hello/SayHello
-    grpcurl -plaintext -import-path ./proto -proto echo.proto -d '{"message": "Echo"}' 0.0.0.0:5000 echo.Echo/ping
-    curl http://0.0.0.0:5000/v1
+    grpcurl -plaintext -import-path ./proto -proto hello.proto -d '{"name": "Tonic"}' 0.0.0.0:8000 hello.Hello/SayHello
+    grpcurl -plaintext -import-path ./proto -proto echo.proto -d '{"message": "Echo"}' 0.0.0.0:8000 echo.Echo/ping
+    curl http://0.0.0.0:8000/v1
+    curl http://0.0.0.0:8000/health
 */

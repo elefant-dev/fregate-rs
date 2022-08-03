@@ -1,14 +1,14 @@
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 
-use fregate::{Application, Health, HealthStatus};
+use fregate::{axum, init_tracing, Application, Health, HealthStatus};
 
 #[derive(Default, Debug)]
 pub struct CustomHealth {
     status: AtomicU8,
 }
 
-#[async_trait::async_trait]
+#[axum::async_trait]
 impl Health for CustomHealth {
     async fn check(&self) -> HealthStatus {
         match self.status.fetch_add(1, Ordering::SeqCst) {
@@ -20,13 +20,7 @@ impl Health for CustomHealth {
 
 #[tokio::main]
 async fn main() {
+    init_tracing();
     let health = Arc::new(CustomHealth::default());
-
-    let app = Application::builder()
-        .init_tracing()
-        .set_configuration_file("./src/resources/default_conf.toml")
-        .set_health_indicator(health)
-        .build();
-
-    app.run().await.unwrap();
+    Application::new_with_health(health).run().await.unwrap();
 }

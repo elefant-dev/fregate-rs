@@ -9,7 +9,6 @@ members = ["examples/*"]
 
 [dependencies]
 async-graphql =  { version = "4.0.5", features = ["tracing"] }
-async-trait = "0.1"
 axum = { version = "0.5.7", features = ["headers", "http1", "http2", "json", "matched-path", "original-uri"] }
 axum-extra = "0.3.4"
 bytes = "1"

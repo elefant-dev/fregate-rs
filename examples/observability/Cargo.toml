@@ -7,8 +7,4 @@ edition = "2021"
 
 [dependencies]
 fregate = { path = "../.." }
-axum  = '0.5.1'
-axum-extra = "0.2.1"
 tokio = { version = "1.0", features = ["full"] }
-tracing = "0.1.29"
-tracing-subscriber = { version = "0.3.2", features = ["env-filter", "fmt", "json", "time","tracing-log"] }
