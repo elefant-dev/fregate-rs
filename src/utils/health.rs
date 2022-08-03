@@ -3,7 +3,7 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 
 #[async_trait::async_trait]
-pub trait Health: Default + Send + Sync + 'static {
+pub trait Health: Send + Sync + 'static {
     async fn check(&self) -> HealthStatus;
 }
 
@@ -32,5 +32,15 @@ pub struct AlwaysHealthy {}
 impl Health for AlwaysHealthy {
     async fn check(&self) -> HealthStatus {
         HealthStatus::UP
+    }
+}
+
+#[derive(Default)]
+pub struct NoHealth {}
+
+#[async_trait::async_trait]
+impl Health for NoHealth {
+    async fn check(&self) -> HealthStatus {
+        HealthStatus::DOWN
     }
 }
