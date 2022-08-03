@@ -1,16 +1,15 @@
-use axum::{
-    body::{self, Body},
-    http::{Request, StatusCode},
-    response::{IntoResponse, Response},
-    routing::get,
-    Router,
-};
-use hyper::upgrade::Upgraded;
 use std::future::Future;
 use tokio::net::TcpStream;
-use tower::util::ServiceFn;
 
-use fregate::{AlwaysHealthy, Application};
+use crate::hyper::upgrade::Upgraded;
+use crate::hyper::StatusCode;
+use fregate::axum::response::{IntoResponse, Response};
+use fregate::axum::routing::get;
+use fregate::axum::{body, Router};
+use fregate::hyper::{Body, Error, Request};
+use fregate::tower::util::ServiceFn;
+use fregate::tracing::{debug, trace, warn};
+use fregate::{hyper, Application};
 
 type _Svs = ServiceFn<dyn FnOnce(Request<Body>) -> dyn Future<Output = Response>>;
 
@@ -29,38 +28,35 @@ async fn main() {
     //     }
     // });
 
-    let app = Application::builder::<AlwaysHealthy>()
-        .set_configuration_file("./src/resources/default_conf.toml")
-        .init_metrics()
-        .set_rest_routes(router)
-        //        .service(service)
-        .build();
-
-    app.run().await.unwrap();
+    Application::new_without_health()
+        .rest_router(router)
+        .run()
+        .await
+        .unwrap();
 }
 
 async fn handler() -> &'static str {
     "Hello, Proxy!"
 }
 
-async fn _proxy(req: Request<Body>) -> Result<Response, hyper::Error> {
-    tracing::trace!(?req);
+async fn _proxy(req: Request<Body>) -> Result<Response, Error> {
+    trace!(?req);
 
     if let Some(host_addr) = req.uri().authority().map(|auth| auth.to_string()) {
         tokio::task::spawn(async move {
             match hyper::upgrade::on(req).await {
                 Ok(upgraded) => {
                     if let Err(e) = _tunnel(upgraded, host_addr).await {
-                        tracing::warn!("server io error: {}", e);
+                        warn!("server io error: {}", e);
                     };
                 }
-                Err(e) => tracing::warn!("upgrade error: {}", e),
+                Err(e) => warn!("upgrade error: {}", e),
             }
         });
 
         Ok(Response::new(body::boxed(body::Empty::new())))
     } else {
-        tracing::warn!("CONNECT host is not socket addr: {:?}", req.uri());
+        warn!("CONNECT host is not socket addr: {:?}", req.uri());
         Ok((
             StatusCode::BAD_REQUEST,
             "CONNECT must be to a socket address",
@@ -75,10 +71,9 @@ async fn _tunnel(mut upgraded: Upgraded, addr: String) -> std::io::Result<()> {
     let (from_client, from_server) =
         tokio::io::copy_bidirectional(&mut upgraded, &mut server).await?;
 
-    tracing::debug!(
+    debug!(
         "client wrote {} bytes and received {} bytes",
-        from_client,
-        from_server
+        from_client, from_server
     );
 
     Ok(())

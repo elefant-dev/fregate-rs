@@ -1,115 +1,143 @@
-mod configuration;
-mod health;
-mod metrics;
-mod router;
-mod tracing;
-
-use axum::Router as AxumRouter;
-use std::net::{IpAddr, SocketAddr};
+use axum::{BoxError, Router as AxumRouter};
+use hyper::header::CONTENT_TYPE;
+use hyper::{Body, Request, Server};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
+use tokio::signal;
 use tonic::transport::server::Router as TonicRouter;
+use tower::make::Shared;
+use tower::steer::Steer;
+use tower::ServiceExt;
+use tracing::info;
 
-use crate::{
-    builder::{metrics::*, tracing::*},
-    Application,
-};
-use router::*;
-pub use {configuration::*, health::*};
+use crate::utils::*;
 
-#[derive(Debug, Default)]
-pub struct ApplicationBuilder<'a, H> {
-    configuration: ConfigurationBuilder<'a>,
-    rest_router: RouterBuilder<H>,
-    grpc_router: Option<TonicRouter>,
+const DEFAULT_PORT: u16 = 8000;
+
+pub struct Application<H: Health> {
     health_indicator: Option<Arc<H>>,
-    address: Option<IpAddr>,
+    ip_addr: Option<IpAddr>,
     port: Option<u16>,
-    init_tracing: bool,
-    init_metrics: bool,
+    rest_router: Option<AxumRouter>,
+    grpc_router: Option<TonicRouter>,
 }
 
-impl<'a, H: Health> ApplicationBuilder<'a, H> {
-    pub fn build(&mut self) -> Application {
-        if self.init_tracing {
-            init_tracing();
+impl Application<NoHealth> {
+    pub fn new_without_health() -> Application<NoHealth> {
+        Application::<NoHealth> {
+            health_indicator: None,
+            ip_addr: None,
+            port: None,
+            rest_router: None,
+            grpc_router: None,
         }
+    }
+}
 
-        if self.init_metrics {
-            init_metrics();
-            self.rest_router.init_metrics();
-        }
-
-        let health_indicator = self
-            .health_indicator
-            .take()
-            .unwrap_or_else(|| Arc::new(H::default()));
-
-        self.rest_router.set_health_indicator(health_indicator);
-
-        let config = self.configuration.build();
-
-        let socket = match (self.address.take(), self.port.take()) {
-            (Some(add), Some(port)) => SocketAddr::new(add, port),
-            (None, Some(port)) => SocketAddr::new(get_address(&config), port),
-            (Some(add), None) => SocketAddr::new(add, get_port(&config)),
-            (None, None) => SocketAddr::new(get_address(&config), get_port(&config)),
-        };
-
-        let router = self.rest_router.build();
-
-        Application {
-            rest_router: router,
-            grpc_router: self.grpc_router.take(),
-            socket,
-            _config: config,
+impl<H: Health> Application<H> {
+    pub fn new_with_health(health: Arc<H>) -> Self {
+        Self {
+            health_indicator: Some(health),
+            ip_addr: None,
+            port: None,
+            rest_router: None,
+            grpc_router: None,
         }
     }
 
-    pub fn set_configuration_file(&'a mut self, file: &'a str) -> &'a mut Self {
-        self.configuration.set_path_to_file(file);
+    pub async fn run(mut self) -> hyper::Result<()> {
+        let socket = SocketAddr::new(
+            self.ip_addr.unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED)),
+            self.port.unwrap_or(DEFAULT_PORT),
+        );
+
+        let rest = build_rest_router(self.health_indicator, self.rest_router);
+
+        // TODO: MAKE GRPC A FEATURE ?
+        // TODO: GENERIC FOR SERVER TYPE TO REMOVE DIFFERENT FUNCTIONS
+        if let Some(grpc) = self.grpc_router.take() {
+            run_rest_and_grpc(&socket, rest, grpc).await
+        } else {
+            run_rest_only(&socket, rest).await
+        }
+    }
+
+    pub fn rest_router(mut self, router: AxumRouter) -> Self {
+        self.rest_router = Some(router);
         self
     }
 
-    pub fn set_configuration_environment(
-        &'a mut self,
-        environment: Environment<'a>,
-    ) -> &'a mut Self {
-        self.configuration.set_environment(environment);
-        self
-    }
-
-    pub fn set_rest_routes(&mut self, router: AxumRouter) -> &mut Self {
-        self.rest_router.set_rest_routes(router);
-        self
-    }
-
-    pub fn set_grpc_routes(&mut self, router: TonicRouter) -> &mut Self {
+    pub fn grpc_router(mut self, router: TonicRouter) -> Self {
         self.grpc_router = Some(router);
         self
     }
 
-    pub fn set_health_indicator(&mut self, health_indicator: Arc<H>) -> &mut Self {
-        self.health_indicator = Some(health_indicator);
+    pub fn ip_addr(mut self, ip_addr: impl Into<IpAddr>) -> Self {
+        self.ip_addr = Some(ip_addr.into());
         self
     }
 
-    pub fn init_tracing(&mut self) -> &mut Self {
-        self.init_tracing = true;
-        self
-    }
-
-    pub fn init_metrics(&mut self) -> &mut Self {
-        self.init_metrics = true;
-        self
-    }
-
-    pub fn set_address(&mut self, address: impl Into<IpAddr>) -> &mut Self {
-        self.address = Some(address.into());
-        self
-    }
-
-    pub fn set_port(&mut self, port: impl Into<u16>) -> &mut Self {
+    pub fn port(mut self, port: impl Into<u16>) -> Self {
         self.port = Some(port.into());
         self
     }
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    info!("Termination signal, starting shutdown...");
+}
+
+async fn run_rest_only(socket: &SocketAddr, rest: AxumRouter) -> hyper::Result<()> {
+    let server = Server::bind(socket).serve(rest.into_make_service());
+
+    info!("Start Listening on {:?}", socket);
+    server.with_graceful_shutdown(shutdown_signal()).await
+}
+
+async fn run_rest_and_grpc(
+    socket: &SocketAddr,
+    rest: AxumRouter,
+    grpc: TonicRouter,
+) -> hyper::Result<()> {
+    let rest = rest.map_err(BoxError::from).boxed_clone();
+
+    let grpc = grpc
+        .into_service()
+        .map_response(|r| r.map(axum::body::boxed))
+        .boxed_clone();
+
+    let http_grpc = Steer::new(vec![rest, grpc], |req: &Request<Body>, _svcs: &[_]| {
+        if req.headers().get(CONTENT_TYPE).map(|v| v.as_bytes()) != Some(b"application/grpc") {
+            0
+        } else {
+            1
+        }
+    });
+
+    let server = Server::bind(socket).serve(Shared::new(http_grpc));
+
+    info!("Start Listening on {:?}", socket);
+    server.with_graceful_shutdown(shutdown_signal()).await
 }
