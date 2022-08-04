@@ -16,7 +16,7 @@ const DEFAULT_PORT: u16 = 8000;
 
 pub struct Application<H: Health> {
     health_indicator: Option<Arc<H>>,
-    ip_addr: Option<IpAddr>,
+    host: Option<IpAddr>,
     port: Option<u16>,
     rest_router: Option<AxumRouter>,
     grpc_router: Option<TonicRouter>,
@@ -26,7 +26,7 @@ impl Application<NoHealth> {
     pub fn new_without_health() -> Application<NoHealth> {
         Application::<NoHealth> {
             health_indicator: None,
-            ip_addr: None,
+            host: None,
             port: None,
             rest_router: None,
             grpc_router: None,
@@ -38,7 +38,7 @@ impl<H: Health> Application<H> {
     pub fn new_with_health(health: Arc<H>) -> Self {
         Self {
             health_indicator: Some(health),
-            ip_addr: None,
+            host: None,
             port: None,
             rest_router: None,
             grpc_router: None,
@@ -47,7 +47,7 @@ impl<H: Health> Application<H> {
 
     pub async fn run(mut self) -> hyper::Result<()> {
         let socket = SocketAddr::new(
-            self.ip_addr.unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED)),
+            self.host.unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED)),
             self.port.unwrap_or(DEFAULT_PORT),
         );
 
@@ -72,8 +72,8 @@ impl<H: Health> Application<H> {
         self
     }
 
-    pub fn ip_addr(mut self, ip_addr: impl Into<IpAddr>) -> Self {
-        self.ip_addr = Some(ip_addr.into());
+    pub fn host(mut self, host: impl Into<IpAddr>) -> Self {
+        self.host = Some(host.into());
         self
     }
 

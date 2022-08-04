@@ -11,7 +11,7 @@ async fn main() {
 
     Application::new_with_health(Arc::new(AlwaysHealthy::default()))
         .rest_router(Router::new().route("/", get(handler)))
-        .ip_addr(Ipv4Addr::new(0, 0, 0, 0))
+        .host(Ipv4Addr::new(0, 0, 0, 0))
         .port(8005u16)
         .run()
         .await
