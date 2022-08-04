@@ -1,11 +1,12 @@
 use std::future::Future;
 use tokio::net::TcpStream;
 
-use crate::hyper::upgrade::Upgraded;
-use crate::hyper::StatusCode;
-use fregate::axum::response::{IntoResponse, Response};
-use fregate::axum::routing::get;
-use fregate::axum::{body, Router};
+use crate::hyper::{upgrade::Upgraded, StatusCode};
+use fregate::axum::{
+    response::{IntoResponse, Response},
+    routing::get,
+    {body, Router},
+};
 use fregate::hyper::{Body, Error, Request};
 use fregate::tower::util::ServiceFn;
 use fregate::tracing::{debug, trace, warn};

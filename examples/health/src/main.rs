@@ -28,6 +28,9 @@ impl Health for CustomHealth {
 #[tokio::main]
 async fn main() {
     init_tracing();
-    let health = CustomHealth::default();
-    Application::new_with_health(health).run().await.unwrap();
+
+    Application::new_with_health(CustomHealth::default())
+        .run()
+        .await
+        .unwrap();
 }

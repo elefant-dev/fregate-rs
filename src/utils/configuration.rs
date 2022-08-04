@@ -13,6 +13,7 @@ pub struct DefaultConfig {
 pub struct DefaultServerConfig {
     pub host: IpAddr,
     pub port: u16,
+    pub management_port: u16,
 }
 
 // Do we want to deserialize it into provided struct, or always DefaultConfig ?

@@ -14,20 +14,20 @@ const FAVICON_PATH: &str = "/favicon.ico";
 static FAVICON: Bytes = Bytes::from_static(include_bytes!("../../src/resources/favicon.png"));
 const OPENAPI: &str = include_str!("../../src/resources/openapi.yaml");
 
-pub(crate) fn build_rest_router<H: Health>(
-    health_indicator: Option<H>,
-    rest_router: Option<AxumRouter>,
-) -> Router {
+pub(crate) fn build_application_router(rest_router: Option<AxumRouter>) -> Router {
+    Router::new().nest_optional(API_PATH, rest_router)
+}
+
+pub(crate) fn build_management_router<H: Health>(health_indicator: Option<H>) -> Router {
     Router::new()
         // TODO: SET CORRECT FORMATTING FOR HTTP TRACING
         .layer(TraceLayer::new_for_http())
         .route(OPENAPI_PATH, get(|| async { yaml(OPENAPI) }))
         .route(FAVICON_PATH, get(|| async { png(&FAVICON) }))
-        .nest_optional(API_PATH, rest_router)
-        .merge_optional(get_health_router(health_indicator))
+        .merge_optional(build_health_router(health_indicator))
 }
 
-fn get_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router> {
+fn build_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router> {
     let health_indicator = health_indicator?;
 
     let alive_handler = |Extension(health): Extension<H>| async move { health.alive().await };

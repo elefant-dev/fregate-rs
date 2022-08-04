@@ -12,7 +12,7 @@ This crate relies on multiple external crates:
 async fn main() {
     init_tracing();
 
-    Application::new_with_health(Arc::new(AlwaysHealthy::default()))
+    Application::new_with_health(AlwaysReadyAndAlive::default())
         .rest_router(Router::new().route("/", get(handler)))
         .run()
         .await

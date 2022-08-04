@@ -23,7 +23,7 @@ struct ServerConfig {
 async fn main() {
     init_tracing();
 
-    std::env::set_var("APP_SERVER_SOCKET", "0.0.0.0:9999");
+    std::env::set_var("APP_SERVER_SOCKET", "0.0.0.0:9998");
 
     // You might want to read DefaultConfig providing only path to default conf file and environment
     // variables prefix, separator is "_" by default.
@@ -38,10 +38,10 @@ async fn main() {
         .try_deserialize_and_log::<CustomConfig>()
         .unwrap();
 
-    // If no host or port are set, then default values are used: host: 0.0.0.0, port: 8000
     Application::new_without_health()
         .host(config.server.socket.ip())
         .port(config.server.socket.port())
+        .management_port(9999u16)
         .rest_router(Router::new().route("/", get(handler)))
         .run()
         .await
