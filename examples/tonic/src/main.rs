@@ -2,7 +2,7 @@ use fregate::axum::routing::get;
 use fregate::axum::Router;
 use fregate::tonic::transport::Server;
 use fregate::tonic::{Request, Response, Status};
-use fregate::{init_tracing, AlwaysHealthy, Application};
+use fregate::{init_tracing, AlwaysReadyAndAlive, Application};
 use proto::{
     echo_server::{Echo, EchoServer},
     hello_server::{Hello, HelloServer},
@@ -61,7 +61,7 @@ async fn main() {
         .add_service(echo_service)
         .add_service(hello_service);
 
-    Application::new_with_health(Arc::new(AlwaysHealthy::default()))
+    Application::new_with_health(Arc::new(AlwaysReadyAndAlive::default()))
         .rest_router(Router::new().route("/", get(handler)))
         .grpc_router(grpc_router)
         .run()
