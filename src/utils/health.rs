@@ -18,7 +18,7 @@ impl IntoResponse for ApplicationStatus {
     fn into_response(self) -> Response {
         match self {
             ApplicationStatus::UP => (StatusCode::OK, "UP").into_response(),
-            ApplicationStatus::DOWN => (StatusCode::INTERNAL_SERVER_ERROR, "DOWN").into_response(),
+            ApplicationStatus::DOWN => (StatusCode::SERVICE_UNAVAILABLE, "DOWN").into_response(),
         }
     }
 }
