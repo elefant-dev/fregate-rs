@@ -1,28 +1,30 @@
 use config::{Config, ConfigError};
 use serde::Deserialize;
 use std::fmt::Debug;
-use tracing::{debug, error};
+use tracing::{error, info};
 
 #[derive(thiserror::Error, Debug)]
-pub enum DeserializeError {
+pub enum Error {
     #[error("Got config Error: `{0}`")]
     ConfigError(#[from] ConfigError),
 }
 
+pub type Result<T> = std::result::Result<T, Error>;
+
 pub trait DeserializeAndLog {
-    fn try_deserialize_and_log<'de, T>(self) -> Result<T, DeserializeError>
+    fn try_deserialize_and_log<'de, T>(self) -> Result<T>
     where
         T: Deserialize<'de> + Debug;
 }
 
 impl DeserializeAndLog for Config {
-    fn try_deserialize_and_log<'de, T>(self) -> Result<T, DeserializeError>
+    fn try_deserialize_and_log<'de, T>(self) -> Result<T>
     where
         T: Deserialize<'de> + Debug,
     {
         let val = match T::deserialize(self) {
             Ok(config) => {
-                debug!("Configuration: `{config:?}`.", config = config);
+                info!("Configuration: `{config:?}`.", config = config);
                 Ok(config)
             }
             Err(err) => {

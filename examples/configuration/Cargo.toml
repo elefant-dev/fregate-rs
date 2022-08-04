@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 fregate = { path = "../.." }
 tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0.141", features = ["derive"] }

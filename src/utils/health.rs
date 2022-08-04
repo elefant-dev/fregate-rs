@@ -1,46 +1,52 @@
-use serde::Serialize;
-use std::fmt;
-use std::fmt::{Display, Formatter};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 
 #[axum::async_trait]
-pub trait Health: Send + Sync + 'static {
-    async fn check(&self) -> HealthStatus;
+pub trait Health: Send + Sync + 'static + Clone {
+    async fn alive(&self) -> ApplicationStatus;
+
+    async fn ready(&self) -> ApplicationStatus;
 }
 
-#[derive(Serialize, Debug, Clone, Copy)]
-pub enum HealthStatus {
+#[derive(Debug, Clone, Copy)]
+pub enum ApplicationStatus {
     UP,
     DOWN,
 }
 
-impl Default for HealthStatus {
-    fn default() -> Self {
-        HealthStatus::DOWN
+impl IntoResponse for ApplicationStatus {
+    fn into_response(self) -> Response {
+        match self {
+            ApplicationStatus::UP => (StatusCode::OK, "UP").into_response(),
+            ApplicationStatus::DOWN => (StatusCode::SERVICE_UNAVAILABLE, "DOWN").into_response(),
+        }
     }
 }
 
-impl Display for HealthStatus {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-#[derive(Default)]
-pub struct AlwaysHealthy {}
+#[derive(Default, Clone)]
+pub struct AlwaysReadyAndAlive {}
 
 #[axum::async_trait]
-impl Health for AlwaysHealthy {
-    async fn check(&self) -> HealthStatus {
-        HealthStatus::UP
+impl Health for AlwaysReadyAndAlive {
+    async fn alive(&self) -> ApplicationStatus {
+        ApplicationStatus::UP
+    }
+
+    async fn ready(&self) -> ApplicationStatus {
+        ApplicationStatus::UP
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct NoHealth {}
 
 #[axum::async_trait]
 impl Health for NoHealth {
-    async fn check(&self) -> HealthStatus {
-        HealthStatus::DOWN
+    async fn alive(&self) -> ApplicationStatus {
+        ApplicationStatus::DOWN
+    }
+
+    async fn ready(&self) -> ApplicationStatus {
+        ApplicationStatus::DOWN
     }
 }
