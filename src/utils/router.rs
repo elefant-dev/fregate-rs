@@ -1,7 +1,6 @@
 use axum::Router as AxumRouter;
 use axum::{routing::get, Extension, Router};
 use bytes::Bytes;
-use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
 use crate::extensions::{png, yaml};
@@ -16,7 +15,7 @@ static FAVICON: Bytes = Bytes::from_static(include_bytes!("../../src/resources/f
 const OPENAPI: &str = include_str!("../../src/resources/openapi.yaml");
 
 pub(crate) fn build_rest_router<H: Health>(
-    health_indicator: Option<Arc<H>>,
+    health_indicator: Option<H>,
     rest_router: Option<AxumRouter>,
 ) -> Router {
     Router::new()
@@ -28,11 +27,11 @@ pub(crate) fn build_rest_router<H: Health>(
         .merge_optional(get_health_router(health_indicator))
 }
 
-fn get_health_router<H: Health>(health_indicator: Option<Arc<H>>) -> Option<Router> {
+fn get_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router> {
     let health_indicator = health_indicator?;
 
-    let alive_handler = |Extension(health): Extension<Arc<H>>| async move { health.alive().await };
-    let ready_handler = |Extension(health): Extension<Arc<H>>| async move { health.ready().await };
+    let alive_handler = |Extension(health): Extension<H>| async move { health.alive().await };
+    let ready_handler = |Extension(health): Extension<H>| async move { health.ready().await };
 
     Some(
         Router::new()

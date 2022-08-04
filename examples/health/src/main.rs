@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use fregate::{axum, init_tracing, Application, ApplicationStatus, Health};
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct CustomHealth {
-    status: AtomicU8,
+    status: Arc<AtomicU8>,
 }
 
 #[axum::async_trait]
@@ -28,6 +28,6 @@ impl Health for CustomHealth {
 #[tokio::main]
 async fn main() {
     init_tracing();
-    let health = Arc::new(CustomHealth::default());
+    let health = CustomHealth::default();
     Application::new_with_health(health).run().await.unwrap();
 }

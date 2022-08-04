@@ -2,7 +2,6 @@ use axum::{BoxError, Router as AxumRouter};
 use hyper::header::CONTENT_TYPE;
 use hyper::{Body, Request, Server};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::sync::Arc;
 use tokio::signal;
 use tonic::transport::server::Router as TonicRouter;
 use tower::make::Shared;
@@ -15,7 +14,7 @@ use crate::utils::*;
 const DEFAULT_PORT: u16 = 8000;
 
 pub struct Application<H: Health> {
-    health_indicator: Option<Arc<H>>,
+    health_indicator: Option<H>,
     host: Option<IpAddr>,
     port: Option<u16>,
     rest_router: Option<AxumRouter>,
@@ -35,7 +34,7 @@ impl Application<NoHealth> {
 }
 
 impl<H: Health> Application<H> {
-    pub fn new_with_health(health: Arc<H>) -> Self {
+    pub fn new_with_health(health: H) -> Self {
         Self {
             health_indicator: Some(health),
             host: None,

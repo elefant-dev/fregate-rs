@@ -2,7 +2,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 
 #[axum::async_trait]
-pub trait Health: Send + Sync + 'static {
+pub trait Health: Send + Sync + 'static + Clone {
     async fn alive(&self) -> ApplicationStatus;
 
     async fn ready(&self) -> ApplicationStatus;
@@ -23,7 +23,7 @@ impl IntoResponse for ApplicationStatus {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct AlwaysReadyAndAlive {}
 
 #[axum::async_trait]
@@ -37,7 +37,7 @@ impl Health for AlwaysReadyAndAlive {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct NoHealth {}
 
 #[axum::async_trait]
