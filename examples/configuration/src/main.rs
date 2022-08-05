@@ -41,7 +41,6 @@ async fn main() {
     Application::new_without_health()
         .host(config.server.socket.ip())
         .port(config.server.socket.port())
-        .management_port(9999u16)
         .rest_router(Router::new().route("/", get(handler)))
         .run()
         .await

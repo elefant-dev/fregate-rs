@@ -1,7 +1,6 @@
 use axum::Router as AxumRouter;
 use axum::{routing::get, Extension, Router};
 use bytes::Bytes;
-use tower_http::trace::TraceLayer;
 
 use crate::extensions::{png, yaml};
 use crate::{Health, Optional};
@@ -20,8 +19,6 @@ pub(crate) fn build_application_router(rest_router: Option<AxumRouter>) -> Route
 
 pub(crate) fn build_management_router<H: Health>(health_indicator: Option<H>) -> Router {
     Router::new()
-        // TODO: SET CORRECT FORMATTING FOR HTTP TRACING
-        .layer(TraceLayer::new_for_http())
         .route(OPENAPI_PATH, get(|| async { yaml(OPENAPI) }))
         .route(FAVICON_PATH, get(|| async { png(&FAVICON) }))
         .merge_optional(build_health_router(health_indicator))
