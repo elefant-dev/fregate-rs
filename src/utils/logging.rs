@@ -43,7 +43,7 @@ pub fn init_tracing() {
 #[inline(always)]
 fn get_rust_log() -> &'static str {
     static RUST_LOG: Lazy<String> =
-        Lazy::new(|| std::env::var("RUST_LOG").unwrap_or_else(|_| "debug".to_owned()));
+        Lazy::new(|| std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_owned()));
     &RUST_LOG
 }
 

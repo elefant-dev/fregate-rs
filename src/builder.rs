@@ -12,13 +12,11 @@ use tracing::info;
 use crate::utils::*;
 
 const DEFAULT_PORT: u16 = 8000;
-const DEFAULT_MANAGEMENT_PORT: u16 = 8001;
 
 pub struct Application<H: Health> {
     health_indicator: Option<H>,
     host: Option<IpAddr>,
     port: Option<u16>,
-    management_port: Option<u16>,
     rest_router: Option<AxumRouter>,
     grpc_router: Option<TonicRouter>,
 }
@@ -29,7 +27,6 @@ impl Application<NoHealth> {
             health_indicator: None,
             host: None,
             port: None,
-            management_port: None,
             rest_router: None,
             grpc_router: None,
         }
@@ -42,47 +39,27 @@ impl<H: Health> Application<H> {
             health_indicator: Some(health),
             host: None,
             port: None,
-            management_port: None,
             rest_router: None,
             grpc_router: None,
         }
     }
 
     pub async fn run(mut self) -> hyper::Result<()> {
-        let rest_application = build_application_router(self.rest_router);
-        let rest_management = build_management_router(self.health_indicator);
+        // TODO: SET CORRECT FORMATTING FOR HTTP TRACING
+        let rest = build_application_router(self.rest_router)
+            .merge(build_management_router(self.health_indicator));
 
         let application_socket = SocketAddr::new(
             self.host.unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED)),
             self.port.unwrap_or(DEFAULT_PORT),
         );
 
-        let management_socket = SocketAddr::new(
-            self.host.unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED)),
-            self.management_port.unwrap_or(DEFAULT_MANAGEMENT_PORT),
-        );
-
         // TODO: MAKE GRPC A FEATURE ?
-        // TODO: GENERIC FOR SERVER TYPE TO REMOVE DIFFERENT FUNCTIONS
         if let Some(grpc) = self.grpc_router.take() {
-            tokio::try_join!(
-                run_rest_and_grpc_service(
-                    &application_socket,
-                    rest_application,
-                    grpc,
-                    true,
-                    "rest + grpc",
-                ),
-                run_rest_service(&management_socket, rest_management, false, "management")
-            )?
+            run_rest_and_grpc_service(&application_socket, rest, grpc).await
         } else {
-            tokio::try_join!(
-                run_rest_service(&application_socket, rest_application, true, "rest"),
-                run_rest_service(&management_socket, rest_management, false, "management")
-            )?
-        };
-
-        Ok(())
+            run_rest_service(&application_socket, rest).await
+        }
     }
 
     pub fn rest_router(mut self, router: AxumRouter) -> Self {
@@ -102,11 +79,6 @@ impl<H: Health> Application<H> {
 
     pub fn port(mut self, port: impl Into<u16>) -> Self {
         self.port = Some(port.into());
-        self
-    }
-
-    pub fn management_port(mut self, management_port: impl Into<u16>) -> Self {
-        self.management_port = Some(management_port.into());
         self
     }
 }
@@ -137,28 +109,17 @@ async fn shutdown_signal() {
     info!("Termination signal, starting shutdown...");
 }
 
-async fn run_rest_service(
-    socket: &SocketAddr,
-    rest: AxumRouter,
-    graceful_shutdown: bool,
-    server_type: &str,
-) -> hyper::Result<()> {
+async fn run_rest_service(socket: &SocketAddr, rest: AxumRouter) -> hyper::Result<()> {
     let server = Server::bind(socket).serve(rest.into_make_service());
-    info!(target: "server", server_type = server_type, "Started: http://{socket}");
+    info!(target: "server", server_type = "rest", "Started: http://{socket}");
 
-    if graceful_shutdown {
-        server.with_graceful_shutdown(shutdown_signal()).await
-    } else {
-        server.await
-    }
+    server.with_graceful_shutdown(shutdown_signal()).await
 }
 
 async fn run_rest_and_grpc_service(
     socket: &SocketAddr,
     rest: AxumRouter,
     grpc: TonicRouter,
-    graceful_shutdown: bool,
-    server_type: &str,
 ) -> hyper::Result<()> {
     let rest = rest.map_err(BoxError::from).boxed_clone();
 
@@ -176,12 +137,7 @@ async fn run_rest_and_grpc_service(
     });
 
     let server = Server::bind(socket).serve(Shared::new(rest_grpc));
+    info!(target: "server", server_type = "rest + grpc", "Started: http://{socket}");
 
-    info!(target: "server", server_type = server_type, "Started: http://{socket}");
-
-    if graceful_shutdown {
-        server.with_graceful_shutdown(shutdown_signal()).await
-    } else {
-        server.await
-    }
+    server.with_graceful_shutdown(shutdown_signal()).await
 }
