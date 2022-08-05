@@ -8,9 +8,7 @@ edition = "2021"
 members = ["examples/*"]
 
 [dependencies]
-async-graphql =  { version = "4.0.5", features = ["tracing"] }
 axum = { version = "0.5.7", features = ["headers", "http1", "http2", "json", "matched-path", "original-uri"] }
-axum-extra = "0.3.4"
 bytes = "1"
 config = "0.13.1"
 http-body = "0.4.4"
@@ -24,11 +22,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 prost = "0.11.0"
 tokio = { version = "1.0", features = ["full"] }
-tokio-metrics = "0.1.0"
 tonic = "0.8.0"
 tower = { version = "0.4", features = ["full"] }
 tower-http = { version = "0.3", features = ["full"] }
 tracing = "0.1"
-tracing-futures = "0.2.5"
 tracing-subscriber = { version = "0.3.11", features = ["env-filter", "fmt", "json", "time", "tracing-log"] }
-wyz = "0.5.0"
