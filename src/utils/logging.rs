@@ -21,7 +21,7 @@ pub fn init_tracing() {
         .with_filter_reloading()
         // Record an event when each span closes. This can be used to time our
         // routes' durations!
-        .with_span_events(FmtSpan::ACTIVE)
+        .with_span_events(FmtSpan::NONE)
         .init();
 
     // Capture the span context in which the program panicked
