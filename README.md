@@ -1,10 +1,10 @@
 # fregate-rs
 
-When developing a new server it usually requires to write a lot of boilerplate code for logging, configuration set up, metrics, health checks etc.
-This crate aims to solve these problems providing user with `ApplicationBuilder` struct with multiple configurations for setting up http or/and grpc service.
+Developing a server requires to write code for logging, configuration, metrics, health checks etc.
+This crate aims to solve these problems providing user with `Application` builder for setting up http or/and grpc service.
 
-This crate relies on multiple external crates:
-`TODO list of external crates`
+## Work in progress 
+This project in progress and might change a lot from version to version.
 
 ## Usage example
 ```rust

@@ -15,7 +15,7 @@ pub fn init_tracing() {
         .with_timer::<_>(UtcTime::rfc_3339())
         .flatten_event(true)
         .with_target(true)
-        .with_current_span(true)
+        .with_current_span(false)
         // Use the filter we built above to determine which traces to record.
         .with_env_filter(get_log_filter())
         .with_filter_reloading()
