@@ -1,5 +1,5 @@
 use fregate::axum::routing::get;
-use fregate::{axum::Router, init_tracing, AlwaysReadyAndAlive, Application};
+use fregate::{axum::Router, init_tracing, AppConfig, Application};
 
 async fn handler() -> &'static str {
     "Hello, World!"
@@ -9,7 +9,9 @@ async fn handler() -> &'static str {
 async fn main() {
     init_tracing();
 
-    Application::new_with_health(AlwaysReadyAndAlive::default())
+    let config = AppConfig::default();
+
+    Application::new_without_health(config)
         .rest_router(Router::new().route("/", get(handler)))
         .run()
         .await

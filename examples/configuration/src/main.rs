@@ -1,46 +1,44 @@
 use fregate::axum::routing::get;
 use fregate::axum::Router;
-use fregate::config::{Config, Environment};
-use fregate::{init_tracing, Application, DeserializeAndLog};
+use fregate::{init_tracing, AppConfig, Application};
 use serde::Deserialize;
-use std::net::SocketAddr;
 
 async fn handler() -> &'static str {
     "Hello, Configuration!"
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
-struct CustomConfig {
-    server: ServerConfig,
-}
-
-#[derive(Deserialize, Debug)]
-struct ServerConfig {
-    socket: SocketAddr,
+struct Custom {
+    number: u32,
 }
 
 #[tokio::main]
 async fn main() {
     init_tracing();
 
-    std::env::set_var("APP_SERVER_SOCKET", "0.0.0.0:9998");
+    std::env::set_var("APP_SERVER_PORT", "3333");
+    std::env::set_var("APP_PRIVATE_NUMBER", "1010");
 
-    // You might want to read DefaultConfig providing only path to default conf file and environment
-    // variables prefix, separator is "_" by default.
-    // This function will read file and overwrite it with given in environment variables.
-    // let config = read_default_config("./src/resources/default_conf.toml", "APP").unwrap();
+    // Only if default settings needed
+    let _conf = AppConfig::default();
 
-    // For more configuration you might want to do something like this:
-    let config = Config::builder()
-        .add_source(Environment::with_prefix("APP").separator("_"))
+    // Read default, overwrite with envs, overwrite with file
+    let _conf = AppConfig::builder()
+        .add_default()
+        .add_env_prefixed("APP")
+        .add_file("./examples/configuration/app.yaml")
         .build()
-        .unwrap()
-        .try_deserialize_and_log::<CustomConfig>()
         .unwrap();
 
-    Application::new_without_health()
-        .host(config.server.socket.ip())
-        .port(config.server.socket.port())
+    // Try to deserialize with private field
+    let conf: AppConfig<Custom> = AppConfig::builder_with_private()
+        .add_default()
+        .add_env_prefixed("APP")
+        .build()
+        .unwrap();
+
+    Application::new_without_health(conf)
         .rest_router(Router::new().route("/", get(handler)))
         .run()
         .await

@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 
-use fregate::{axum, init_tracing, Application, ApplicationStatus, Health};
+use fregate::{axum, init_tracing, AppConfig, Application, ApplicationStatus, Health};
 
 #[derive(Default, Debug, Clone)]
 pub struct CustomHealth {
@@ -29,8 +29,17 @@ impl Health for CustomHealth {
 async fn main() {
     init_tracing();
 
-    Application::new_with_health(CustomHealth::default())
+    let health = CustomHealth::default();
+    let config = AppConfig::default();
+
+    Application::new_with_health(config)
+        .health_indicator(health)
         .run()
         .await
         .unwrap();
 }
+
+/*
+    curl http://0.0.0.0:8000/health/alive
+    curl http://0.0.0.0:8000/health/ready
+*/
