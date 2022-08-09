@@ -2,7 +2,7 @@ use fregate::axum::routing::get;
 use fregate::axum::Router;
 use fregate::tonic::transport::Server;
 use fregate::tonic::{Request, Response, Status};
-use fregate::{init_tracing, AlwaysReadyAndAlive, AppConfig, Application};
+use fregate::{init_logging, AlwaysReadyAndAlive, AppConfig, Application};
 use proto::{
     echo_server::{Echo, EchoServer},
     hello_server::{Hello, HelloServer},
@@ -51,7 +51,7 @@ async fn handler() -> &'static str {
 
 #[tokio::main]
 async fn main() {
-    init_tracing();
+    init_logging();
 
     let echo_service = EchoServer::new(MyEcho);
     let hello_service = HelloServer::new(MyHello);
@@ -67,7 +67,7 @@ async fn main() {
         .health_indicator(health)
         .rest_router(Router::new().route("/", get(handler)))
         .grpc_router(grpc_router)
-        .run()
+        .serve()
         .await
         .unwrap();
 }

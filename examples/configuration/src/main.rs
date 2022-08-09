@@ -1,6 +1,6 @@
 use fregate::axum::routing::get;
 use fregate::axum::Router;
-use fregate::{init_tracing, AppConfig, Application};
+use fregate::{init_logging, AppConfig, Application};
 use serde::Deserialize;
 
 async fn handler() -> &'static str {
@@ -15,7 +15,7 @@ struct Custom {
 
 #[tokio::main]
 async fn main() {
-    init_tracing();
+    init_logging();
 
     std::env::set_var("APP_SERVER_PORT", "3333");
     std::env::set_var("APP_PRIVATE_NUMBER", "1010");
@@ -40,7 +40,7 @@ async fn main() {
 
     Application::new_without_health(conf)
         .rest_router(Router::new().route("/", get(handler)))
-        .run()
+        .serve()
         .await
         .unwrap();
 }

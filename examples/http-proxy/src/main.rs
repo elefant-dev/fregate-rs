@@ -33,7 +33,7 @@ async fn main() {
 
     Application::new_without_health(config)
         .rest_router(router)
-        .run()
+        .serve()
         .await
         .unwrap();
 }

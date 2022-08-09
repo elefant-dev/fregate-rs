@@ -1,11 +1,11 @@
 use fregate::{
     axum::{routing::get, Router},
-    init_tracing, AlwaysReadyAndAlive, AppConfig, Application,
+    init_logging, AlwaysReadyAndAlive, AppConfig, Application,
 };
 
 #[tokio::main]
 async fn main() {
-    init_tracing();
+    init_logging();
 
     let config = AppConfig::default();
     let health = AlwaysReadyAndAlive::default();
@@ -13,7 +13,7 @@ async fn main() {
     Application::new_with_health(config)
         .health_indicator(health)
         .rest_router(Router::new().route("/", get(handler)))
-        .run()
+        .serve()
         .await
         .unwrap();
 }

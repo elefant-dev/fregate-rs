@@ -50,7 +50,7 @@ impl<H: Health, T: DeserializeOwned> Application<H, T> {
         self
     }
 
-    pub async fn run(mut self) -> hyper::Result<()> {
+    pub async fn serve(mut self) -> hyper::Result<()> {
         // TODO: SET CORRECT FORMATTING FOR HTTP TRACING
         let rest = build_application_router(self.rest_router)
             .merge(build_management_router(self.health_indicator))
