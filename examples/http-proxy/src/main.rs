@@ -31,7 +31,7 @@ async fn main() {
 
     let config = AppConfig::default();
 
-    Application::new_without_health(config)
+    Application::new(config)
         .rest_router(router)
         .serve()
         .await

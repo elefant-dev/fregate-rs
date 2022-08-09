@@ -19,7 +19,7 @@ pub struct Application<H, T> {
 }
 
 impl<T: DeserializeOwned> Application<NoHealth, T> {
-    pub fn new_without_health(config: AppConfig<T>) -> Self {
+    pub fn new(config: AppConfig<T>) -> Self {
         Application::<NoHealth, T> {
             config,
             health_indicator: None,
