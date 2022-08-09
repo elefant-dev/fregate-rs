@@ -1,8 +1,13 @@
+use fregate::axum::middleware::{from_fn, Next};
+use fregate::axum::response::IntoResponse;
 use fregate::axum::routing::get;
 use fregate::axum::Router;
-use fregate::tonic::transport::Server;
-use fregate::tonic::{Request, Response, Status};
-use fregate::{init_logging, AlwaysReadyAndAlive, AppConfig, Application};
+use fregate::hyper::Request;
+use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
+use fregate::{
+    grpc_trace_layer, http_trace_layer, init_logging, AlwaysReadyAndAlive, AppConfig, Application,
+    Tonicable,
+};
 use proto::{
     echo_server::{Echo, EchoServer},
     hello_server::{Hello, HelloServer},
@@ -24,29 +29,32 @@ struct MyEcho;
 impl Hello for MyHello {
     async fn say_hello(
         &self,
-        request: Request<HelloRequest>,
-    ) -> Result<Response<HelloResponse>, Status> {
+        request: TonicRequest<HelloRequest>,
+    ) -> Result<TonicResponse<HelloResponse>, Status> {
         let reply = HelloResponse {
             message: format!("Hello {}!", request.into_inner().name),
         };
 
-        Ok(Response::new(reply))
+        Ok(TonicResponse::new(reply))
     }
 }
 
 #[tonic::async_trait]
 impl Echo for MyEcho {
-    async fn ping(&self, request: Request<EchoRequest>) -> Result<Response<EchoResponse>, Status> {
+    async fn ping(
+        &self,
+        request: TonicRequest<EchoRequest>,
+    ) -> Result<TonicResponse<EchoResponse>, Status> {
         let reply = EchoResponse {
             message: request.into_inner().message,
         };
 
-        Ok(Response::new(reply))
+        Ok(TonicResponse::new(reply))
     }
 }
 
-async fn handler() -> &'static str {
-    "Hello, World!"
+async fn deny_middleware<B>(_req: Request<B>, _next: Next<B>) -> impl IntoResponse {
+    Status::permission_denied("You shall not pass").to_http()
 }
 
 #[tokio::main]
@@ -56,17 +64,20 @@ async fn main() {
     let echo_service = EchoServer::new(MyEcho);
     let hello_service = HelloServer::new(MyHello);
 
-    let grpc_router = Server::builder()
-        .add_service(echo_service)
-        .add_service(hello_service);
+    let rest = Router::new()
+        .route("/", get(|| async { "Hello, World!" }))
+        .layer(http_trace_layer());
 
-    let config = AppConfig::default();
-    let health = AlwaysReadyAndAlive::default();
+    // Echo service will always deny request
+    let grpc = Router::from_tonic_service(echo_service)
+        .layer(from_fn(deny_middleware))
+        .merge(Router::from_tonic_service(hello_service))
+        .layer(grpc_trace_layer());
 
-    Application::new_with_health(config)
-        .health_indicator(health)
-        .rest_router(Router::new().route("/", get(handler)))
-        .grpc_router(grpc_router)
+    Application::new_with_health(AppConfig::default())
+        .health_indicator(AlwaysReadyAndAlive::default())
+        .rest_router(rest)
+        .grpc_router(grpc)
         .serve()
         .await
         .unwrap();

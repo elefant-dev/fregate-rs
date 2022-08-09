@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 fregate = { path = "../.." }
+tracing = "0.1.36"
 tokio = { version = "1.0", features = ["full"] }
 prost = "0.11.0"
 tonic = "0.8.0"

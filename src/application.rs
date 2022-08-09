@@ -1,18 +1,12 @@
-use axum::response::Response;
-use axum::{BoxError, Router as AxumRouter};
+use axum::Router as AxumRouter;
 use hyper::header::CONTENT_TYPE;
 use hyper::{Body, Request, Server};
 use serde::de::DeserializeOwned;
 use std::net::SocketAddr;
-use std::time::Duration;
 use tokio::signal;
-use tonic::transport::server::Router as TonicRouter;
 use tower::make::Shared;
 use tower::steer::Steer;
-use tower::{ServiceBuilder, ServiceExt};
-use tower_http::trace::TraceLayer;
-use tracing::field::display;
-use tracing::{info, info_span, Span};
+use tracing::info;
 
 use crate::utils::*;
 
@@ -21,7 +15,7 @@ pub struct Application<H, T> {
     config: AppConfig<T>,
     health_indicator: Option<H>,
     rest_router: Option<AxumRouter>,
-    grpc_router: Option<TonicRouter>,
+    grpc_router: Option<AxumRouter>,
 }
 
 impl<T: DeserializeOwned> Application<NoHealth, T> {
@@ -51,35 +45,8 @@ impl<H: Health, T: DeserializeOwned> Application<H, T> {
     }
 
     pub async fn serve(mut self) -> hyper::Result<()> {
-        // TODO: SET CORRECT FORMATTING FOR HTTP TRACING
         let rest = build_application_router(self.rest_router)
-            .merge(build_management_router(self.health_indicator))
-            .layer(
-                TraceLayer::new_for_http()
-                    .make_span_with(|_request: &Request<_>| {
-                        info_span!(
-                            "http-request",
-                            method = tracing::field::Empty,
-                            uri = tracing::field::Empty,
-                        )
-                    })
-                    .on_request(|request: &Request<_>, span: &Span| {
-                        let method = request.method();
-                        let uri = request.uri();
-
-                        info!("Incoming REST Request: {}, {}", method, uri);
-
-                        span.record("method", &display(method));
-                        span.record("uri", &display(uri));
-                    })
-                    .on_response(|response: &Response, latency: Duration, _span: &Span| {
-                        info!(
-                            "Outgoing REST Response: {}, latency: {}ms",
-                            response.status(),
-                            latency.as_millis()
-                        );
-                    }),
-            );
+            .merge(build_management_router(self.health_indicator));
 
         let application_socket = SocketAddr::new(self.config.server.host, self.config.server.port);
 
@@ -96,7 +63,7 @@ impl<H: Health, T: DeserializeOwned> Application<H, T> {
         self
     }
 
-    pub fn grpc_router(mut self, router: TonicRouter) -> Self {
+    pub fn grpc_router(mut self, router: AxumRouter) -> Self {
         self.grpc_router = Some(router);
         self
     }
@@ -138,45 +105,8 @@ async fn run_rest_service(socket: &SocketAddr, rest: AxumRouter) -> hyper::Resul
 async fn run_rest_and_grpc_service(
     socket: &SocketAddr,
     rest: AxumRouter,
-    grpc: TonicRouter,
+    grpc: AxumRouter,
 ) -> hyper::Result<()> {
-    let rest = rest.map_err(BoxError::from).boxed_clone();
-
-    let grpc = grpc
-        .into_service()
-        .map_response(|r| r.map(axum::body::boxed));
-
-    let grpc = ServiceBuilder::new()
-        .layer(
-            TraceLayer::new_for_grpc()
-                .make_span_with(|_request: &Request<_>| {
-                    info_span!(
-                        "grpc-request",
-                        method = tracing::field::Empty,
-                        uri = tracing::field::Empty,
-                    )
-                })
-                .on_request(|request: &Request<_>, span: &Span| {
-                    let method = request.method();
-                    let uri = request.uri();
-
-                    info!("Incoming GRPC Request: {}, {}", method, uri);
-
-                    span.record("method", &display(method));
-                    span.record("uri", &display(uri));
-                })
-                .on_response(|response: &Response, latency: Duration, _span: &Span| {
-                    info!(
-                        "Outgoing GRPC Response: {}, latency: {}ms",
-                        response.status(),
-                        latency.as_millis()
-                    );
-                }),
-        )
-        .service(grpc)
-        .map_response(|r| r.map(axum::body::boxed))
-        .boxed_clone();
-
     let rest_grpc = Steer::new(vec![rest, grpc], |req: &Request<Body>, _svcs: &[_]| {
         if req.headers().get(CONTENT_TYPE).map(|v| v.as_bytes()) != Some(b"application/grpc") {
             0

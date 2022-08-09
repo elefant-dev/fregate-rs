@@ -5,7 +5,7 @@ use bytes::Bytes;
 use crate::extensions::{png, yaml};
 use crate::{Health, Optional};
 
-// TODO: MAKE IT CONFIGURABLE
+// TODO: MAKE IT CONFIGURABLE ?
 const API_PATH: &str = "/v1";
 const OPENAPI_PATH: &str = "/openapi";
 const FAVICON_PATH: &str = "/favicon.ico";
