@@ -1,6 +1,6 @@
 use fregate::axum::routing::get;
 use fregate::axum::Router;
-use fregate::{init_logging, AppConfig, Application};
+use fregate::{init_tracing, AppConfig, Application};
 use serde::Deserialize;
 
 async fn handler() -> &'static str {
@@ -15,7 +15,7 @@ struct Custom {
 
 #[tokio::main]
 async fn main() {
-    init_logging();
+    init_tracing();
 
     std::env::set_var("APP_SERVER_PORT", "3333");
     std::env::set_var("APP_PRIVATE_NUMBER", "1010");
@@ -31,6 +31,9 @@ async fn main() {
         .build()
         .unwrap();
 
+    // Or most popular use case:
+    let _conf = AppConfig::default_with("./examples/configuration/app.yaml", "APP").unwrap();
+
     // Try to deserialize with private field
     let conf: AppConfig<Custom> = AppConfig::builder_with_private()
         .add_default()
@@ -38,7 +41,7 @@ async fn main() {
         .build()
         .unwrap();
 
-    Application::new_without_health(conf)
+    Application::new(conf)
         .rest_router(Router::new().route("/", get(handler)))
         .serve()
         .await

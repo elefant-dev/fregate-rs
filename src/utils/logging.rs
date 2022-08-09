@@ -5,7 +5,7 @@ use tracing_subscriber::{
     fmt::{format::FmtSpan, time::UtcTime},
 };
 
-pub fn init_logging() {
+pub fn init_tracing() {
     // Configure the default `tracing` subscriber.
     // The `fmt` subscriber from the `tracing-subscriber` crate logs `tracing`
     // events to stdout. Other subscribers are available for integrating with

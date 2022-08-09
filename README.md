@@ -14,9 +14,9 @@ async fn main() {
 
     let config = AppConfig::default();
 
-    Application::new_without_health(config)
+    Application::new(config)
         .rest_router(Router::new().route("/", get(handler)))
-        .run()
+        .serve()
         .await
         .unwrap();
 }

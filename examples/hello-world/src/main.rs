@@ -1,5 +1,5 @@
 use fregate::axum::routing::get;
-use fregate::{axum::Router, init_logging, AppConfig, Application};
+use fregate::{axum::Router, init_tracing, AppConfig, Application};
 
 async fn handler() -> &'static str {
     "Hello, World!"
@@ -7,11 +7,11 @@ async fn handler() -> &'static str {
 
 #[tokio::main]
 async fn main() {
-    init_logging();
+    init_tracing();
 
     let config = AppConfig::default();
 
-    Application::new_without_health(config)
+    Application::new(config)
         .rest_router(Router::new().route("/", get(handler)))
         .serve()
         .await

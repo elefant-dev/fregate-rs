@@ -45,6 +45,15 @@ impl AppConfig<Empty> {
     pub fn builder() -> AppConfigBuilder<Empty> {
         AppConfigBuilder::new()
     }
+
+    pub fn default_with(file_path: &str, env_prefix: &str) -> Result<Self> {
+        // Try to deserialize with private field
+        AppConfig::builder()
+            .add_default()
+            .add_file(file_path)
+            .add_env_prefixed(env_prefix)
+            .build()
+    }
 }
 
 #[derive(Debug, Default)]

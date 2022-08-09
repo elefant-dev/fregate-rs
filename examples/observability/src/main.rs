@@ -1,11 +1,11 @@
 use fregate::{
     axum::{routing::get, Router},
-    http_trace_layer, init_logging, AlwaysReadyAndAlive, AppConfig, Application,
+    http_trace_layer, init_tracing, AlwaysReadyAndAlive, AppConfig, Application,
 };
 
 #[tokio::main]
 async fn main() {
-    init_logging();
+    init_tracing();
 
     let config = AppConfig::default();
     let health = AlwaysReadyAndAlive::default();
