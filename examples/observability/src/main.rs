@@ -1,18 +1,23 @@
 use fregate::{
     axum::{routing::get, Router},
-    init_tracing, AlwaysReadyAndAlive, Application,
+    http_trace_layer, init_logging, AlwaysReadyAndAlive, AppConfig, Application,
 };
-use std::net::Ipv4Addr;
 
 #[tokio::main]
 async fn main() {
-    init_tracing();
+    init_logging();
 
-    Application::new_with_health(AlwaysReadyAndAlive::default())
-        .rest_router(Router::new().route("/", get(handler)))
-        .host(Ipv4Addr::new(0, 0, 0, 0))
-        .port(8005u16)
-        .run()
+    let config = AppConfig::default();
+    let health = AlwaysReadyAndAlive::default();
+
+    let rest = Router::new()
+        .route("/", get(handler))
+        .layer(http_trace_layer());
+
+    Application::new_with_health(config)
+        .health_indicator(health)
+        .rest_router(rest)
+        .serve()
         .await
         .unwrap();
 }
@@ -20,3 +25,7 @@ async fn main() {
 async fn handler() -> &'static str {
     "Hello, World!"
 }
+
+/*
+    curl http://0.0.0.0:8000/v1
+*/

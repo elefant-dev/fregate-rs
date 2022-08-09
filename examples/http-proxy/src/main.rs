@@ -10,7 +10,7 @@ use fregate::axum::{
 use fregate::hyper::{Body, Error, Request};
 use fregate::tower::util::ServiceFn;
 use fregate::tracing::{debug, trace, warn};
-use fregate::{hyper, Application};
+use fregate::{hyper, AppConfig, Application};
 
 type _Svs = ServiceFn<dyn FnOnce(Request<Body>) -> dyn Future<Output = Response>>;
 
@@ -29,9 +29,11 @@ async fn main() {
     //     }
     // });
 
-    Application::new_without_health()
+    let config = AppConfig::default();
+
+    Application::new_without_health(config)
         .rest_router(router)
-        .run()
+        .serve()
         .await
         .unwrap();
 }
