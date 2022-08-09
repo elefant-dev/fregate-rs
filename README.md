@@ -12,7 +12,9 @@ This project in progress and might change a lot from version to version.
 async fn main() {
     init_tracing();
 
-    Application::new_with_health(AlwaysReadyAndAlive::default())
+    let config = AppConfig::default();
+
+    Application::new_without_health(config)
         .rest_router(Router::new().route("/", get(handler)))
         .run()
         .await
