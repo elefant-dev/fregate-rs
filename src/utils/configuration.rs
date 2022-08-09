@@ -2,16 +2,22 @@ use crate::{DeserializeAndLog, Result};
 use config::builder::DefaultState;
 use config::FileFormat::Toml;
 use config::{ConfigBuilder, Environment, File};
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use std::fmt::Debug;
+use std::marker::PhantomData;
 use std::net::IpAddr;
 
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
 const DEFAULT_SEPARATOR: &str = "_";
 
 #[derive(Debug, Deserialize)]
-pub struct AppConfig {
+pub struct Empty {}
+
+#[derive(Debug, Deserialize)]
+pub struct AppConfig<T> {
     pub server: ServerConfig,
+    pub private: T,
 }
 
 #[derive(Debug, Deserialize)]
@@ -20,7 +26,7 @@ pub struct ServerConfig {
     pub port: u16,
 }
 
-impl Default for AppConfig {
+impl Default for AppConfig<Empty> {
     fn default() -> Self {
         AppConfig::builder()
             .add_default()
@@ -29,20 +35,36 @@ impl Default for AppConfig {
     }
 }
 
-impl AppConfig {
-    pub fn builder() -> AppConfigBuilder {
-        AppConfigBuilder::default()
+impl<T: DeserializeOwned + Debug> AppConfig<T> {
+    pub fn builder_with_private() -> AppConfigBuilder<T> {
+        AppConfigBuilder::new()
+    }
+}
+
+impl AppConfig<Empty> {
+    pub fn builder() -> AppConfigBuilder<Empty> {
+        AppConfigBuilder::new()
     }
 }
 
 #[derive(Debug, Default)]
-pub struct AppConfigBuilder {
+pub struct AppConfigBuilder<T> {
     builder: ConfigBuilder<DefaultState>,
+    phantom: PhantomData<T>,
 }
 
-impl AppConfigBuilder {
-    pub fn build(self) -> Result<AppConfig> {
-        self.builder.build()?.try_deserialize_and_log::<AppConfig>()
+impl<T: DeserializeOwned + Debug> AppConfigBuilder<T> {
+    pub fn new() -> Self {
+        Self {
+            builder: ConfigBuilder::default(),
+            phantom: PhantomData,
+        }
+    }
+
+    pub fn build(self) -> Result<AppConfig<T>> {
+        self.builder
+            .build()?
+            .try_deserialize_and_log::<AppConfig<T>>()
     }
 
     pub fn add_default(mut self) -> Self {

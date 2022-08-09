@@ -2,6 +2,7 @@ use axum::response::Response;
 use axum::{BoxError, Router as AxumRouter};
 use hyper::header::CONTENT_TYPE;
 use hyper::{Body, Request, Server};
+use serde::de::DeserializeOwned;
 use std::net::SocketAddr;
 use std::time::Duration;
 use tokio::signal;
@@ -16,16 +17,16 @@ use tracing::{info, info_span, Span};
 use crate::utils::*;
 
 #[derive(Debug)]
-pub struct Application<H: Health> {
-    config: AppConfig,
+pub struct Application<H, T> {
+    config: AppConfig<T>,
     health_indicator: Option<H>,
     rest_router: Option<AxumRouter>,
     grpc_router: Option<TonicRouter>,
 }
 
-impl Application<NoHealth> {
-    pub fn new_without_health(config: AppConfig) -> Application<NoHealth> {
-        Application::<NoHealth> {
+impl<T: DeserializeOwned> Application<NoHealth, T> {
+    pub fn new_without_health(config: AppConfig<T>) -> Self {
+        Application::<NoHealth, T> {
             config,
             health_indicator: None,
             rest_router: None,
@@ -34,8 +35,8 @@ impl Application<NoHealth> {
     }
 }
 
-impl<H: Health> Application<H> {
-    pub fn new_with_health(config: AppConfig) -> Self {
+impl<H: Health, T: DeserializeOwned> Application<H, T> {
+    pub fn new_with_health(config: AppConfig<T>) -> Self {
         Self {
             config,
             health_indicator: None,
