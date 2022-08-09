@@ -2,7 +2,7 @@ use axum::response::Response;
 use axum::{BoxError, Router as AxumRouter};
 use hyper::header::CONTENT_TYPE;
 use hyper::{Body, Request, Server};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::SocketAddr;
 use std::time::Duration;
 use tokio::signal;
 use tonic::transport::server::Router as TonicRouter;
@@ -15,22 +15,19 @@ use tracing::{info, info_span, Span};
 
 use crate::utils::*;
 
-const DEFAULT_PORT: u16 = 8000;
-
+#[derive(Debug)]
 pub struct Application<H: Health> {
+    config: AppConfig,
     health_indicator: Option<H>,
-    host: Option<IpAddr>,
-    port: Option<u16>,
     rest_router: Option<AxumRouter>,
     grpc_router: Option<TonicRouter>,
 }
 
 impl Application<NoHealth> {
-    pub fn new_without_health() -> Application<NoHealth> {
+    pub fn new_without_health(config: AppConfig) -> Application<NoHealth> {
         Application::<NoHealth> {
+            config,
             health_indicator: None,
-            host: None,
-            port: None,
             rest_router: None,
             grpc_router: None,
         }
@@ -38,14 +35,18 @@ impl Application<NoHealth> {
 }
 
 impl<H: Health> Application<H> {
-    pub fn new_with_health(health: H) -> Self {
+    pub fn new_with_health(config: AppConfig) -> Self {
         Self {
-            health_indicator: Some(health),
-            host: None,
-            port: None,
+            config,
+            health_indicator: None,
             rest_router: None,
             grpc_router: None,
         }
+    }
+
+    pub fn health_indicator(mut self, health: H) -> Self {
+        self.health_indicator = Some(health);
+        self
     }
 
     pub async fn run(mut self) -> hyper::Result<()> {
@@ -79,10 +80,7 @@ impl<H: Health> Application<H> {
                     }),
             );
 
-        let application_socket = SocketAddr::new(
-            self.host.unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED)),
-            self.port.unwrap_or(DEFAULT_PORT),
-        );
+        let application_socket = SocketAddr::new(self.config.server.host, self.config.server.port);
 
         // TODO: MAKE GRPC A FEATURE ?
         if let Some(grpc) = self.grpc_router.take() {
@@ -99,16 +97,6 @@ impl<H: Health> Application<H> {
 
     pub fn grpc_router(mut self, router: TonicRouter) -> Self {
         self.grpc_router = Some(router);
-        self
-    }
-
-    pub fn host(mut self, host: impl Into<IpAddr>) -> Self {
-        self.host = Some(host.into());
-        self
-    }
-
-    pub fn port(mut self, port: impl Into<u16>) -> Self {
-        self.port = Some(port.into());
         self
     }
 }
