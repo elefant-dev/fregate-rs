@@ -1,6 +1,6 @@
 use fregate::axum::routing::get;
 use fregate::axum::Router;
-use fregate::{init_tracing, AppConfig, Application};
+use fregate::{init_tracing, AppConfig, Application, Empty};
 use serde::Deserialize;
 
 async fn handler() -> &'static str {
@@ -31,12 +31,20 @@ async fn main() {
         .build()
         .unwrap();
 
-    // Or most popular use case:
-    let _conf = AppConfig::default_with("./examples/configuration/app.yaml", "APP").unwrap();
+    // Or most popular use cases:
+    // set type for private field
+    let _conf: AppConfig<Custom> =
+        AppConfig::default_with("./examples/configuration/app.yaml", "APP").unwrap();
+    // if do not need private field use Empty struct from crate
+    let _conf: AppConfig<Empty> =
+        AppConfig::default_with("./examples/configuration/app.yaml", "APP").unwrap();
 
-    // Try to deserialize with private field
+    // Try to deserialize with private field, here you can add any number of sources
     let conf: AppConfig<Custom> = AppConfig::builder_with_private()
         .add_default()
+        .add_env_prefixed("ONE")
+        .add_env_prefixed("TWO")
+        .add_env_prefixed("THREE")
         .add_env_prefixed("APP")
         .build()
         .unwrap();
