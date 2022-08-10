@@ -19,12 +19,12 @@ pub struct Application<H, T> {
     grpc_router: Option<AxumRouter>,
 }
 
-impl<T: DeserializeOwned> Application<NoHealth, T> {
+impl<T: DeserializeOwned> Application<AlwaysReadyAndAlive, T> {
     pub fn new(config: AppConfig<T>) -> Self {
-        Application::<NoHealth, T> {
+        Application::<AlwaysReadyAndAlive, T> {
             config,
-            health_indicator: None,
             api_path: None,
+            health_indicator: Some(AlwaysReadyAndAlive {}),
             rest_router: None,
             grpc_router: None,
         }
@@ -32,19 +32,14 @@ impl<T: DeserializeOwned> Application<NoHealth, T> {
 }
 
 impl<H: Health, T: DeserializeOwned> Application<H, T> {
-    pub fn new_with_health(config: AppConfig<T>) -> Self {
-        Self {
-            config,
-            health_indicator: None,
-            api_path: None,
-            rest_router: None,
-            grpc_router: None,
+    pub fn health_indicator<Hh>(self, health: Hh) -> Application<Hh, T> {
+        Application::<Hh, T> {
+            config: self.config,
+            health_indicator: Some(health),
+            api_path: self.api_path,
+            rest_router: self.rest_router,
+            grpc_router: self.grpc_router,
         }
-    }
-
-    pub fn health_indicator(mut self, health: H) -> Self {
-        self.health_indicator = Some(health);
-        self
     }
 
     pub async fn serve(mut self) -> hyper::Result<()> {

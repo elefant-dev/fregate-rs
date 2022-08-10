@@ -74,8 +74,7 @@ async fn main() {
         .merge(Router::from_tonic_service(hello_service))
         .layer(grpc_trace_layer());
 
-    Application::new_with_health(AppConfig::default())
-        .health_indicator(AlwaysReadyAndAlive::default())
+    Application::new(AppConfig::default())
         .rest_router(rest)
         .grpc_router(grpc)
         .serve()
