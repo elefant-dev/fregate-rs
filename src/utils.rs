@@ -1,8 +1,9 @@
 mod configuration;
 mod health;
 mod logging;
-mod metrices;
+mod metrics;
 mod router;
 
+pub use self::metrics::*;
 pub(crate) use router::*;
-pub use {configuration::*, health::*, logging::*, metrices::*};
+pub use {configuration::*, health::*, logging::*};
