@@ -1,11 +1,11 @@
 mod application;
 mod extensions;
-mod middlewares;
+mod middleware;
 mod utils;
 
 pub use application::*;
 pub use extensions::*;
-pub use middlewares::*;
+pub use middleware::*;
 pub use utils::*;
 
 pub use axum;
