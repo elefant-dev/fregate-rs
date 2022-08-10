@@ -27,19 +27,30 @@ impl Health for CustomHealth {
 
 #[tokio::main]
 async fn main() {
+    std::env::set_var("APP_SERVER_PORT", "3333");
+
     init_tracing();
 
     let health = CustomHealth::default();
-    let config = AppConfig::default();
-
-    Application::new_with_health(config)
-        .health_indicator(health)
-        .serve()
-        .await
+    let conf1 = AppConfig::default();
+    let conf2 = AppConfig::builder()
+        .add_default()
+        .add_env_prefixed("APP")
+        .build()
         .unwrap();
+
+    // this will always ready and healthy
+    let always_ready = Application::new(conf1).serve();
+
+    // this will use custom health
+    let custom_health = Application::new(conf2).health_indicator(health).serve();
+
+    tokio::try_join!(always_ready, custom_health).unwrap();
 }
 
 /*
     curl http://0.0.0.0:8000/health/alive
     curl http://0.0.0.0:8000/health/ready
+    curl http://0.0.0.0:3333/health/alive
+    curl http://0.0.0.0:3333/health/ready
 */
