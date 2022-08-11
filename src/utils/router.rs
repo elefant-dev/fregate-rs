@@ -15,7 +15,11 @@ pub(crate) fn build_application_router(
     api_path: Option<String>,
     rest_router: Option<AxumRouter>,
 ) -> Router {
-    Router::new().nest_optional(api_path.unwrap_or_default().as_str(), rest_router)
+    if let Some(api_path) = api_path {
+        Router::new().nest_optional(api_path.as_str(), rest_router)
+    } else {
+        rest_router.unwrap_or_default()
+    }
 }
 
 pub(crate) fn build_management_router<H: Health>(health_indicator: Option<H>) -> Router {
