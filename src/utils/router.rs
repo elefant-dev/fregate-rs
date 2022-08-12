@@ -37,8 +37,9 @@ fn build_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router>
 
     Some(
         Router::new()
-            .route("/health/alive", get(alive_handler))
-            .route("/health/ready", get(ready_handler))
+            .route("/health", get(alive_handler))
+            .route("/live", get(alive_handler))
+            .route("/ready", get(ready_handler))
             .layer(Extension(health_indicator)),
     )
 }

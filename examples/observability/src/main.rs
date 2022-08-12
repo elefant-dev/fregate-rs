@@ -27,5 +27,5 @@ async fn handler() -> &'static str {
 }
 
 /*
-    curl http://0.0.0.0:8000/v1
+    curl http://0.0.0.0:8000
 */
