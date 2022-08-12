@@ -49,8 +49,10 @@ async fn main() {
 }
 
 /*
-    curl http://0.0.0.0:8000/health/alive
-    curl http://0.0.0.0:8000/health/ready
-    curl http://0.0.0.0:3333/health/alive
-    curl http://0.0.0.0:3333/health/ready
+    curl http://0.0.0.0:8000/health
+    curl http://0.0.0.0:8000/live
+    curl http://0.0.0.0:8000/ready
+    curl http://0.0.0.0:3333/health
+    curl http://0.0.0.0:3333/live
+    curl http://0.0.0.0:3333/ready
 */
