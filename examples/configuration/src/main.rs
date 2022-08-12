@@ -17,8 +17,8 @@ struct Custom {
 async fn main() {
     init_tracing();
 
-    std::env::set_var("APP_SERVER_PORT", "3333");
-    std::env::set_var("APP_PRIVATE_NUMBER", "1010");
+    std::env::set_var("APP_SERVICE_PORT", "3333");
+    std::env::set_var("APP_SERVICE_PRIVATE_NUMBER", "1010");
 
     // Only if default settings needed
     let _conf = AppConfig::default();
@@ -26,7 +26,7 @@ async fn main() {
     // Read default, overwrite with envs, overwrite with file
     let _conf = AppConfig::builder()
         .add_default()
-        .add_env_prefixed("APP")
+        .add_env_prefixed("APP_SERVICE")
         .add_file("./examples/configuration/app.yaml")
         .build()
         .unwrap();
@@ -34,10 +34,10 @@ async fn main() {
     // Or most popular use cases:
     // set type for private field
     let _conf: AppConfig<Custom> =
-        AppConfig::default_with("./examples/configuration/app.yaml", "APP").unwrap();
+        AppConfig::default_with("./examples/configuration/app.yaml", "APP_SERVICE").unwrap();
     // if do not need private field use Empty struct from crate
     let _conf: AppConfig<Empty> =
-        AppConfig::default_with("./examples/configuration/app.yaml", "APP").unwrap();
+        AppConfig::default_with("./examples/configuration/app.yaml", "APP_SERVICE").unwrap();
 
     // Try to deserialize with private field, here you can add any number of sources
     let conf: AppConfig<Custom> = AppConfig::builder_with_private()
@@ -45,7 +45,7 @@ async fn main() {
         .add_env_prefixed("ONE")
         .add_env_prefixed("TWO")
         .add_env_prefixed("THREE")
-        .add_env_prefixed("APP")
+        .add_env_prefixed("APP_SERVICE")
         .build()
         .unwrap();
 

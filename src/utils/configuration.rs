@@ -16,12 +16,7 @@ pub struct Empty {}
 
 #[derive(Debug, Deserialize)]
 pub struct AppConfig<T> {
-    pub server: ServerConfig,
     pub private: T,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ServerConfig {
     pub host: IpAddr,
     pub port: u16,
 }

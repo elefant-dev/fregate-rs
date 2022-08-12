@@ -27,7 +27,7 @@ impl Health for CustomHealth {
 
 #[tokio::main]
 async fn main() {
-    std::env::set_var("APP_SERVER_PORT", "3333");
+    std::env::set_var("APP_PORT", "3333");
 
     init_tracing();
 

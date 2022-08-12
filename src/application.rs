@@ -46,7 +46,7 @@ impl<H: Health, T: DeserializeOwned> Application<H, T> {
         let rest = build_application_router(self.api_path, self.rest_router)
             .merge(build_management_router(self.health_indicator));
 
-        let application_socket = SocketAddr::new(self.config.server.host, self.config.server.port);
+        let application_socket = SocketAddr::new(self.config.host, self.config.port);
 
         // TODO: MAKE GRPC A FEATURE ?
         if let Some(grpc) = self.grpc_router.take() {
