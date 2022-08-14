@@ -110,16 +110,29 @@ async fn run_rest_and_grpc_service(
     rest: AxumRouter,
     grpc: AxumRouter,
 ) -> hyper::Result<()> {
-    let rest_grpc = Steer::new(vec![rest, grpc], |req: &Request<Body>, _svcs: &[_]| {
-        if req.headers().get(CONTENT_TYPE).map(|v| v.as_bytes()) != Some(b"application/grpc") {
-            0
-        } else {
-            1
-        }
-    });
+    let rest_grpc = Steer::new(
+        [rest, grpc],
+        |req: &Request<Body>, _svcs: &[_]| {
+            if is_grpc_request(req) {
+                1
+            } else {
+                0
+            }
+        },
+    );
 
     let server = Server::bind(socket).serve(Shared::new(rest_grpc));
     info!(target: "server", server_type = "rest + grpc", "Started: http://{socket}");
 
     server.with_graceful_shutdown(shutdown_signal()).await
+}
+
+#[inline(always)]
+fn is_grpc_request(req: &Request<Body>) -> bool {
+    if let Some(content_type) = req.headers().get(CONTENT_TYPE) {
+        // some gRPC clients uses `application/grpc+<additional type>` header
+        content_type.as_bytes().starts_with(b"application/grpc")
+    } else {
+        false
+    }
 }
