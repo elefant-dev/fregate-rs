@@ -73,7 +73,7 @@ async fn main() {
         .merge(Router::from_tonic_service(hello_service))
         .layer(grpc_trace_layer());
 
-    Application::new(AppConfig::default())
+    Application::new(&AppConfig::default())
         .rest_router(rest)
         .grpc_router(grpc)
         .serve()

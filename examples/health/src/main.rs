@@ -40,10 +40,10 @@ async fn main() {
         .unwrap();
 
     // this will always ready and healthy
-    let always_ready = Application::new(conf1).serve();
+    let always_ready = Application::new(&conf1).serve();
 
     // this will use custom health
-    let custom_health = Application::new(conf2).health_indicator(health).serve();
+    let custom_health = Application::new(&conf2).health_indicator(health).serve();
 
     tokio::try_join!(always_ready, custom_health).unwrap();
 }

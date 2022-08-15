@@ -11,17 +11,17 @@ use tracing::info;
 use crate::utils::*;
 
 #[derive(Debug)]
-pub struct Application<H, T> {
-    config: AppConfig<T>,
+pub struct Application<'a, H, T> {
+    config: &'a AppConfig<T>,
     health_indicator: Option<H>,
     api_path: Option<String>, // TODO: DO WE WANT TO READ IT FROM CONFIG ?
     rest_router: Option<AxumRouter>,
     grpc_router: Option<AxumRouter>,
 }
 
-impl<T: DeserializeOwned> Application<AlwaysReadyAndAlive, T> {
-    pub fn new(config: AppConfig<T>) -> Self {
-        Application::<AlwaysReadyAndAlive, T> {
+impl<'a, T: DeserializeOwned> Application<'a, AlwaysReadyAndAlive, T> {
+    pub fn new(config: &'a AppConfig<T>) -> Self {
+        Application::<'a, AlwaysReadyAndAlive, T> {
             config,
             api_path: None,
             health_indicator: Some(AlwaysReadyAndAlive {}),
@@ -31,9 +31,9 @@ impl<T: DeserializeOwned> Application<AlwaysReadyAndAlive, T> {
     }
 }
 
-impl<H: Health, T: DeserializeOwned> Application<H, T> {
-    pub fn health_indicator<Hh>(self, health: Hh) -> Application<Hh, T> {
-        Application::<Hh, T> {
+impl<'a, H: Health, T: DeserializeOwned> Application<'a, H, T> {
+    pub fn health_indicator<Hh>(self, health: Hh) -> Application<'a, Hh, T> {
+        Application::<'a, Hh, T> {
             config: self.config,
             health_indicator: Some(health),
             api_path: self.api_path,
