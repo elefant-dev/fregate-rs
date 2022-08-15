@@ -18,7 +18,7 @@ async fn main() {
     init_tracing();
 
     std::env::set_var("APP_SERVICE_PORT", "3333");
-    std::env::set_var("APP_SERVICE_PRIVATE_NUMBER", "1010");
+    std::env::set_var("APP_SERVICE_NUMBER", "1010");
 
     // Only if default settings needed
     let _conf = AppConfig::default();
