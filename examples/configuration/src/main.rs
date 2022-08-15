@@ -49,7 +49,7 @@ async fn main() {
         .build()
         .unwrap();
 
-    Application::new(conf)
+    Application::new(&conf)
         .rest_router(Router::new().route("/", get(handler)))
         .serve()
         .await

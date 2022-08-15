@@ -14,7 +14,7 @@ async fn main() {
         .route("/", get(handler))
         .layer(http_trace_layer());
 
-    Application::new(config)
+    Application::new(&config)
         .health_indicator(health)
         .rest_router(rest)
         .serve()

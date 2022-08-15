@@ -31,7 +31,7 @@ async fn main() {
 
     let config = AppConfig::default();
 
-    Application::new(config)
+    Application::new(&config)
         .rest_router(router)
         .serve()
         .await
