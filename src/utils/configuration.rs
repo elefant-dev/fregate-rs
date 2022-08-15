@@ -16,6 +16,7 @@ pub struct Empty {}
 
 #[derive(Debug, Deserialize)]
 pub struct AppConfig<T> {
+    #[serde(flatten)]
     pub private: T,
     pub host: IpAddr,
     pub port: u16,
@@ -83,9 +84,11 @@ impl<T: DeserializeOwned + Debug> AppConfigBuilder<T> {
     }
 
     pub fn add_env_prefixed(mut self, prefix: &str) -> Self {
-        self.builder = self
-            .builder
-            .add_source(Environment::with_prefix(prefix).separator(DEFAULT_SEPARATOR));
+        self.builder = self.builder.add_source(
+            Environment::with_prefix(prefix)
+                .try_parsing(true)
+                .separator(DEFAULT_SEPARATOR),
+        );
         self
     }
 }
