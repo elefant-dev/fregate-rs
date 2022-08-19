@@ -1,4 +1,3 @@
-use axum::Router as AxumRouter;
 use axum::{routing::get, Extension, Router};
 use bytes::Bytes;
 
@@ -10,17 +9,6 @@ const FAVICON_PATH: &str = "/favicon.ico";
 
 static FAVICON: Bytes = Bytes::from_static(include_bytes!("../../src/resources/favicon.png"));
 const OPENAPI: &str = include_str!("../../src/resources/openapi.yaml");
-
-pub(crate) fn build_application_router(
-    api_path: Option<String>,
-    rest_router: Option<AxumRouter>,
-) -> Router {
-    if let Some(api_path) = api_path {
-        Router::new().nest_optional(api_path.as_str(), rest_router)
-    } else {
-        rest_router.unwrap_or_default()
-    }
-}
 
 pub(crate) fn build_management_router<H: Health>(health_indicator: Option<H>) -> Router {
     Router::new()
