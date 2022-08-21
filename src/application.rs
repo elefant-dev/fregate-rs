@@ -1,3 +1,4 @@
+use crate::Optional;
 use axum::Router as AxumRouter;
 use hyper::header::CONTENT_TYPE;
 use hyper::{Body, Request, Server};
@@ -14,7 +15,6 @@ use crate::utils::*;
 pub struct Application<'a, H, T> {
     config: &'a AppConfig<T>,
     health_indicator: Option<H>,
-    api_path: Option<String>, // TODO: DO WE WANT TO READ IT FROM CONFIG ?
     rest_router: Option<AxumRouter>,
     grpc_router: Option<AxumRouter>,
 }
@@ -23,7 +23,6 @@ impl<'a, T: DeserializeOwned> Application<'a, AlwaysReadyAndAlive, T> {
     pub fn new(config: &'a AppConfig<T>) -> Self {
         Application::<'a, AlwaysReadyAndAlive, T> {
             config,
-            api_path: None,
             health_indicator: Some(AlwaysReadyAndAlive {}),
             rest_router: None,
             grpc_router: None,
@@ -36,15 +35,13 @@ impl<'a, H: Health, T: DeserializeOwned> Application<'a, H, T> {
         Application::<'a, Hh, T> {
             config: self.config,
             health_indicator: Some(health),
-            api_path: self.api_path,
             rest_router: self.rest_router,
             grpc_router: self.grpc_router,
         }
     }
 
     pub async fn serve(mut self) -> hyper::Result<()> {
-        let rest = build_application_router(self.api_path, self.rest_router)
-            .merge(build_management_router(self.health_indicator));
+        let rest = build_management_router(self.health_indicator).merge_optional(self.rest_router);
 
         let application_socket = SocketAddr::new(self.config.host, self.config.port);
 
@@ -54,11 +51,6 @@ impl<'a, H: Health, T: DeserializeOwned> Application<'a, H, T> {
         } else {
             run_rest_service(&application_socket, rest).await
         }
-    }
-
-    pub fn api_path(mut self, api_path: &str) -> Self {
-        self.api_path = Some(api_path.to_owned());
-        self
     }
 
     pub fn rest_router(mut self, router: AxumRouter) -> Self {
