@@ -1,7 +1,6 @@
 use crate::{DeserializeAndLog, Result};
 use config::builder::DefaultState;
-use config::FileFormat::Toml;
-use config::{ConfigBuilder, Environment, File};
+use config::{ConfigBuilder, Environment, File, FileFormat};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use std::fmt::Debug;
@@ -74,12 +73,17 @@ impl<T: DeserializeOwned + Debug> AppConfigBuilder<T> {
     pub fn add_default(mut self) -> Self {
         self.builder = self
             .builder
-            .add_source(File::from_str(DEFAULT_CONFIG, Toml));
+            .add_source(File::from_str(DEFAULT_CONFIG, FileFormat::Toml));
         self
     }
 
     pub fn add_file(mut self, path: &str) -> Self {
         self.builder = self.builder.add_source(File::with_name(path));
+        self
+    }
+
+    pub fn add_str(mut self, str: &str, format: FileFormat) -> Self {
+        self.builder = self.builder.add_source(File::from_str(str, format));
         self
     }
 
