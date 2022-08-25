@@ -28,6 +28,7 @@ async fn main() {
         .add_default()
         .add_env_prefixed("APP_SERVICE")
         .add_file("./examples/configuration/app.yaml")
+        //.add_str(include_str!("../app.yaml), FileFormat::Yaml)
         .build()
         .unwrap();
 
