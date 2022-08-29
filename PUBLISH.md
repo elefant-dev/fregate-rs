@@ -1,3 +1,5 @@
+Add changes to [CHANGELOG.md](https://github.com/elefant-dev/fregate-rs/blob/main/CHANGELOG.md)
+
 Make sure you have updated version in Cargo.toml with the versioning rules your team agreed on:
 ```toml
 [package]
