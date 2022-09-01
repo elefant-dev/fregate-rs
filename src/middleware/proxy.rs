@@ -1,19 +1,36 @@
-use axum::body::BoxBody;
-use axum::response::IntoResponse;
+use axum::{body::BoxBody, http::StatusCode, response::IntoResponse, BoxError};
+use bytes::Bytes;
 use hyper::{
     client::HttpConnector,
     http::{Request, Response},
     Body, Uri,
 };
 use pin_project_lite::pin_project;
-use std::marker::PhantomData;
 use std::{
+    error::Error,
     future::Future,
+    marker::PhantomData,
     pin::Pin,
     task::{Context, Poll},
 };
 use tower::{Layer, Service};
 use tracing::info;
+
+fn handle_result<B, E>(result: Result<Response<B>, E>) -> impl IntoResponse
+where
+    E: Error,
+    B: http_body::Body<Data = Bytes> + Send + 'static,
+    B::Error: Into<BoxError>,
+{
+    match result {
+        Ok(resp) => resp.into_response(),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed with: {}", err),
+        )
+            .into_response(),
+    }
+}
 
 type Client = hyper::client::Client<HttpConnector, Body>;
 
@@ -96,10 +113,7 @@ where
     type Future = ResponseFuture<S::Future>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        match self.inner.poll_ready(cx) {
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(r) => Poll::Ready(r.map_err(Into::into)),
-        }
+        self.inner.poll_ready(cx)
     }
 
     fn call(&mut self, mut req: Request<Body>) -> Self::Future {
@@ -116,7 +130,7 @@ where
             info!("Proxy Call");
             ResponseFuture::hyper(self.client.call(req))
         } else {
-            info!("Local Resolver Call");
+            info!("Local Handler Call");
             ResponseFuture::future(self.inner.call(req))
         }
     }
@@ -167,10 +181,7 @@ where
         match self.project().kind.project() {
             FutureProject::Axum { future } => future.poll(cx),
             FutureProject::Hyper { future } => match future.poll(cx) {
-                Poll::Ready(v) => {
-                    // TODO! : Add Error Handling
-                    Poll::Ready(Ok(v.map(axum::body::boxed).unwrap().into_response()))
-                }
+                Poll::Ready(v) => Poll::Ready(Ok(handle_result(v).into_response())),
                 Poll::Pending => Poll::Pending,
             },
         }

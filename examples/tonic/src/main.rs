@@ -1,7 +1,9 @@
-use fregate::axum::middleware::{from_fn, Next};
-use fregate::axum::response::IntoResponse;
-use fregate::axum::routing::get;
-use fregate::axum::Router;
+use fregate::axum::{
+    middleware::{from_fn, Next},
+    response::IntoResponse,
+    routing::get,
+    Router,
+};
 use fregate::hyper::Request;
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
 use fregate::{
