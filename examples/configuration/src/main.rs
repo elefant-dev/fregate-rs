@@ -1,5 +1,6 @@
 use fregate::axum::routing::get;
 use fregate::axum::Router;
+use fregate::config::FileFormat;
 use fregate::{init_tracing, AppConfig, Application, Empty};
 use serde::Deserialize;
 
@@ -31,7 +32,7 @@ async fn main() {
         .add_default()
         .add_env_prefixed("TEST")
         .add_file("./examples/configuration/app.yaml")
-        //.add_str(include_str!("../app.yaml), FileFormat::Yaml)
+        .add_str(include_str!("../app.yaml"), FileFormat::Yaml)
         .build()
         .unwrap();
 

@@ -33,18 +33,13 @@ pub struct LoggerConfig {
     pub traces_endpoint: Option<String>,
 }
 
-impl<'de, T> Deserialize<'de> for AppConfig<T>
-where
-    T: Debug + DeserializeOwned,
-{
+impl<'de> Deserialize<'de> for LoggerConfig {
     fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
         let mut config = Value::deserialize(deserializer)?;
 
-        let host = config.pointer_and_deserialize::<D, _>(HOST_PTR)?;
-        let port = config.pointer_and_deserialize::<D, _>(PORT_PTR)?;
         let log_level = config.pointer_and_deserialize::<D, _>(LOG_LEVEL_PTR)?;
         let service_name = config.pointer_and_deserialize::<D, _>(SERVICE_NAME_PTR)?;
         let traces_endpoint_ptr = config.pointer_mut(TRACES_ENDPOINT_PTR);
@@ -55,16 +50,33 @@ where
             None
         };
 
+        Ok(LoggerConfig {
+            log_level,
+            service_name,
+            traces_endpoint,
+        })
+    }
+}
+
+impl<'de, T> Deserialize<'de> for AppConfig<T>
+where
+    T: Debug + DeserializeOwned,
+{
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let config = Value::deserialize(deserializer)?;
+
+        let host = config.pointer_and_deserialize::<D, _>(HOST_PTR)?;
+        let port = config.pointer_and_deserialize::<D, _>(PORT_PTR)?;
+        let logger = LoggerConfig::deserialize(&config).map_err(Error::custom)?;
         let private = T::deserialize(&config).map_err(Error::custom)?;
 
         Ok(AppConfig::<T> {
             host,
             port,
-            logger: LoggerConfig {
-                log_level,
-                service_name,
-                traces_endpoint,
-            },
+            logger,
             private,
         })
     }
