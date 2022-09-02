@@ -40,8 +40,8 @@ impl<'de> Deserialize<'de> for LoggerConfig {
     {
         let mut config = Value::deserialize(deserializer)?;
 
-        let log_level = config.pointer_and_deserialize::<D, _>(LOG_LEVEL_PTR)?;
-        let service_name = config.pointer_and_deserialize::<D, _>(SERVICE_NAME_PTR)?;
+        let log_level = config.pointer_and_deserialize(LOG_LEVEL_PTR)?;
+        let service_name = config.pointer_and_deserialize(SERVICE_NAME_PTR)?;
         let traces_endpoint_ptr = config.pointer_mut(TRACES_ENDPOINT_PTR);
 
         let traces_endpoint = if let Some(ptr) = traces_endpoint_ptr {
@@ -68,10 +68,10 @@ where
     {
         let config = Value::deserialize(deserializer)?;
 
-        let host = config.pointer_and_deserialize::<D, _>(HOST_PTR)?;
-        let port = config.pointer_and_deserialize::<D, _>(PORT_PTR)?;
+        let host = config.pointer_and_deserialize(HOST_PTR)?;
+        let port = config.pointer_and_deserialize(PORT_PTR)?;
         let logger = LoggerConfig::deserialize(&config).map_err(Error::custom)?;
-        let private = T::deserialize(&config).map_err(Error::custom)?;
+        let private = T::deserialize(config).map_err(Error::custom)?;
 
         Ok(AppConfig::<T> {
             host,
