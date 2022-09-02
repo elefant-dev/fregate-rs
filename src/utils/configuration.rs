@@ -1,5 +1,3 @@
-mod deserialize_ext;
-
 use crate::{DeserializeAndLog, Result};
 use config::builder::DefaultState;
 use config::{ConfigBuilder, Environment, File, FileFormat};
@@ -8,8 +6,6 @@ use serde::Deserialize;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::net::IpAddr;
-
-pub use deserialize_ext::*;
 
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
 const DEFAULT_SEPARATOR: &str = "_";
