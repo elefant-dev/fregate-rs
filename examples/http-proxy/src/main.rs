@@ -50,6 +50,7 @@ async fn main() {
 
 async fn server() {
     let config = AppConfig::builder()
+        .add_default()
         .add_env_prefixed("APP_PROXY")
         .build()
         .unwrap();
