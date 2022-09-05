@@ -40,6 +40,15 @@ pub fn init_tracing() {
     }));
 }
 
+pub fn init_logging(directive: tracing_subscriber::filter::Directive) {
+    tracing_subscriber::fmt()
+        .json()
+        .with_writer(std::io::stdout)
+        .with_env_filter(set_level_for_log_filter(directive))    
+        .with_span_events(fmt::format::FmtSpan::NONE)
+        .init();
+}
+
 #[inline(always)]
 fn get_rust_log() -> &'static str {
     static RUST_LOG: Lazy<String> =
@@ -51,3 +60,13 @@ fn get_rust_log() -> &'static str {
 fn get_log_filter() -> EnvFilter {
     EnvFilter::try_new(get_rust_log()).expect("Wrong RUST_LOG filter")
 }
+
+
+#[inline(always)]
+fn set_level_for_log_filter(directive: tracing_subscriber::filter::Directive) -> EnvFilter {
+    EnvFilter::builder()
+            .with_default_directive(directive)
+            .from_env_lossy()
+}
+
+
