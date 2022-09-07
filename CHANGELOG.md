@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.2.5] - 2022-09-02
+### Added
+- Add `Proxy` middleware using http client ([#45](https://github.com/elefant-dev/fregate-rs/pull/45))
+- Add public `DeserializeExt` trait ([#46](https://github.com/elefant-dev/fregate-rs/pull/46))
+- Add logger settings to `AppConfig` ([#47](https://github.com/elefant-dev/fregate-rs/pull/47))
+
 ## [0.2.4] - 2022-08-25
 ### Added
 - Add proxy `Router` using http client ([#37](https://github.com/elefant-dev/fregate-rs/pull/37))
