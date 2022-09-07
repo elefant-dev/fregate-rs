@@ -42,7 +42,7 @@ async fn main() {
         .layer(http_trace_layer());
 
     Application::new(&AppConfig::default())
-        .rest_router(app)
+        .router(app)
         .serve()
         .await
         .unwrap();
@@ -61,11 +61,7 @@ async fn server() {
             post(|| async { (StatusCode::BAD_REQUEST, "Probably You Want GET Method") }),
         );
 
-    Application::new(&config)
-        .rest_router(app)
-        .serve()
-        .await
-        .unwrap();
+    Application::new(&config).router(app).serve().await.unwrap();
 }
 
 /*

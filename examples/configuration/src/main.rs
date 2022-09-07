@@ -51,7 +51,7 @@ async fn main() {
         .unwrap();
 
     Application::new(&conf)
-        .rest_router(Router::new().route("/", get(handler)))
+        .router(Router::new().route("/", get(handler)))
         .serve()
         .await
         .unwrap();
