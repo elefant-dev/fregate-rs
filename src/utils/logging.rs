@@ -1,8 +1,10 @@
 use once_cell::sync::Lazy;
 use tracing_subscriber::{
+    prelude::*,
     filter::EnvFilter,
+    Registry,
     fmt,
-    fmt::{format::FmtSpan, time::UtcTime},
+    fmt::{format::{FmtSpan, JsonFields, Format, Json}, time::UtcTime, Layer},
 };
 
 pub fn init_tracing() {
@@ -40,13 +42,25 @@ pub fn init_tracing() {
     }));
 }
 
-pub fn init_logging(directive: tracing_subscriber::filter::Directive) {
-    tracing_subscriber::fmt()
+pub fn init_logging(log_level: tracing::Level) {
+    let log_layer = setup_logging(log_level);
+
+    let subscriber = tracing_subscriber::registry()
+        .with(log_layer);
+
+    tracing::subscriber::set_global_default(subscriber).expect("Unable to set a global collector");
+}
+
+fn setup_logging(log_level: tracing::Level) -> Layer<Registry, JsonFields, Format<Json>, std::fs::File> 
+{
+    let log_file = std::fs::File::create(format!("logs/test.log")).unwrap();
+    fmt::Layer::new()
         .json()
-        .with_writer(std::io::stdout)
-        .with_env_filter(set_level_for_log_filter(directive))    
+        .with_writer(std::io::stdout.with_max_level(log_level))
+        .with_writer(log_file)
+        .with_target(true)
+        .with_current_span(false)    
         .with_span_events(fmt::format::FmtSpan::NONE)
-        .init();
 }
 
 #[inline(always)]
@@ -60,13 +74,3 @@ fn get_rust_log() -> &'static str {
 fn get_log_filter() -> EnvFilter {
     EnvFilter::try_new(get_rust_log()).expect("Wrong RUST_LOG filter")
 }
-
-
-#[inline(always)]
-fn set_level_for_log_filter(directive: tracing_subscriber::filter::Directive) -> EnvFilter {
-    EnvFilter::builder()
-            .with_default_directive(directive)
-            .from_env_lossy()
-}
-
-
