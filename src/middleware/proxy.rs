@@ -35,14 +35,14 @@ where
 type Client = hyper::client::Client<HttpConnector, Body>;
 
 #[derive(Clone)]
-pub struct ProxyLayer<F, B> {
+pub struct ProxyLayer<B, F> {
     client: Client,
     destination: String,
     should_be_proxied_fn: F,
     phantom: PhantomData<B>,
 }
 
-impl<F, B> ProxyLayer<F, B>
+impl<B, F> ProxyLayer<B, F>
 where
     F: Fn(&Request<B>) -> bool,
 {
@@ -56,11 +56,11 @@ where
     }
 }
 
-impl<S, F, B> Layer<S> for ProxyLayer<F, B>
+impl<B, F, S> Layer<S> for ProxyLayer<B, F>
 where
     F: Clone,
 {
-    type Service = Proxy<S, F>;
+    type Service = Proxy<F, S>;
 
     fn layer(&self, inner: S) -> Self::Service {
         Proxy::new(
@@ -73,14 +73,14 @@ where
 }
 
 #[derive(Clone)]
-pub struct Proxy<S, F> {
+pub struct Proxy<F, S> {
     client: Client,
     destination: String,
     inner: S,
     should_be_proxied_fn: F,
 }
 
-impl<S, F> Proxy<S, F> {
+impl<F, S> Proxy<F, S> {
     pub fn new(service: S, should_be_proxied_fn: F, destination: String, client: Client) -> Self {
         Self {
             inner: service,
@@ -103,10 +103,10 @@ impl<S, F> Proxy<S, F> {
     }
 }
 
-impl<F, S> Service<Request<Body>> for Proxy<S, F>
+impl<F, S> Service<Request<Body>> for Proxy<F, S>
 where
-    S: Service<Request<Body>, Response = Response<BoxBody>>,
     F: Fn(&Request<Body>) -> bool,
+    S: Service<Request<Body>, Response = Response<BoxBody>>,
 {
     type Response = S::Response;
     type Error = S::Error;
@@ -171,7 +171,7 @@ pin_project! {
     }
 }
 
-impl<F, E> Future for ResponseFuture<F>
+impl<E, F> Future for ResponseFuture<F>
 where
     F: Future<Output = Result<Response<BoxBody>, E>>,
 {
