@@ -9,7 +9,6 @@ use pin_project_lite::pin_project;
 use std::{
     error::Error,
     future::Future,
-    marker::PhantomData,
     pin::Pin,
     task::{Context, Poll},
 };
@@ -35,28 +34,26 @@ where
 type Client = hyper::client::Client<HttpConnector, Body>;
 
 #[derive(Clone)]
-pub struct ProxyLayer<B, F> {
+pub struct ProxyLayer<F> {
     client: Client,
     destination: String,
     should_be_proxied_fn: F,
-    phantom: PhantomData<B>,
 }
 
-impl<B, F> ProxyLayer<B, F>
-where
-    F: Fn(&Request<B>) -> bool,
-{
-    pub fn new(should_be_proxied_fn: F, client: Client, destination: &str) -> Self {
+impl<F> ProxyLayer<F> {
+    pub fn new<B>(should_be_proxied_fn: F, client: Client, destination: &str) -> Self
+    where
+        F: Fn(&Request<B>) -> bool,
+    {
         Self {
             should_be_proxied_fn,
-            phantom: PhantomData::default(),
             client,
             destination: destination.to_owned(),
         }
     }
 }
 
-impl<B, F, S> Layer<S> for ProxyLayer<B, F>
+impl<F, S> Layer<S> for ProxyLayer<F>
 where
     F: Clone,
 {
