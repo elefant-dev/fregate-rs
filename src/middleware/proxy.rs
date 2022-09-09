@@ -13,9 +13,9 @@ use std::{
     task::{Context, Poll},
 };
 use tower::{Layer, Service};
-use tracing::info;
+use tracing::error;
 
-fn handle_result<B, E>(result: Result<Response<B>, E>) -> impl IntoResponse
+fn handle_result<B, E>(result: Result<Response<B>, E>) -> Response<BoxBody>
 where
     E: Error,
     B: http_body::Body<Data = Bytes> + Send + 'static,
@@ -122,12 +122,18 @@ where
                 .unwrap_or_else(|| req.uri().path());
 
             let uri = format!("{}{}", self.destination, path_query);
-            *req.uri_mut() = Uri::try_from(uri).unwrap();
 
-            info!("Proxy Call");
-            ResponseFuture::hyper(self.client.call(req))
+            match Uri::try_from(uri) {
+                Ok(new_uri) => {
+                    *req.uri_mut() = new_uri;
+                    ResponseFuture::hyper(self.client.call(req))
+                }
+                Err(err) => {
+                    error!("Failed to proxy request to {} with error: {err} going to use local Handler for {} endpoint", self.destination, req.uri());
+                    ResponseFuture::future(self.inner.call(req))
+                }
+            }
         } else {
-            info!("Local Handler Call");
             ResponseFuture::future(self.inner.call(req))
         }
     }
@@ -178,7 +184,7 @@ where
         match self.project().kind.project() {
             FutureProject::Axum { future } => future.poll(cx),
             FutureProject::Hyper { future } => match future.poll(cx) {
-                Poll::Ready(v) => Poll::Ready(Ok(handle_result(v).into_response())),
+                Poll::Ready(v) => Poll::Ready(Ok(handle_result(v))),
                 Poll::Pending => Poll::Pending,
             },
         }
