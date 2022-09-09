@@ -9,14 +9,13 @@ use pin_project_lite::pin_project;
 use std::{
     error::Error,
     future::Future,
-    marker::PhantomData,
     pin::Pin,
     task::{Context, Poll},
 };
 use tower::{Layer, Service};
-use tracing::info;
+use tracing::error;
 
-fn handle_result<B, E>(result: Result<Response<B>, E>) -> impl IntoResponse
+fn handle_result<B, E>(result: Result<Response<B>, E>) -> Response<BoxBody>
 where
     E: Error,
     B: http_body::Body<Data = Bytes> + Send + 'static,
@@ -35,37 +34,35 @@ where
 type Client = hyper::client::Client<HttpConnector, Body>;
 
 #[derive(Clone)]
-pub struct ProxyLayer<F, B> {
+pub struct ProxyLayer<F> {
     client: Client,
     destination: String,
-    f: F,
-    phantom: PhantomData<B>,
+    should_be_proxied_fn: F,
 }
 
-impl<F, B> ProxyLayer<F, B>
-where
-    F: Fn(&Request<B>) -> bool,
-{
-    pub fn new(f: F, client: Client, destination: &str) -> Self {
+impl<F> ProxyLayer<F> {
+    pub fn new<B>(should_be_proxied_fn: F, client: Client, destination: &str) -> Self
+    where
+        F: Fn(&Request<B>) -> bool,
+    {
         Self {
-            f,
-            phantom: PhantomData::default(),
+            should_be_proxied_fn,
             client,
             destination: destination.to_owned(),
         }
     }
 }
 
-impl<S, F, B> Layer<S> for ProxyLayer<F, B>
+impl<F, S> Layer<S> for ProxyLayer<F>
 where
     F: Clone,
 {
-    type Service = Proxy<S, F>;
+    type Service = Proxy<F, S>;
 
     fn layer(&self, inner: S) -> Self::Service {
         Proxy::new(
             inner,
-            self.f.clone(),
+            self.should_be_proxied_fn.clone(),
             self.destination.clone(),
             self.client.clone(),
         )
@@ -73,18 +70,18 @@ where
 }
 
 #[derive(Clone)]
-pub struct Proxy<S, F> {
+pub struct Proxy<F, S> {
     client: Client,
     destination: String,
     inner: S,
-    f: F,
+    should_be_proxied_fn: F,
 }
 
-impl<S, F> Proxy<S, F> {
-    pub fn new(service: S, f: F, destination: String, client: Client) -> Self {
+impl<F, S> Proxy<F, S> {
+    pub fn new(service: S, should_be_proxied_fn: F, destination: String, client: Client) -> Self {
         Self {
             inner: service,
-            f,
+            should_be_proxied_fn,
             destination,
             client,
         }
@@ -103,10 +100,10 @@ impl<S, F> Proxy<S, F> {
     }
 }
 
-impl<F, S> Service<Request<Body>> for Proxy<S, F>
+impl<F, S> Service<Request<Body>> for Proxy<F, S>
 where
-    S: Service<Request<Body>, Response = Response<BoxBody>>,
     F: Fn(&Request<Body>) -> bool,
+    S: Service<Request<Body>, Response = Response<BoxBody>>,
 {
     type Response = S::Response;
     type Error = S::Error;
@@ -117,7 +114,7 @@ where
     }
 
     fn call(&mut self, mut req: Request<Body>) -> Self::Future {
-        if (self.f)(&req) {
+        if (self.should_be_proxied_fn)(&req) {
             let path_query = req
                 .uri()
                 .path_and_query()
@@ -125,12 +122,18 @@ where
                 .unwrap_or_else(|| req.uri().path());
 
             let uri = format!("{}{}", self.destination, path_query);
-            *req.uri_mut() = Uri::try_from(uri).unwrap();
 
-            info!("Proxy Call");
-            ResponseFuture::hyper(self.client.call(req))
+            match Uri::try_from(uri) {
+                Ok(new_uri) => {
+                    *req.uri_mut() = new_uri;
+                    ResponseFuture::hyper(self.client.call(req))
+                }
+                Err(err) => {
+                    error!("Failed to proxy request to {} with error: {err} going to use local Handler for {} endpoint", self.destination, req.uri());
+                    ResponseFuture::future(self.inner.call(req))
+                }
+            }
         } else {
-            info!("Local Handler Call");
             ResponseFuture::future(self.inner.call(req))
         }
     }
@@ -171,7 +174,7 @@ pin_project! {
     }
 }
 
-impl<F, E> Future for ResponseFuture<F>
+impl<E, F> Future for ResponseFuture<F>
 where
     F: Future<Output = Result<Response<BoxBody>, E>>,
 {
@@ -181,7 +184,7 @@ where
         match self.project().kind.project() {
             FutureProject::Axum { future } => future.poll(cx),
             FutureProject::Hyper { future } => match future.poll(cx) {
-                Poll::Ready(v) => Poll::Ready(Ok(handle_result(v).into_response())),
+                Poll::Ready(v) => Poll::Ready(Ok(handle_result(v))),
                 Poll::Pending => Poll::Pending,
             },
         }
