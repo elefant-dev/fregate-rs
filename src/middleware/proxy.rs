@@ -38,7 +38,7 @@ type Client = hyper::client::Client<HttpConnector, Body>;
 pub struct ProxyLayer<F, B> {
     client: Client,
     destination: String,
-    f: F,
+    should_be_proxied_fn: F,
     phantom: PhantomData<B>,
 }
 
@@ -46,9 +46,9 @@ impl<F, B> ProxyLayer<F, B>
 where
     F: Fn(&Request<B>) -> bool,
 {
-    pub fn new(f: F, client: Client, destination: &str) -> Self {
+    pub fn new(should_be_proxied_fn: F, client: Client, destination: &str) -> Self {
         Self {
-            f,
+            should_be_proxied_fn,
             phantom: PhantomData::default(),
             client,
             destination: destination.to_owned(),
@@ -65,7 +65,7 @@ where
     fn layer(&self, inner: S) -> Self::Service {
         Proxy::new(
             inner,
-            self.f.clone(),
+            self.should_be_proxied_fn.clone(),
             self.destination.clone(),
             self.client.clone(),
         )
@@ -77,14 +77,14 @@ pub struct Proxy<S, F> {
     client: Client,
     destination: String,
     inner: S,
-    f: F,
+    should_be_proxied_fn: F,
 }
 
 impl<S, F> Proxy<S, F> {
-    pub fn new(service: S, f: F, destination: String, client: Client) -> Self {
+    pub fn new(service: S, should_be_proxied_fn: F, destination: String, client: Client) -> Self {
         Self {
             inner: service,
-            f,
+            should_be_proxied_fn,
             destination,
             client,
         }
@@ -117,7 +117,7 @@ where
     }
 
     fn call(&mut self, mut req: Request<Body>) -> Self::Future {
-        if (self.f)(&req) {
+        if (self.should_be_proxied_fn)(&req) {
             let path_query = req
                 .uri()
                 .path_and_query()
