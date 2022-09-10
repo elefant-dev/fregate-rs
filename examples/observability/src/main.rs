@@ -16,7 +16,7 @@ async fn main() {
 
     Application::new(&config)
         .health_indicator(health)
-        .rest_router(rest)
+        .router(rest)
         .serve()
         .await
         .unwrap();
