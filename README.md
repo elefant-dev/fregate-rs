@@ -8,20 +8,16 @@ This project in progress and might change a lot from version to version.
 
 ## Usage example
 ```rust
+async fn handler() -> &'static str {
+    "Hello, World!"
+}
+
 #[tokio::main]
 async fn main() {
-    init_tracing();
-
-    let config = AppConfig::default();
-
-    Application::new(&config)
+    Application::new(&AppConfig::default())
         .router(Router::new().route("/", get(handler)))
         .serve()
         .await
         .unwrap();
-}
-
-async fn handler() -> &'static str {
-    "Hello, World!"
 }
 ```

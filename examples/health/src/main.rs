@@ -1,7 +1,6 @@
+use fregate::{axum, AppConfig, Application, ApplicationStatus, Health};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
-
-use fregate::{axum, init_tracing, AppConfig, Application, ApplicationStatus, Health};
 
 #[derive(Default, Debug, Clone)]
 pub struct CustomHealth {
@@ -27,32 +26,15 @@ impl Health for CustomHealth {
 
 #[tokio::main]
 async fn main() {
-    std::env::set_var("APP_PORT", "3333");
-
-    init_tracing();
-
-    let health = CustomHealth::default();
-    let conf1 = AppConfig::default();
-    let conf2 = AppConfig::builder()
-        .add_default()
-        .add_env_prefixed("APP")
-        .build()
+    Application::new(&AppConfig::default())
+        .health_indicator(CustomHealth::default())
+        .serve()
+        .await
         .unwrap();
-
-    // this will always ready and healthy
-    let always_ready = Application::new(&conf1).serve();
-
-    // this will use custom health
-    let custom_health = Application::new(&conf2).health_indicator(health).serve();
-
-    tokio::try_join!(always_ready, custom_health).unwrap();
 }
 
 /*
     curl http://0.0.0.0:8000/health
     curl http://0.0.0.0:8000/live
     curl http://0.0.0.0:8000/ready
-    curl http://0.0.0.0:3333/health
-    curl http://0.0.0.0:3333/live
-    curl http://0.0.0.0:3333/ready
 */
