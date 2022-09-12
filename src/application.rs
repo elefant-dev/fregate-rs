@@ -2,6 +2,7 @@ use crate::Optional;
 use axum::Router as AxumRouter;
 use hyper::Server;
 use serde::de::DeserializeOwned;
+use std::fmt::Debug;
 use std::net::SocketAddr;
 use tokio::signal;
 use tracing::info;
@@ -15,7 +16,7 @@ pub struct Application<'a, H, T> {
     router: Option<AxumRouter>,
 }
 
-impl<'a, T: DeserializeOwned> Application<'a, AlwaysReadyAndAlive, T> {
+impl<'a, T: DeserializeOwned + Debug> Application<'a, AlwaysReadyAndAlive, T> {
     pub fn new(config: &'a AppConfig<T>) -> Self {
         Application::<'a, AlwaysReadyAndAlive, T> {
             config,
@@ -25,7 +26,7 @@ impl<'a, T: DeserializeOwned> Application<'a, AlwaysReadyAndAlive, T> {
     }
 }
 
-impl<'a, H: Health, T: DeserializeOwned> Application<'a, H, T> {
+impl<'a, H: Health, T: DeserializeOwned + Debug> Application<'a, H, T> {
     pub fn health_indicator<Hh>(self, health: Hh) -> Application<'a, Hh, T> {
         Application::<'a, Hh, T> {
             config: self.config,
@@ -35,6 +36,8 @@ impl<'a, H: Health, T: DeserializeOwned> Application<'a, H, T> {
     }
 
     pub async fn serve(self) -> hyper::Result<()> {
+        info!("Application starts on: `{config:?}`.", config = self.config);
+
         let app = build_management_router(self.health_indicator).merge_optional(self.router);
         let application_socket = SocketAddr::new(self.config.host, self.config.port);
 
