@@ -24,8 +24,8 @@ use tracing_subscriber::{
 
 pub(crate) static CONFIG_IS_READ: AtomicBool = AtomicBool::new(false);
 
-pub type ConsoleLayerReload = Handle<Filtered<DefaultLayer, EnvFilter, Registry>, Registry>;
-pub type OTLPLayerReload = Handle<
+pub type LogLayerReload = Handle<Filtered<DefaultLayer, EnvFilter, Registry>, Registry>;
+pub type TraceLayerReload = Handle<
     Filtered<OpenTelemetryLayer<DefaultLayered, Tracer>, EnvFilter, DefaultLayered>,
     DefaultLayered,
 >;
@@ -76,7 +76,7 @@ pub(crate) fn init_tracing<T>(config: &mut AppConfig<T>) {
     let log_level = EnvFilter::from_str(settings.log_level.as_str()).unwrap_or_default();
     settings.log_level = log_level.to_string();
 
-    let console_layer = layer()
+    let log_filter = layer()
         .json()
         .with_timer(UtcTime::rfc_3339())
         .flatten_event(true)
@@ -85,7 +85,7 @@ pub(crate) fn init_tracing<T>(config: &mut AppConfig<T>) {
         .with_span_events(FmtSpan::NONE)
         .with_filter(log_level);
 
-    let (log_filter, log_filter_reloader) = reload::Layer::new(console_layer);
+    let (log_filter, log_filter_reloader) = reload::Layer::new(log_filter);
     settings.log_filter_reloader.replace(log_filter_reloader);
 
     registry().with(log_filter).with(traces_filter).init();

@@ -1,4 +1,4 @@
-use crate::{init_tracing, ConsoleLayerReload, DeserializeExt, OTLPLayerReload, CONFIG_IS_READ};
+use crate::{init_tracing, DeserializeExt, LogLayerReload, TraceLayerReload, CONFIG_IS_READ};
 use config::{builder::DefaultState, ConfigBuilder, ConfigError, Environment, File, FileFormat};
 use serde::{
     de::{DeserializeOwned, Error},
@@ -34,8 +34,8 @@ pub struct LoggerConfig {
     pub trace_level: String,
     pub service_name: String,
     pub traces_endpoint: Option<String>,
-    pub log_filter_reloader: Option<ConsoleLayerReload>,
-    pub traces_filter_reloader: Option<OTLPLayerReload>,
+    pub log_filter_reloader: Option<LogLayerReload>,
+    pub traces_filter_reloader: Option<TraceLayerReload>,
 }
 
 impl Debug for LoggerConfig {
@@ -130,6 +130,10 @@ impl<T: DeserializeOwned + Debug> AppConfig<T> {
             .add_file(file_path)
             .add_env_prefixed(env_prefix)
             .build()
+    }
+
+    pub fn get_log_filter_reload(&self) -> Option<&LogLayerReload> {
+        self.logger.log_filter_reloader.as_ref()
     }
 }
 
