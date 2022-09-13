@@ -58,7 +58,7 @@ async fn deny_middleware<B>(_req: Request<B>, _next: Next<B>) -> impl IntoRespon
 
 #[tokio::main]
 async fn main() {
-    init_tracing();
+    let config = &AppConfig::default();
 
     let echo_service = EchoServer::new(MyEcho);
     let hello_service = HelloServer::new(MyHello);
@@ -75,7 +75,7 @@ async fn main() {
 
     let app_router = rest.merge(grpc);
 
-    Application::new(&AppConfig::default())
+    Application::new(config)
         .router(app_router)
         .serve()
         .await
