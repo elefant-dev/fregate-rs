@@ -1,5 +1,6 @@
 use crate::{init_tracing, DeserializeExt, LogLayerReload, TraceLayerReload};
 use config::{builder::DefaultState, ConfigBuilder, ConfigError, Environment, File, FileFormat};
+use opentelemetry::global::shutdown_tracer_provider;
 use serde::{
     de::{DeserializeOwned, Error},
     Deserialize, Deserializer,
@@ -202,5 +203,11 @@ impl<T: DeserializeOwned + Debug> AppConfigBuilder<T> {
                 .separator(DEFAULT_SEPARATOR),
         );
         self
+    }
+}
+
+impl<T> Drop for AppConfig<T> {
+    fn drop(&mut self) {
+        shutdown_tracer_provider();
     }
 }
