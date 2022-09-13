@@ -1,10 +1,11 @@
-use crate::{init_tracing, DeserializeExt, LogLayerReload, TraceLayerReload, CONFIG_IS_READ};
+use crate::{init_tracing, DeserializeExt, LogLayerReload, TraceLayerReload};
 use config::{builder::DefaultState, ConfigBuilder, ConfigError, Environment, File, FileFormat};
 use serde::{
     de::{DeserializeOwned, Error},
     Deserialize, Deserializer,
 };
 use serde_json::{from_value, Value};
+use std::sync::atomic::AtomicBool;
 use std::{fmt::Debug, fmt::Formatter, marker::PhantomData, net::IpAddr, sync::atomic::Ordering};
 
 const HOST_PTR: &str = "/host";
@@ -16,10 +17,12 @@ const TRACES_ENDPOINT_PTR: &str = "/exporter/otlp/traces/endpoint";
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
 const DEFAULT_SEPARATOR: &str = "_";
 
+static CONFIG_IS_READ: AtomicBool = AtomicBool::new(false);
+
 #[derive(Debug, Deserialize)]
 pub struct Empty {}
 
-/// Make sure you build only one AppConfig for server, trying to build more then 1 will return Error
+/// Make sure you build only one AppConfig for server, trying to build more then 1 will cause panic
 #[derive(Debug)]
 pub struct AppConfig<T> {
     pub host: IpAddr,

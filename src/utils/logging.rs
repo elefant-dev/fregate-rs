@@ -3,9 +3,8 @@ use opentelemetry::{global, sdk, sdk::trace::Tracer, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_zipkin::B3Encoding::MultipleHeader;
 use std::str::FromStr;
-use std::sync::atomic::AtomicBool;
 use time::format_description::well_known::Rfc3339;
-use tracing_opentelemetry::OpenTelemetryLayer;
+use tracing_opentelemetry::OpenTelemetryLayer as OTLayer;
 use tracing_subscriber::{
     filter::EnvFilter,
     filter::Filtered,
@@ -22,21 +21,42 @@ use tracing_subscriber::{
     Layer, Registry,
 };
 
-pub(crate) static CONFIG_IS_READ: AtomicBool = AtomicBool::new(false);
-
-pub type LogLayerReload = Handle<Filtered<DefaultLayer, EnvFilter, Registry>, Registry>;
-pub type TraceLayerReload = Handle<
-    Filtered<OpenTelemetryLayer<DefaultLayered, Tracer>, EnvFilter, DefaultLayered>,
-    DefaultLayered,
->;
-type DefaultLayered =
-    Layered<reload::Layer<Filtered<DefaultLayer, EnvFilter, Registry>, Registry>, Registry>;
 type DefaultLayer = fmt::Layer<Registry, JsonFields, Format<Json, UtcTime<Rfc3339>>>;
+type DefaultLayered = Layered<LogLayer, Registry>;
 
-pub(crate) fn init_tracing<T>(config: &mut AppConfig<T>) {
+pub type LogFiltered = Filtered<DefaultLayer, EnvFilter, Registry>;
+pub type LogLayer = reload::Layer<LogFiltered, Registry>;
+pub type LogLayerReload = Handle<LogFiltered, Registry>;
+
+pub type TraceFiltered = Filtered<OTLayer<DefaultLayered, Tracer>, EnvFilter, DefaultLayered>;
+pub type TraceLayer = reload::Layer<TraceFiltered, DefaultLayered>;
+pub type TraceLayerReload = Handle<TraceFiltered, DefaultLayered>;
+
+fn get_log_filter<T>(config: &mut AppConfig<T>) -> LogLayer {
     let settings = &mut config.logger;
 
-    let traces_filter = if let Some(traces_endpoint) = &mut settings.traces_endpoint {
+    let log_level = EnvFilter::from_str(settings.log_level.as_str()).unwrap_or_default();
+    settings.log_level = log_level.to_string();
+
+    let log_filter = layer()
+        .json()
+        .with_timer(UtcTime::rfc_3339())
+        .flatten_event(true)
+        .with_target(true)
+        .with_current_span(false)
+        .with_span_events(FmtSpan::NONE)
+        .with_filter(log_level);
+
+    let (log_filter, log_filter_reloader) = reload::Layer::new(log_filter);
+    settings.log_filter_reloader.replace(log_filter_reloader);
+
+    log_filter
+}
+
+fn get_trace_filter<T>(config: &mut AppConfig<T>) -> Option<TraceLayer> {
+    let settings = &mut config.logger;
+
+    if let Some(traces_endpoint) = &mut settings.traces_endpoint {
         global::set_text_map_propagator(opentelemetry_zipkin::Propagator::with_encoding(
             MultipleHeader,
         ));
@@ -71,25 +91,10 @@ pub(crate) fn init_tracing<T>(config: &mut AppConfig<T>) {
         Some(traces_filter)
     } else {
         None
-    };
+    }
+}
 
-    let log_level = EnvFilter::from_str(settings.log_level.as_str()).unwrap_or_default();
-    settings.log_level = log_level.to_string();
-
-    let log_filter = layer()
-        .json()
-        .with_timer(UtcTime::rfc_3339())
-        .flatten_event(true)
-        .with_target(true)
-        .with_current_span(false)
-        .with_span_events(FmtSpan::NONE)
-        .with_filter(log_level);
-
-    let (log_filter, log_filter_reloader) = reload::Layer::new(log_filter);
-    settings.log_filter_reloader.replace(log_filter_reloader);
-
-    registry().with(log_filter).with(traces_filter).init();
-
+fn set_panic_hook() {
     // Capture the span context in which the program panicked
     std::panic::set_hook(Box::new(|panic| {
         // If the panic has a source location, record it as structured fields.
@@ -104,4 +109,12 @@ pub(crate) fn init_tracing<T>(config: &mut AppConfig<T>) {
             tracing::error!(message = %panic);
         }
     }));
+}
+
+pub(crate) fn init_tracing<T>(config: &mut AppConfig<T>) {
+    let logs_filter = get_log_filter(config);
+    let traces_filter = get_trace_filter(config);
+
+    registry().with(logs_filter).with(traces_filter).init();
+    set_panic_hook();
 }
