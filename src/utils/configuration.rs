@@ -121,6 +121,12 @@ impl Default for AppConfig<Empty> {
     }
 }
 
+impl<T> AppConfig<T> {
+    pub fn get_log_filter_reload(&self) -> Option<&LogLayerReload> {
+        self.logger.log_filter_reloader.as_ref()
+    }
+}
+
 impl<T: DeserializeOwned + Debug> AppConfig<T> {
     pub fn builder() -> AppConfigBuilder<T> {
         AppConfigBuilder::new()
@@ -133,10 +139,6 @@ impl<T: DeserializeOwned + Debug> AppConfig<T> {
             .add_file(file_path)
             .add_env_prefixed(env_prefix)
             .build()
-    }
-
-    pub fn get_log_filter_reload(&self) -> Option<&LogLayerReload> {
-        self.logger.log_filter_reloader.as_ref()
     }
 }
 

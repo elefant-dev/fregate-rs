@@ -25,10 +25,11 @@ async fn main() {
         // Only if default settings needed
         let _conf = AppConfig::default();
 
-        // Read default, overwrite with envs, overwrite with file
+        // Read default, overwrite with envs, overwrite with file, init tracing (initialised by default)
         let _conf = AppConfig::<Empty>::builder()
             .add_default()
             .add_env_prefixed("TEST")
+            .init_tracing()
             .add_file("./examples/configuration/app.yaml")
             .add_str(include_str!("../app.yaml"), FileFormat::Yaml)
             .build()
