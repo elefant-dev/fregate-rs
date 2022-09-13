@@ -4,6 +4,9 @@ port = 8000
 [log]
 level = "info"
 
+[trace]
+level = "info"
+
 [service]
 name = "Rust"
 
