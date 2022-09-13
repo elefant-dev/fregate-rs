@@ -29,7 +29,7 @@ pub type LogLayer = reload::Layer<LogFiltered, Registry>;
 pub type LogLayerReload = Handle<LogFiltered, Registry>;
 
 pub type TraceFiltered = Filtered<OTLayer<DefaultLayered, Tracer>, EnvFilter, DefaultLayered>;
-pub type TraceLayer = reload::Layer<TraceFiltered, DefaultLayered>;
+pub type TraceLayer = TraceFiltered;
 pub type TraceLayerReload = Handle<TraceFiltered, DefaultLayered>;
 
 fn get_log_filter<T>(config: &mut AppConfig<T>) -> LogLayer {
@@ -83,12 +83,13 @@ fn get_trace_filter<T>(config: &mut AppConfig<T>) -> Option<TraceLayer> {
             .with_tracer(tracer)
             .with_filter(trace_level);
 
-        let (traces_filter, traces_filter_reloader) = reload::Layer::new(opentelemetry_layer);
-        settings
-            .traces_filter_reloader
-            .replace(traces_filter_reloader);
+        // TODO: bug ? trace_id is not generated when used with reload Layer
+        // let (traces_filter, traces_filter_reloader) = reload::Layer::new(opentelemetry_layer);
+        // settings
+        //     .traces_filter_reloader
+        //     .replace(traces_filter_reloader);
 
-        Some(traces_filter)
+        Some(opentelemetry_layer)
     } else {
         None
     }
