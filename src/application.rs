@@ -1,12 +1,10 @@
 use crate::Optional;
 use axum::Router as AxumRouter;
-use hyper::header::CONTENT_TYPE;
-use hyper::{Body, Request, Server};
+use hyper::Server;
 use serde::de::DeserializeOwned;
+use std::fmt::Debug;
 use std::net::SocketAddr;
 use tokio::signal;
-use tower::make::Shared;
-use tower::steer::Steer;
 use tracing::info;
 
 use crate::utils::*;
@@ -15,51 +13,39 @@ use crate::utils::*;
 pub struct Application<'a, H, T> {
     config: &'a AppConfig<T>,
     health_indicator: Option<H>,
-    rest_router: Option<AxumRouter>,
-    grpc_router: Option<AxumRouter>,
+    router: Option<AxumRouter>,
 }
 
-impl<'a, T: DeserializeOwned> Application<'a, AlwaysReadyAndAlive, T> {
+impl<'a, T: DeserializeOwned + Debug> Application<'a, AlwaysReadyAndAlive, T> {
     pub fn new(config: &'a AppConfig<T>) -> Self {
         Application::<'a, AlwaysReadyAndAlive, T> {
             config,
             health_indicator: Some(AlwaysReadyAndAlive {}),
-            rest_router: None,
-            grpc_router: None,
+            router: None,
         }
     }
 }
 
-impl<'a, H: Health, T: DeserializeOwned> Application<'a, H, T> {
+impl<'a, H: Health, T: DeserializeOwned + Debug> Application<'a, H, T> {
     pub fn health_indicator<Hh>(self, health: Hh) -> Application<'a, Hh, T> {
         Application::<'a, Hh, T> {
             config: self.config,
             health_indicator: Some(health),
-            rest_router: self.rest_router,
-            grpc_router: self.grpc_router,
+            router: self.router,
         }
     }
 
-    pub async fn serve(mut self) -> hyper::Result<()> {
-        let rest = build_management_router(self.health_indicator).merge_optional(self.rest_router);
+    pub async fn serve(self) -> hyper::Result<()> {
+        info!("Application starts on: `{config:?}`.", config = self.config);
 
+        let app = build_management_router(self.health_indicator).merge_optional(self.router);
         let application_socket = SocketAddr::new(self.config.host, self.config.port);
 
-        // TODO: MAKE GRPC A FEATURE ?
-        if let Some(grpc) = self.grpc_router.take() {
-            run_rest_and_grpc_service(&application_socket, rest, grpc).await
-        } else {
-            run_rest_service(&application_socket, rest).await
-        }
+        run_service(&application_socket, app).await
     }
 
-    pub fn rest_router(mut self, router: AxumRouter) -> Self {
-        self.rest_router = Some(router);
-        self
-    }
-
-    pub fn grpc_router(mut self, router: AxumRouter) -> Self {
-        self.grpc_router = Some(router);
+    pub fn router(mut self, router: AxumRouter) -> Self {
+        self.router = Some(router);
         self
     }
 }
@@ -90,41 +76,9 @@ async fn shutdown_signal() {
     info!("Termination signal, starting shutdown...");
 }
 
-async fn run_rest_service(socket: &SocketAddr, rest: AxumRouter) -> hyper::Result<()> {
+async fn run_service(socket: &SocketAddr, rest: AxumRouter) -> hyper::Result<()> {
     let server = Server::bind(socket).serve(rest.into_make_service());
-    info!(target: "server", server_type = "rest", "Started: http://{socket}");
+    info!(target: "server", "Started: http://{socket}");
 
     server.with_graceful_shutdown(shutdown_signal()).await
-}
-
-async fn run_rest_and_grpc_service(
-    socket: &SocketAddr,
-    rest: AxumRouter,
-    grpc: AxumRouter,
-) -> hyper::Result<()> {
-    let rest_grpc = Steer::new(
-        [rest, grpc],
-        |req: &Request<Body>, _svcs: &[_]| {
-            if is_grpc_request(req) {
-                1
-            } else {
-                0
-            }
-        },
-    );
-
-    let server = Server::bind(socket).serve(Shared::new(rest_grpc));
-    info!(target: "server", server_type = "rest + grpc", "Started: http://{socket}");
-
-    server.with_graceful_shutdown(shutdown_signal()).await
-}
-
-#[inline(always)]
-fn is_grpc_request(req: &Request<Body>) -> bool {
-    if let Some(content_type) = req.headers().get(CONTENT_TYPE) {
-        // some gRPC clients uses `application/grpc+<additional type>` header
-        content_type.as_bytes().starts_with(b"application/grpc")
-    } else {
-        false
-    }
 }

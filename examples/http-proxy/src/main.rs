@@ -1,19 +1,15 @@
 use fregate::axum::{
     routing::{get, post},
-    Router,
+    Router, Server,
 };
 use fregate::hyper::{Client, StatusCode};
-use fregate::{http_trace_layer, init_tracing, AppConfig, Application, ProxyLayer};
+use fregate::{http_trace_layer, AppConfig, Application, ProxyLayer};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
-    init_tracing();
-
-    std::env::set_var("APP_PROXY_HOST", "127.0.0.1");
-    std::env::set_var("APP_PROXY_PORT", "3000");
-
     // Start server where to proxy requests
     tokio::spawn(server());
 
@@ -42,19 +38,13 @@ async fn main() {
         .layer(http_trace_layer());
 
     Application::new(&AppConfig::default())
-        .rest_router(app)
+        .router(app)
         .serve()
         .await
         .unwrap();
 }
 
 async fn server() {
-    let config = AppConfig::builder()
-        .add_default()
-        .add_env_prefixed("APP_PROXY")
-        .build()
-        .unwrap();
-
     let app = Router::new()
         .route("/proxy_server/*path", get(|| async { "Hello, Proxy!" }))
         .route(
@@ -62,11 +52,13 @@ async fn server() {
             post(|| async { (StatusCode::BAD_REQUEST, "Probably You Want GET Method") }),
         );
 
-    Application::new(&config)
-        .rest_router(app)
-        .serve()
-        .await
-        .unwrap();
+    Server::bind(&SocketAddr::new(
+        IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+        3000,
+    ))
+    .serve(app.into_make_service())
+    .await
+    .unwrap();
 }
 
 /*

@@ -28,9 +28,16 @@ mime = "0.3.16"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 prost = "0.11.0"
+time = "0.3.14"
 tokio = { version = "1.0", features = ["full"] }
 tonic = "0.8.0"
 tower = { version = "0.4", features = ["full"] }
 tower-http = { version = "0.3", features = ["full"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3.11", features = ["env-filter", "fmt", "json", "time", "tracing-log"] }
+tracing-subscriber = { version = "0.3.11", features = ["env-filter", "fmt", "std", "json", "time", "tracing-log", "registry"] }
+tracing-opentelemetry = "0.17.4"
+opentelemetry = { version = "0.17.0", features = ["rt-async-std"]}
+opentelemetry-otlp = { version = "0.10.0", features = ["grpc-sys"] }
+opentelemetry-http = "0.6.0"
+opentelemetry-zipkin = "0.15.0"
+

@@ -6,9 +6,7 @@ use fregate::axum::{
 };
 use fregate::hyper::Request;
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
-use fregate::{
-    grpc_trace_layer, http_trace_layer, init_tracing, init_logging, AppConfig, Application, Tonicable,
-};
+use fregate::{grpc_trace_layer, http_trace_layer, AppConfig, Application, Tonicable};
 use proto::{
     echo_server::{Echo, EchoServer},
     hello_server::{Hello, HelloServer},
@@ -60,8 +58,7 @@ async fn deny_middleware<B>(_req: Request<B>, _next: Next<B>) -> impl IntoRespon
 
 #[tokio::main]
 async fn main() {
- //   init_tracing();
-    init_logging(tracing::Level::INFO);
+    let config = &AppConfig::default();
 
     let echo_service = EchoServer::new(MyEcho);
     let hello_service = HelloServer::new(MyHello);
@@ -76,9 +73,10 @@ async fn main() {
         .merge(Router::from_tonic_service(hello_service))
         .layer(grpc_trace_layer());
 
-    Application::new(&AppConfig::default())
-        .rest_router(rest)
-        .grpc_router(grpc)
+    let app_router = rest.merge(grpc);
+
+    Application::new(config)
+        .router(app_router)
         .serve()
         .await
         .unwrap();
