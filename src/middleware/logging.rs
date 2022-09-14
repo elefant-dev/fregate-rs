@@ -5,6 +5,8 @@ use tower_http::trace::{MakeSpan, OnRequest, OnResponse, TraceLayer};
 use tracing::field::display;
 use tracing::{info, info_span, Span};
 
+use tracing_opentelemetry::OpenTelemetrySpanExt;
+
 #[allow(clippy::type_complexity)]
 pub fn http_trace_layer() -> TraceLayer<
     SharedClassifier<ServerErrorsAsFailures>,
@@ -34,8 +36,14 @@ pub fn grpc_trace_layer() -> TraceLayer<
 #[derive(Clone, Debug)]
 pub struct BasicMakeSpan {}
 
-impl<B> MakeSpan<B> for BasicMakeSpan {
-    fn make_span(&mut self, _request: &Request<B>) -> Span {
+impl<B: std::fmt::Debug> MakeSpan<B> for BasicMakeSpan {
+    #[tracing::instrument]
+    fn make_span(&mut self, request: &Request<B>) -> Span {
+        let parent_cx = opentelemetry::global::get_text_map_propagator(|propagator| {
+            propagator.extract(&opentelemetry_http::HeaderExtractor(request.headers()))
+        });
+           
+        tracing::Span::current().set_parent(parent_cx);
         info_span!(
             "http-request",
             method = tracing::field::Empty,
