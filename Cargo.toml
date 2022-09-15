@@ -7,7 +7,6 @@ repository = "https://github.com/elefant-dev/fregate-rs"
 homepage = "https://github.com/elefant-dev/fregate-rs"
 description = "Framework for services creation"
 categories = ["web-programming"]
-publish = ["crates.io"]
 keywords = ["http", "grpc", "service"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
