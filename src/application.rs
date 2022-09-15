@@ -36,8 +36,6 @@ impl<'a, H: Health, T: DeserializeOwned + Debug> Application<'a, H, T> {
     }
 
     pub async fn serve(self) -> hyper::Result<()> {
-        info!("Application starts on: `{config:?}`.", config = self.config);
-
         let app = build_management_router(self.health_indicator).merge_optional(self.router);
         let application_socket = SocketAddr::new(self.config.host, self.config.port);
 

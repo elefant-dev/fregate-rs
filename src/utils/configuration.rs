@@ -8,6 +8,7 @@ use serde::{
 use serde_json::{from_value, Value};
 use std::sync::atomic::AtomicBool;
 use std::{fmt::Debug, fmt::Formatter, marker::PhantomData, net::IpAddr, sync::atomic::Ordering};
+use tracing::log::info;
 
 const HOST_PTR: &str = "/host";
 const PORT_PTR: &str = "/port";
@@ -171,6 +172,7 @@ impl<T: DeserializeOwned + Debug> AppConfigBuilder<T> {
             init_tracing(&mut config);
         }
 
+        info!("Configuration: `{config:?}`.", config = config);
         Ok(config)
     }
 
