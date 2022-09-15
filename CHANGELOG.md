@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.3.1]
+### Changed
+- Remove `grpc-sys` dependency.
+
 ## [0.3.0] - 2022-09-15
 ### Added
 - Add context span propagation from Incoming request ([#52](https://github.com/elefant-dev/fregate-rs/pull/52))
