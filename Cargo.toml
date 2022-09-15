@@ -1,12 +1,13 @@
 [package]
 name = "fregate"
-version = "0.2.5"
+version = "0.3.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/elefant-dev/fregate-rs"
 homepage = "https://github.com/elefant-dev/fregate-rs"
 description = "Framework for services creation"
 categories = ["web-programming"]
+publish = ["crates.io"]
 keywords = ["http", "grpc", "service"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -40,4 +41,3 @@ opentelemetry = { version = "0.17.0", features = ["rt-tokio"]}
 opentelemetry-otlp = { version = "0.10.0", features = ["grpc-sys"] }
 opentelemetry-http = "0.6.0"
 opentelemetry-zipkin = "0.15.0"
-

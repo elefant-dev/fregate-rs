@@ -24,7 +24,9 @@ static CONFIG_IS_READ: AtomicBool = AtomicBool::new(false);
 #[derive(Debug, Deserialize)]
 pub struct Empty {}
 
-/// Make sure you build only one AppConfig for server, trying to build more then 1 will cause panic
+/// Make sure you build only 1 AppConfig for server, trying to build more then 1 will cause panic.
+///
+/// If environment variable "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT" is not provided then no traces are generated and exported to grafana.
 #[derive(Debug)]
 pub struct AppConfig<T> {
     pub host: IpAddr,
