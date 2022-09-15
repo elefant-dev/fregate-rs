@@ -72,8 +72,7 @@ fn get_trace_filter<T>(config: &mut AppConfig<T>) -> Option<TraceLayer> {
             .with_trace_config(sdk::trace::config().with_resource(Resource::new(vec![
                 KeyValue::new("service.name", service_name),
             ])))
-            // TODO: TOKIO RUNTIME
-            .install_batch(opentelemetry::runtime::AsyncStd)
+            .install_batch(opentelemetry::runtime::Tokio)
             .expect("failed to install opentelemetry_otlp pipeline");
 
         let trace_level = EnvFilter::from_str(settings.log_level.as_str()).unwrap_or_default();

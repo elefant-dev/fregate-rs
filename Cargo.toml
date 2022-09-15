@@ -36,7 +36,7 @@ tower-http = { version = "0.3", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.11", features = ["env-filter", "fmt", "std", "json", "time", "tracing-log", "registry"] }
 tracing-opentelemetry = "0.17.4"
-opentelemetry = { version = "0.17.0", features = ["rt-async-std"]}
+opentelemetry = { version = "0.17.0", features = ["rt-tokio"]}
 opentelemetry-otlp = { version = "0.10.0", features = ["grpc-sys"] }
 opentelemetry-http = "0.6.0"
 opentelemetry-zipkin = "0.15.0"
