@@ -1,10 +1,11 @@
 use hyper::{Request, Response};
+use opentelemetry_http::HeaderExtractor;
 use std::time::Duration;
-use tower_http::classify::{GrpcErrorsAsFailures, ServerErrorsAsFailures, SharedClassifier};
-use tower_http::trace::{MakeSpan, OnRequest, OnResponse, TraceLayer};
-use tracing::field::display;
-use tracing::{info, info_span, Span};
-
+use tower_http::{
+    classify::{GrpcErrorsAsFailures, ServerErrorsAsFailures, SharedClassifier},
+    trace::{MakeSpan, OnRequest, OnResponse, TraceLayer},
+};
+use tracing::{field::display, info, info_span, Span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 #[allow(clippy::type_complexity)]
@@ -40,10 +41,11 @@ impl<B: std::fmt::Debug> MakeSpan<B> for BasicMakeSpan {
     #[tracing::instrument]
     fn make_span(&mut self, request: &Request<B>) -> Span {
         let parent_cx = opentelemetry::global::get_text_map_propagator(|propagator| {
-            propagator.extract(&opentelemetry_http::HeaderExtractor(request.headers()))
+            propagator.extract(&HeaderExtractor(request.headers()))
         });
-           
-        tracing::Span::current().set_parent(parent_cx);
+
+        Span::current().set_parent(parent_cx);
+
         info_span!(
             "http-request",
             method = tracing::field::Empty,
