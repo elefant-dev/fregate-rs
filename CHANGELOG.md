@@ -5,6 +5,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.3.0] - 2022-09-15
+### Added
+- Add context span propagation from Incoming request ([#52](https://github.com/elefant-dev/fregate-rs/pull/52))
+- Add AppConfigBuilder::init_tracing() ([#50](https://github.com/elefant-dev/fregate-rs/pull/50))
+- Add Traces export to grafana ([#50](https://github.com/elefant-dev/fregate-rs/pull/50))
+
+### Changed
+- Tower::Steer is removed, rely only on axum path matching mechanism([#48](https://github.com/elefant-dev/fregate-rs/pull/48))
+- Call for local resolver in proxy middleware if failed to set new Uri([#49](https://github.com/elefant-dev/fregate-rs/pull/49))
+- init_tracing() function call moved to AppConfig::build() ([#50](https://github.com/elefant-dev/fregate-rs/pull/50))
+- Only 1 AppConfig() is allowed to build ([#50](https://github.com/elefant-dev/fregate-rs/pull/50))
+- Add log filter reloader to change log level in runtime ([#50](https://github.com/elefant-dev/fregate-rs/pull/50))
+- Use AppConfig::builder() instead of AppConfig::builder_with_private() ([#50](https://github.com/elefant-dev/fregate-rs/pull/50))
+
+### Changed
+- AppConfig::builder_with_private() is removed ([#50](https://github.com/elefant-dev/fregate-rs/pull/50))
+
 ## [0.2.5] - 2022-09-02
 ### Added
 - Add `Proxy` middleware using http client ([#45](https://github.com/elefant-dev/fregate-rs/pull/45))

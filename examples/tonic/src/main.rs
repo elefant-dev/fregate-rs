@@ -31,7 +31,7 @@ impl Hello for MyHello {
         request: TonicRequest<HelloRequest>,
     ) -> Result<TonicResponse<HelloResponse>, Status> {
         let reply = HelloResponse {
-            message: format!("Hello {}!", request.into_inner().name),
+            message: format!("Hello From Tonic Server {}!", request.into_inner().name),
         };
 
         Ok(TonicResponse::new(reply))
