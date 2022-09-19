@@ -33,7 +33,7 @@ async fn main() {
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
     std::env::set_var("OTEL_PORT", "3000");
 
-    let config = bootstrap::<Empty, _>([], None);
+    let config = bootstrap::<Empty, _>([]);
 
     let hello_service = HelloServer::new(MyHello);
     let grpc = Router::from_tonic_service(hello_service).layer(grpc_trace_layer());

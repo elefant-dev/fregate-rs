@@ -57,7 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::env::set_var("OTEL_SERVICE_NAME", "CLIENT");
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
 
-    let _config = bootstrap::<Empty, _>([], None);
+    let _config = bootstrap::<Empty, _>([]);
 
     let channel = tonic::transport::Endpoint::from_static("http://0.0.0.0:8000")
         .connect()

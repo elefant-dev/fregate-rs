@@ -5,7 +5,7 @@ mod bootstrap_fn_test {
 
     #[tokio::test]
     async fn bootstrap_test() {
-        let config = bootstrap::<Empty, _>([], None);
+        let config = bootstrap::<Empty, _>([]);
 
         // bootstrap() fn internally spawns tasks, let's give it a little time
         tokio::time::sleep(Duration::from_millis(200)).await;

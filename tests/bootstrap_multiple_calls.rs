@@ -4,7 +4,7 @@ mod multiple_bootstrap_calls {
     #[tokio::test]
     #[should_panic]
     async fn multiple_bootstrap_calls() {
-        let _config = bootstrap::<Empty, _>([], None);
-        let _config = bootstrap::<Empty, _>([], None);
+        let _config = bootstrap::<Empty, _>([]);
+        let _config = bootstrap::<Empty, _>([]);
     }
 }

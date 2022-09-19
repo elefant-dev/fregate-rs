@@ -23,10 +23,10 @@ async fn main() {
     std::env::set_var("OTEL_SERVICE_NAME", "CONFIGURATION");
 
     // This will initialise tracing from environment variables read to AppConfig.
-    let _conf: AppConfig<Empty> = bootstrap(
-        [ConfigSource::File("./examples/configuration/app.yaml")],
-        None,
-    );
+    let _conf: AppConfig<Empty> = bootstrap([
+        ConfigSource::File("./examples/configuration/app.yaml"),
+        ConfigSource::EnvPrefix("TEST"),
+    ]);
 
     let _conf = AppConfig::default();
 

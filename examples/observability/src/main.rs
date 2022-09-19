@@ -5,7 +5,7 @@ use fregate::{
 
 #[tokio::main]
 async fn main() {
-    let config = bootstrap::<Empty, _>([], None);
+    let config = bootstrap::<Empty, _>([]);
 
     let rest = Router::new()
         .route("/", get(handler))

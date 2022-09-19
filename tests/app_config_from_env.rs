@@ -1,5 +1,5 @@
 mod app_config_from_env {
-    use fregate::AppConfig;
+    use fregate::{AppConfig, ConfigSource};
     use serde::Deserialize;
     use std::net::{IpAddr, Ipv6Addr};
 
@@ -18,7 +18,7 @@ mod app_config_from_env {
         std::env::set_var("TEST_LOG_LEVEL", "trace");
         std::env::set_var("TEST_NUMBER", "100");
 
-        let config = AppConfig::<TestStruct>::load_from([], Some("TEST"))
+        let config = AppConfig::<TestStruct>::load_from([ConfigSource::EnvPrefix("TEST")])
             .expect("Failed to build AppConfig");
 
         assert_eq!(config.port, 1234);

@@ -14,7 +14,9 @@ async fn handler() -> &'static str {
 
 #[tokio::main]
 async fn main() {
-    Application::new(&AppConfig::default())
+    let config = bootstrap::<Empty, _>([]);
+
+    Application::new(&config)
         .router(Router::new().route("/", get(handler)))
         .serve()
         .await

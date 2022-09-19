@@ -20,6 +20,7 @@ const DEFAULT_SEPARATOR: &str = "_";
 pub enum ConfigSource<'a> {
     String(&'a str, FileFormat),
     File(&'a str),
+    EnvPrefix(&'a str),
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Copy, Clone)]
@@ -116,7 +117,7 @@ impl<T: DeserializeOwned + Debug> AppConfig<T> {
             .build()
     }
 
-    pub fn load_from<'a, S>(sources: S, env_prefix: Option<&str>) -> Result<Self, ConfigError>
+    pub fn load_from<'a, S>(sources: S) -> Result<Self, ConfigError>
     where
         S: IntoIterator<Item = ConfigSource<'a>>,
     {
@@ -128,11 +129,8 @@ impl<T: DeserializeOwned + Debug> AppConfig<T> {
             config_builder = match source {
                 ConfigSource::String(str, format) => config_builder.add_str(str, format),
                 ConfigSource::File(path) => config_builder.add_file(path),
+                ConfigSource::EnvPrefix(prefix) => config_builder.add_env_prefixed(prefix),
             };
-        }
-
-        if let Some(p) = env_prefix {
-            config_builder = config_builder.add_env_prefixed(p);
         }
 
         config_builder.build()
