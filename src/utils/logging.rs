@@ -1,9 +1,9 @@
-use crate::AppConfig;
 use opentelemetry::{global, sdk, sdk::trace::Tracer, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_zipkin::B3Encoding::MultipleHeader;
 use std::str::FromStr;
 use time::format_description::well_known::Rfc3339;
+use tokio::sync::OnceCell;
 use tracing_opentelemetry::OpenTelemetryLayer as OTLayer;
 use tracing_subscriber::{
     filter::EnvFilter,
@@ -21,22 +21,25 @@ use tracing_subscriber::{
     Layer, Registry,
 };
 
+static HANDLE_LOG_LAYER: OnceCell<HandleLogLayer> = OnceCell::const_new();
+
+pub fn get_handle_log_layer() -> Option<&'static HandleLogLayer> {
+    HANDLE_LOG_LAYER.get()
+}
+
 type DefaultLayer = fmt::Layer<Registry, JsonFields, Format<Json, UtcTime<Rfc3339>>>;
 type DefaultLayered = Layered<LogLayer, Registry>;
 
 pub type LogFiltered = Filtered<DefaultLayer, EnvFilter, Registry>;
 pub type LogLayer = reload::Layer<LogFiltered, Registry>;
-pub type LogLayerReload = Handle<LogFiltered, Registry>;
+pub type HandleLogLayer = Handle<LogFiltered, Registry>;
 
 pub type TraceFiltered = Filtered<OTLayer<DefaultLayered, Tracer>, EnvFilter, DefaultLayered>;
 pub type TraceLayer = TraceFiltered;
-pub type TraceLayerReload = Handle<TraceFiltered, DefaultLayered>;
+pub type HandleTraceLayer = Handle<TraceFiltered, DefaultLayered>;
 
-fn get_log_filter<T>(config: &mut AppConfig<T>) -> LogLayer {
-    let settings = &mut config.logger;
-
-    let log_level = EnvFilter::from_str(settings.log_level.as_str()).unwrap_or_default();
-    settings.log_level = log_level.to_string();
+fn get_log_layers(log_level: &str) -> (LogLayer, HandleLogLayer) {
+    let log_level = EnvFilter::from_str(log_level).unwrap_or_default();
 
     let log_filter = layer()
         .json()
@@ -47,51 +50,39 @@ fn get_log_filter<T>(config: &mut AppConfig<T>) -> LogLayer {
         .with_span_events(FmtSpan::NONE)
         .with_filter(log_level);
 
-    let (log_filter, log_filter_reloader) = reload::Layer::new(log_filter);
-    settings.log_filter_reloader.replace(log_filter_reloader);
-
-    log_filter
+    reload::Layer::new(log_filter)
 }
 
-fn get_trace_filter<T>(config: &mut AppConfig<T>) -> Option<TraceLayer> {
-    let settings = &mut config.logger;
+fn get_trace_layer(trace_level: &str, service_name: &str, traces_endpoint: &str) -> TraceLayer {
+    global::set_text_map_propagator(opentelemetry_zipkin::Propagator::with_encoding(
+        MultipleHeader,
+    ));
 
-    if let Some(traces_endpoint) = &mut settings.traces_endpoint {
-        global::set_text_map_propagator(opentelemetry_zipkin::Propagator::with_encoding(
-            MultipleHeader,
-        ));
-
-        let service_name = settings.service_name.clone();
-        let tracer = opentelemetry_otlp::new_pipeline()
+    let tracer =
+        opentelemetry_otlp::new_pipeline()
             .tracing()
             .with_exporter(
                 opentelemetry_otlp::new_exporter()
                     .tonic()
-                    .with_endpoint(traces_endpoint.clone()),
+                    .with_endpoint(traces_endpoint),
             )
             .with_trace_config(sdk::trace::config().with_resource(Resource::new(vec![
-                KeyValue::new("service.name", service_name),
+                KeyValue::new("service.name", service_name.to_owned()),
             ])))
             .install_batch(opentelemetry::runtime::Tokio)
             .expect("failed to install opentelemetry_otlp pipeline");
 
-        let trace_level = EnvFilter::from_str(settings.log_level.as_str()).unwrap_or_default();
-        settings.trace_level = trace_level.to_string();
+    let trace_level = EnvFilter::from_str(trace_level).unwrap_or_default();
 
-        let opentelemetry_layer = tracing_opentelemetry::layer()
-            .with_tracer(tracer)
-            .with_filter(trace_level);
+    tracing_opentelemetry::layer()
+        .with_tracer(tracer)
+        .with_filter(trace_level)
 
-        // TODO: bug ? trace_id is not generated when used with reload Layer
-        // let (traces_filter, traces_filter_reloader) = reload::Layer::new(opentelemetry_layer);
-        // settings
-        //     .traces_filter_reloader
-        //     .replace(traces_filter_reloader);
-
-        Some(opentelemetry_layer)
-    } else {
-        None
-    }
+    // TODO: bug ? trace_id is not generated when used with reload Layer
+    // let (traces_filter, traces_filter_reloader) = reload::Layer::new(opentelemetry_layer);
+    // settings
+    //     .traces_filter_reloader
+    //     .replace(traces_filter_reloader);
 }
 
 fn set_panic_hook() {
@@ -111,10 +102,26 @@ fn set_panic_hook() {
     }));
 }
 
-pub(crate) fn init_tracing<T>(config: &mut AppConfig<T>) {
-    let logs_filter = get_log_filter(config);
-    let traces_filter = get_trace_filter(config);
+/// Must be called in tokio runtime otherwise panic.
+pub fn init_tracing(
+    log_level: &str,
+    trace_level: &str,
+    service_name: &str,
+    traces_endpoint: Option<&str>,
+) {
+    let (lag_layer, log_layer_handle) = get_log_layers(log_level);
 
-    registry().with(logs_filter).with(traces_filter).init();
+    let trace_layer = traces_endpoint
+        .map(|traces_endpoint| get_trace_layer(trace_level, service_name, traces_endpoint));
+
+    // This will panic if called twice
+    registry().with(lag_layer).with(trace_layer).init();
+
+    tokio::task::spawn(async {
+        let _handle = HANDLE_LOG_LAYER
+            .get_or_init(|| async { log_layer_handle })
+            .await;
+    });
+
     set_panic_hook();
 }

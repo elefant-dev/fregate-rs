@@ -1,13 +1,11 @@
-use crate::{init_tracing, DeserializeExt, LogLayerReload, TraceLayerReload};
+use crate::DeserializeExt;
 use config::{builder::DefaultState, ConfigBuilder, ConfigError, Environment, File, FileFormat};
-use opentelemetry::global::shutdown_tracer_provider;
 use serde::{
     de::{DeserializeOwned, Error},
     Deserialize, Deserializer,
 };
 use serde_json::{from_value, Value};
-use std::sync::atomic::AtomicBool;
-use std::{fmt::Debug, fmt::Formatter, marker::PhantomData, net::IpAddr, sync::atomic::Ordering};
+use std::{fmt::Debug, marker::PhantomData, net::IpAddr};
 use tracing::log::info;
 
 const HOST_PTR: &str = "/host";
@@ -19,46 +17,28 @@ const TRACES_ENDPOINT_PTR: &str = "/exporter/otlp/traces/endpoint";
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
 const DEFAULT_SEPARATOR: &str = "_";
 
-static CONFIG_IS_READ: AtomicBool = AtomicBool::new(false);
+pub enum ConfigSource<'a> {
+    String(&'a str, FileFormat),
+    File(&'a str),
+}
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Copy, Clone)]
 pub struct Empty {}
 
-/// Make sure you build only 1 AppConfig for server, trying to build more then 1 will cause panic.
-///
-/// If environment variable "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT" is not provided then no traces are generated and exported to grafana.
 #[derive(Debug)]
 pub struct AppConfig<T> {
     pub host: IpAddr,
     pub port: u16,
     pub logger: LoggerConfig,
-    pub init_tracing: bool,
     pub private: T,
 }
 
+#[derive(Debug)]
 pub struct LoggerConfig {
     pub log_level: String,
     pub trace_level: String,
     pub service_name: String,
     pub traces_endpoint: Option<String>,
-    pub log_filter_reloader: Option<LogLayerReload>,
-    pub traces_filter_reloader: Option<TraceLayerReload>,
-}
-
-impl Debug for LoggerConfig {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LoggerConfig")
-            .field("log_level", &self.log_level)
-            .field("trace_level", &self.trace_level)
-            .field("service_name", &self.service_name)
-            .field("traces_endpoint", &self.traces_endpoint)
-            .field("log_filter_reloader", &self.log_filter_reloader.is_some())
-            .field(
-                "traces_filter_reloader",
-                &self.traces_filter_reloader.is_some(),
-            )
-            .finish()
-    }
 }
 
 impl<'de> Deserialize<'de> for LoggerConfig {
@@ -84,8 +64,6 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             trace_level,
             service_name,
             traces_endpoint,
-            log_filter_reloader: None,
-            traces_filter_reloader: None,
         })
     }
 }
@@ -108,7 +86,6 @@ where
         Ok(AppConfig::<T> {
             host,
             port,
-            init_tracing: false,
             logger,
             private,
         })
@@ -119,15 +96,9 @@ impl Default for AppConfig<Empty> {
     fn default() -> Self {
         AppConfig::builder()
             .add_default()
-            .init_tracing()
+            .add_env_prefixed("OTEL")
             .build()
             .expect("Default config never fails")
-    }
-}
-
-impl<T> AppConfig<T> {
-    pub fn get_log_filter_reload(&self) -> Option<&LogLayerReload> {
-        self.logger.log_filter_reloader.as_ref()
     }
 }
 
@@ -139,17 +110,38 @@ impl<T: DeserializeOwned + Debug> AppConfig<T> {
     pub fn default_with(file_path: &str, env_prefix: &str) -> Result<Self, ConfigError> {
         AppConfig::builder()
             .add_default()
-            .init_tracing()
+            .add_env_prefixed("OTEL")
             .add_file(file_path)
             .add_env_prefixed(env_prefix)
             .build()
+    }
+
+    pub fn load_from<'a, S>(sources: S, env_prefix: Option<&str>) -> Result<Self, ConfigError>
+    where
+        S: IntoIterator<Item = ConfigSource<'a>>,
+    {
+        let mut config_builder = AppConfig::<T>::builder()
+            .add_default()
+            .add_env_prefixed("OTEL");
+
+        for source in sources {
+            config_builder = match source {
+                ConfigSource::String(str, format) => config_builder.add_str(str, format),
+                ConfigSource::File(path) => config_builder.add_file(path),
+            };
+        }
+
+        if let Some(p) = env_prefix {
+            config_builder = config_builder.add_env_prefixed(p);
+        }
+
+        config_builder.build()
     }
 }
 
 #[derive(Debug, Default)]
 pub struct AppConfigBuilder<T> {
     builder: ConfigBuilder<DefaultState>,
-    init_tracing: bool,
     phantom: PhantomData<T>,
 }
 
@@ -157,37 +149,23 @@ impl<T: DeserializeOwned + Debug> AppConfigBuilder<T> {
     pub fn new() -> Self {
         Self {
             builder: ConfigBuilder::default(),
-            init_tracing: false,
             phantom: PhantomData,
         }
     }
 
     pub fn build(self) -> Result<AppConfig<T>, ConfigError> {
-        if CONFIG_IS_READ.swap(true, Ordering::SeqCst) {
-            panic!("Only one config is allowed to read")
-        }
-
-        let mut config = self.builder.build()?.try_deserialize::<AppConfig<T>>()?;
-        config.init_tracing = self.init_tracing;
-
-        if config.init_tracing {
-            init_tracing(&mut config);
-        }
+        let config = self.builder.build()?.try_deserialize::<AppConfig<T>>()?;
 
         info!("Configuration: `{config:?}`.", config = config);
-        Ok(config)
-    }
 
-    pub fn init_tracing(mut self) -> Self {
-        self.init_tracing = true;
-        self
+        Ok(config)
     }
 
     pub fn add_default(mut self) -> Self {
         self.builder = self
             .builder
             .add_source(File::from_str(DEFAULT_CONFIG, FileFormat::Toml));
-        self.add_env_prefixed("OTEL")
+        self
     }
 
     pub fn add_file(mut self, path: &str) -> Self {
@@ -207,11 +185,5 @@ impl<T: DeserializeOwned + Debug> AppConfigBuilder<T> {
                 .separator(DEFAULT_SEPARATOR),
         );
         self
-    }
-}
-
-impl<T> Drop for AppConfig<T> {
-    fn drop(&mut self) {
-        shutdown_tracer_provider();
     }
 }
