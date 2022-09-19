@@ -1,15 +1,17 @@
 use fregate::{
     axum::{routing::get, Router},
-    http_trace_layer, AppConfig, Application,
+    bootstrap, http_trace_layer, Application, Empty,
 };
 
 #[tokio::main]
 async fn main() {
+    let config = bootstrap::<Empty, _>([], None);
+
     let rest = Router::new()
         .route("/", get(handler))
         .layer(http_trace_layer());
 
-    Application::new(&AppConfig::default())
+    Application::new(&config)
         .router(rest)
         .serve()
         .await

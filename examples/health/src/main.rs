@@ -1,4 +1,4 @@
-use fregate::{axum, AppConfig, Application, ApplicationStatus, Health};
+use fregate::{axum, bootstrap, Application, ApplicationStatus, Empty, Health};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 
@@ -26,7 +26,9 @@ impl Health for CustomHealth {
 
 #[tokio::main]
 async fn main() {
-    Application::new(&AppConfig::default())
+    let config = bootstrap::<Empty, _>([], None);
+
+    Application::new(&config)
         .health_indicator(CustomHealth::default())
         .serve()
         .await

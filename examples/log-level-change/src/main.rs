@@ -1,9 +1,8 @@
 use fregate::{
     axum::{routing::get, Router},
-    http_trace_layer, AppConfig, Application,
+    bootstrap, get_handle_log_layer, http_trace_layer, Application, Empty,
 };
 use std::str::FromStr;
-use std::sync::Arc;
 use std::time::Duration;
 use tracing_subscriber::EnvFilter;
 
@@ -12,13 +11,11 @@ use tracing_subscriber::EnvFilter;
 // Will be changed to TRACE
 #[tokio::main]
 async fn main() {
-    let conf = Arc::new(AppConfig::default());
+    let conf = bootstrap::<Empty, _>([], None);
 
-    let config = conf.clone();
     tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_secs(10)).await;
-        let config = config;
-        let log_filter_reloader = config.get_log_filter_reload().unwrap();
+        tokio::time::sleep(Duration::from_secs(20)).await;
+        let log_filter_reloader = get_handle_log_layer().unwrap();
 
         log_filter_reloader
             .modify(|filter| *filter.filter_mut() = EnvFilter::from_str("trace").unwrap())

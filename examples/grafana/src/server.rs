@@ -1,6 +1,6 @@
 use fregate::axum::Router;
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
-use fregate::{grpc_trace_layer, AppConfig, Application, Tonicable};
+use fregate::{bootstrap, grpc_trace_layer, Application, Empty, Tonicable};
 use proto::{
     hello_server::{Hello, HelloServer},
     HelloRequest, HelloResponse,
@@ -31,11 +31,16 @@ impl Hello for MyHello {
 async fn main() {
     std::env::set_var("OTEL_SERVICE_NAME", "SERVER");
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
+    std::env::set_var("OTEL_PORT", "3000");
 
-    let config = &AppConfig::default();
+    let config = bootstrap::<Empty, _>([], None);
 
     let hello_service = HelloServer::new(MyHello);
     let grpc = Router::from_tonic_service(hello_service).layer(grpc_trace_layer());
 
-    Application::new(config).router(grpc).serve().await.unwrap();
+    Application::new(&config)
+        .router(grpc)
+        .serve()
+        .await
+        .unwrap();
 }

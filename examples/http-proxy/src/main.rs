@@ -3,13 +3,15 @@ use fregate::axum::{
     Router, Server,
 };
 use fregate::hyper::{Client, StatusCode};
-use fregate::{http_trace_layer, AppConfig, Application, ProxyLayer};
+use fregate::{bootstrap, http_trace_layer, Application, Empty, ProxyLayer};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
+    let config = bootstrap::<Empty, _>([], None);
+
     // Start server where to proxy requests
     tokio::spawn(server());
 
@@ -37,11 +39,7 @@ async fn main() {
         .nest("/app", hello.merge(world).merge(might_be_proxied))
         .layer(http_trace_layer());
 
-    Application::new(&AppConfig::default())
-        .router(app)
-        .serve()
-        .await
-        .unwrap();
+    Application::new(&config).router(app).serve().await.unwrap();
 }
 
 async fn server() {
