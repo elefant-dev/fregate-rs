@@ -30,11 +30,12 @@ pub fn get_handle_log_layer() -> Option<&'static HandleLogLayer> {
 type DefaultLayer = fmt::Layer<Registry, JsonFields, Format<Json, UtcTime<Rfc3339>>>;
 type DefaultLayered = Layered<LogLayer, Registry>;
 
-pub type LogFiltered = Filtered<DefaultLayer, EnvFilter, Registry>;
+type LogFiltered = Filtered<DefaultLayer, EnvFilter, Registry>;
 pub type LogLayer = reload::Layer<LogFiltered, Registry>;
 pub type HandleLogLayer = Handle<LogFiltered, Registry>;
 
-pub type TraceFiltered = Filtered<OTLayer<DefaultLayered, Tracer>, EnvFilter, DefaultLayered>;
+type TraceFiltered = Filtered<OTLayer<DefaultLayered, Tracer>, EnvFilter, DefaultLayered>;
+// TODO: will be changed to reload
 pub type TraceLayer = TraceFiltered;
 pub type HandleTraceLayer = Handle<TraceFiltered, DefaultLayered>;
 

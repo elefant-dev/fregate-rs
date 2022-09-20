@@ -33,7 +33,7 @@ where
 
 type Client = hyper::client::Client<HttpConnector, Body>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ProxyLayer<F> {
     client: Client,
     destination: String,
@@ -69,7 +69,7 @@ where
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Proxy<F, S> {
     client: Client,
     destination: String,

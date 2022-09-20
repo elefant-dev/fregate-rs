@@ -17,6 +17,7 @@ const TRACES_ENDPOINT_PTR: &str = "/exporter/otlp/traces/endpoint";
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
 const DEFAULT_SEPARATOR: &str = "_";
 
+#[derive(Clone, Debug)]
 pub enum ConfigSource<'a> {
     String(&'a str, FileFormat),
     File(&'a str),

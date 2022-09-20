@@ -7,8 +7,8 @@ use crate::{Health, Optional};
 const OPENAPI_PATH: &str = "/openapi";
 const FAVICON_PATH: &str = "/favicon.ico";
 
-static FAVICON: Bytes = Bytes::from_static(include_bytes!("../../src/resources/favicon.png"));
-const OPENAPI: &str = include_str!("../../src/resources/openapi.yaml");
+static FAVICON: Bytes = Bytes::from_static(include_bytes!("../resources/favicon.png"));
+const OPENAPI: &str = include_str!("../resources/openapi.yaml");
 
 pub(crate) fn build_management_router<H: Health>(health_indicator: Option<H>) -> Router {
     Router::new()

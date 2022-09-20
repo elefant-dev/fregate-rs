@@ -3,6 +3,7 @@ use serde::Deserialize;
 use std::fmt::Debug;
 use tracing::{error, info};
 
+//TODO: This seems to be unused, remove in future when sure no need for config_ext
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("Got config Error: `{0}`")]
