@@ -104,12 +104,15 @@ impl Default for AppConfig<Empty> {
     }
 }
 
-impl<T: DeserializeOwned + Debug> AppConfig<T> {
+impl<T> AppConfig<T> {
     pub fn builder() -> AppConfigBuilder<T> {
         AppConfigBuilder::new()
     }
 
-    pub fn default_with(file_path: &str, env_prefix: &str) -> Result<Self, ConfigError> {
+    pub fn default_with(file_path: &str, env_prefix: &str) -> Result<Self, ConfigError>
+    where
+        T: Debug + DeserializeOwned,
+    {
         AppConfig::builder()
             .add_default()
             .add_env_prefixed("OTEL")
@@ -120,6 +123,7 @@ impl<T: DeserializeOwned + Debug> AppConfig<T> {
 
     pub fn load_from<'a, S>(sources: S) -> Result<Self, ConfigError>
     where
+        T: Debug + DeserializeOwned,
         S: IntoIterator<Item = ConfigSource<'a>>,
     {
         let mut config_builder = AppConfig::<T>::builder()
@@ -144,7 +148,7 @@ pub struct AppConfigBuilder<T> {
     phantom: PhantomData<T>,
 }
 
-impl<T: DeserializeOwned + Debug> AppConfigBuilder<T> {
+impl<T> AppConfigBuilder<T> {
     pub fn new() -> Self {
         Self {
             builder: ConfigBuilder::default(),
@@ -152,10 +156,13 @@ impl<T: DeserializeOwned + Debug> AppConfigBuilder<T> {
         }
     }
 
-    pub fn build(self) -> Result<AppConfig<T>, ConfigError> {
+    pub fn build(self) -> Result<AppConfig<T>, ConfigError>
+    where
+        T: Debug + DeserializeOwned,
+    {
         let config = self.builder.build()?.try_deserialize::<AppConfig<T>>()?;
 
-        info!("Configuration: `{config:?}`.", config = config);
+        info!("Configuration: `{config:?}`.");
 
         Ok(config)
     }
