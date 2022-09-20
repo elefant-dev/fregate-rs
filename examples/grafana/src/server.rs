@@ -31,6 +31,7 @@ impl Hello for MyHello {
 async fn main() {
     std::env::set_var("OTEL_SERVICE_NAME", "SERVER");
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
+    std::env::set_var("OTEL_PORT", "3000");
 
     let config = bootstrap::<Empty, _>([]);
 

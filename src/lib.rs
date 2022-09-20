@@ -1,8 +1,8 @@
 //TODO: add docs and missing_docs lint
+//TODO: clippy::expect_used,
 #![warn(
     rust_2018_idioms,
     missing_debug_implementations,
-    clippy::expect_used,
     clippy::missing_panics_doc,
     clippy::panic_in_result_fn,
     clippy::panicking_unwrap,

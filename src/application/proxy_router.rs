@@ -24,7 +24,7 @@ async fn proxy_handler(
 
     let uri = format!("{}{}", destination, path_query);
     //TODO: return error in response
-    *request.uri_mut() = Uri::try_from(uri).unwrap();
+    *request.uri_mut() = Uri::try_from(uri).expect("Failed to get uri from destination");
 
     let response = client.request(request).await;
     match response {
