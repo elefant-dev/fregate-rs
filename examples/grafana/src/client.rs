@@ -2,7 +2,8 @@ mod proto {
     tonic::include_proto!("hello");
 }
 
-use fregate::AppConfig;
+use fregate::{bootstrap, Empty};
+use opentelemetry::global::shutdown_tracer_provider;
 use opentelemetry::propagation::Injector;
 use proto::{hello_client::HelloClient, HelloRequest, HelloResponse};
 use tonic::transport::Channel;
@@ -55,7 +56,8 @@ async fn send_hello(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::env::set_var("OTEL_SERVICE_NAME", "CLIENT");
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
-    let _config = AppConfig::default();
+
+    let _config = bootstrap::<Empty, _>([]);
 
     let channel = tonic::transport::Endpoint::from_static("http://0.0.0.0:8000")
         .connect()
@@ -69,5 +71,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     send_hello(&mut client, request).await?;
 
+    shutdown_tracer_provider();
     Ok(())
 }

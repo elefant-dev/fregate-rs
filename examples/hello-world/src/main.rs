@@ -1,5 +1,5 @@
 use fregate::axum::routing::get;
-use fregate::{axum::Router, AppConfig, Application};
+use fregate::{axum::Router, bootstrap, Application, Empty};
 
 async fn handler() -> &'static str {
     "Hello, World!"
@@ -7,7 +7,9 @@ async fn handler() -> &'static str {
 
 #[tokio::main]
 async fn main() {
-    Application::new(&AppConfig::default())
+    let config = bootstrap::<Empty, _>([]);
+
+    Application::new(&config)
         .router(Router::new().route("/", get(handler)))
         .serve()
         .await
