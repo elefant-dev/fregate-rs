@@ -13,6 +13,11 @@ use tower_http::{
 use tracing::{field::display, info, span, Level, Span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
+use metrics::{
+    decrement_gauge, describe_counter, describe_histogram, gauge, histogram, increment_counter,
+    increment_gauge,
+};
+
 #[allow(clippy::type_complexity)]
 pub fn http_trace_layer() -> TraceLayer<
     SharedClassifier<ServerErrorsAsFailures>,
@@ -71,6 +76,14 @@ impl<B> OnRequest<B> for BasicOnRequest {
 
         span.record("method", &display(method));
         span.record("uri", &display(uri));
+
+        let labels = [
+            ("method", method.to_string()),
+            ("uri", uri.to_string()),
+            ("trace_id", trace_id.to_string()),
+        ];
+
+        increment_counter!("http_requests_total", &labels);
     }
 }
 
@@ -81,11 +94,20 @@ impl<B> OnResponse<B> for BasicOnResponse {
     fn on_response(self, response: &Response<B>, latency: Duration, span: &Span) {
         let trace_id = get_span_trace_id(span);
         let status = response.status();
-        let latency = latency.as_millis();
+        let latency_as_millis = latency.as_millis();
+        let latency_as_sec = latency.as_secs_f64();
 
         info!(
-            "Outgoing Response: status code: {status}, latency: {latency}ms, x-b3-traceid: {trace_id}"
+            "Outgoing Response: status code: {status}, latency: {latency_as_millis}ms, x-b3-traceid: {trace_id}"
         );
+
+        let labels = [
+            ("status", status.to_string()),
+            ("trace_id", trace_id.to_string()),
+        ];
+
+        increment_counter!("http_response_total", &labels);
+        histogram!("http_requests_duration_seconds", latency_as_sec, &labels);
     }
 }
 

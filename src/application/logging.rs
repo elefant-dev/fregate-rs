@@ -86,6 +86,18 @@ fn get_trace_layer(trace_level: &str, service_name: &str, traces_endpoint: &str)
     //     .replace(traces_filter_reloader);
 }
 
+use metrics_exporter_prometheus::PrometheusBuilder;
+use metrics_util::MetricKindMask;
+fn init_prometheus_recorder() {
+    PrometheusBuilder::new()
+        .idle_timeout(
+            MetricKindMask::COUNTER | MetricKindMask::HISTOGRAM,
+            Some(std::time::Duration::from_secs(10)),
+        )
+        .install()
+        .expect("failed to install Prometheus recorder");
+}
+
 fn set_panic_hook() {
     // Capture the span context in which the program panicked
     std::panic::set_hook(Box::new(|panic| {
@@ -110,6 +122,8 @@ pub fn init_tracing(
     service_name: &str,
     traces_endpoint: Option<&str>,
 ) {
+    init_prometheus_recorder();
+
     let (lag_layer, log_layer_handle) = get_log_layers(log_level);
 
     let trace_layer = traces_endpoint
