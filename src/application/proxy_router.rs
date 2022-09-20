@@ -10,6 +10,7 @@ use hyper::{client::HttpConnector, Body};
 
 type Client = hyper::client::Client<HttpConnector, Body>;
 
+// TODO: might need to be removed, review it on axum 0.16
 async fn proxy_handler(
     Extension(client): Extension<Client>,
     Extension(destination): Extension<String>,
@@ -22,7 +23,8 @@ async fn proxy_handler(
         .unwrap_or_else(|| request.uri().path());
 
     let uri = format!("{}{}", destination, path_query);
-    *request.uri_mut() = Uri::try_from(uri).unwrap();
+    //TODO: return error in response
+    *request.uri_mut() = Uri::try_from(uri).expect("Failed to get uri from destination");
 
     let response = client.request(request).await;
     match response {

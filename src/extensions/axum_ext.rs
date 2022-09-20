@@ -38,6 +38,7 @@ pub fn png(content: &Bytes) -> Response<BoxBody> {
         .into_response()
 }
 
+//TODO: Might be substituted with Router::nest(other.unwrap_or_default())
 pub trait Optional {
     fn merge_optional(self, other: Option<Router>) -> Self;
 

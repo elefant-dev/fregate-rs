@@ -14,7 +14,7 @@ async fn main() {
     let conf = bootstrap::<Empty, _>([]);
 
     tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_secs(20)).await;
+        tokio::time::sleep(Duration::from_secs(10)).await;
         let log_filter_reloader = get_handle_log_layer().unwrap();
 
         log_filter_reloader

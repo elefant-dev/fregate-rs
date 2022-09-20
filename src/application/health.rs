@@ -23,7 +23,7 @@ impl IntoResponse for ApplicationStatus {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct AlwaysReadyAndAlive {}
 
 #[axum::async_trait]
@@ -37,7 +37,7 @@ impl Health for AlwaysReadyAndAlive {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct NoHealth {}
 
 #[axum::async_trait]

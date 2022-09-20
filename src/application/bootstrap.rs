@@ -1,14 +1,4 @@
-mod configuration;
-mod health;
-mod logging;
-mod metrics;
-mod proxy;
-mod router;
-
-pub use self::metrics::*;
-pub(crate) use router::*;
-pub use {configuration::*, health::*, logging::*, proxy::*};
-
+use crate::*;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use tracing::info;
