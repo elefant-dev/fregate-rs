@@ -18,6 +18,7 @@ where
         trace_level,
         service_name,
         traces_endpoint,
+        metrics_endpoint,
     } = &config.logger;
 
     init_tracing(
@@ -26,6 +27,9 @@ where
         service_name,
         traces_endpoint.as_deref(),
     );
+    if let Some(socket) = metrics_endpoint {
+        init_metrics(socket);
+    }
 
     info!("Configuration: `{config:?}`.", config = config);
 

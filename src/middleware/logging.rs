@@ -1,7 +1,7 @@
 use hyper::{Request, Response};
 use opentelemetry::{
     global::get_text_map_propagator,
-    trace::{TraceContextExt, TraceId},
+    trace::{SpanId, TraceContextExt, TraceId},
     Context,
 };
 use opentelemetry_http::HeaderExtractor;
@@ -69,10 +69,11 @@ pub struct BasicOnRequest {}
 impl<B> OnRequest<B> for BasicOnRequest {
     fn on_request(&mut self, request: &Request<B>, span: &Span) {
         let trace_id = get_span_trace_id(span);
+        let span_id = get_span_span_id(span);
         let method = request.method();
         let uri = request.uri();
 
-        info!("Incoming Request: method: [{method}], uri: {uri}, x-b3-traceid: {trace_id}");
+        info!("Incoming Request: method: [{method}], uri: {uri}, x-b3-traceid: {trace_id}, x-b3-spanid: {span_id}");
 
         span.record("method", &display(method));
         span.record("uri", &display(uri));
@@ -81,6 +82,7 @@ impl<B> OnRequest<B> for BasicOnRequest {
             ("method", method.to_string()),
             ("uri", uri.to_string()),
             ("trace_id", trace_id.to_string()),
+            ("span_id", span_id.to_string()),
         ];
 
         increment_counter!("http_requests_total", &labels);
@@ -93,17 +95,19 @@ pub struct BasicOnResponse {}
 impl<B> OnResponse<B> for BasicOnResponse {
     fn on_response(self, response: &Response<B>, latency: Duration, span: &Span) {
         let trace_id = get_span_trace_id(span);
+        let span_id = get_span_span_id(span);
         let status = response.status();
         let latency_as_millis = latency.as_millis();
         let latency_as_sec = latency.as_secs_f64();
 
         info!(
-            "Outgoing Response: status code: {status}, latency: {latency_as_millis}ms, x-b3-traceid: {trace_id}"
+            "Outgoing Response: status code: {status}, latency: {latency_as_millis}ms, x-b3-traceid: {trace_id}, x-b3-spanid: {span_id}"
         );
 
         let labels = [
             ("status", status.to_string()),
             ("trace_id", trace_id.to_string()),
+            ("span_id", span_id.to_string()),
         ];
 
         increment_counter!("http_response_total", &labels);
@@ -126,5 +130,19 @@ pub fn get_span_trace_id(span: &Span) -> TraceId {
         span_context.trace_id()
     } else {
         TraceId::INVALID
+    }
+}
+
+pub fn get_span_span_id(span: &Span) -> SpanId {
+    let context = span.context();
+    let span_ref = context.span();
+    let span_context = span_ref.span_context();
+
+    // when logging span_id, firstly set parent context for current span and then take from it span_id
+    // if context were invalid it will be generated, so we log correct span_id
+    if span_context.is_valid() {
+        span_context.span_id()
+    } else {
+        SpanId::INVALID
     }
 }
