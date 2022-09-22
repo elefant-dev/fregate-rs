@@ -13,6 +13,7 @@ use tower_http::{
 use tracing::{field::display, info, span, Level, Span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
+/// Returns [`TraceLayer`] with basic functionality for logging incoming HTTP request and outgoing HTTP response. Creates info span on request. Uses [`ServerErrorsAsFailures`] as classifier to log errors.
 #[allow(clippy::type_complexity)]
 pub fn http_trace_layer() -> TraceLayer<
     SharedClassifier<ServerErrorsAsFailures>,
@@ -26,6 +27,7 @@ pub fn http_trace_layer() -> TraceLayer<
         .on_request(BasicOnRequest {})
 }
 
+/// Returns [`TraceLayer`] with basic functionality for logging incoming HTTP request and outgoing HTTP response. Creates info span on request. Uses [`GrpcErrorsAsFailures`] as classifier to log errors.
 #[allow(clippy::type_complexity)]
 pub fn grpc_trace_layer() -> TraceLayer<
     SharedClassifier<GrpcErrorsAsFailures>,
@@ -39,6 +41,7 @@ pub fn grpc_trace_layer() -> TraceLayer<
         .on_request(BasicOnRequest {})
 }
 
+/// Creates info span on incoming request
 #[derive(Clone, Debug)]
 pub struct BasicMakeSpan {}
 
@@ -58,6 +61,7 @@ impl<B> MakeSpan<B> for BasicMakeSpan {
     }
 }
 
+/// Logs message on request: "Incoming Request: method: \[{method}], uri: {uri}, x-b3-traceid: {trace_id}".
 #[derive(Clone, Debug)]
 pub struct BasicOnRequest {}
 
@@ -74,6 +78,7 @@ impl<B> OnRequest<B> for BasicOnRequest {
     }
 }
 
+/// Logs message on response: "Outgoing Response: status code: {status}, latency: {latency}ms, x-b3-traceid: {trace_id}".
 #[derive(Clone, Debug)]
 pub struct BasicOnResponse {}
 
@@ -89,10 +94,12 @@ impl<B> OnResponse<B> for BasicOnResponse {
     }
 }
 
+/// Extracts context from request headers
 pub fn extract_context<B>(request: &Request<B>) -> Context {
     get_text_map_propagator(|propagator| propagator.extract(&HeaderExtractor(request.headers())))
 }
 
+/// Get TraceId from given [`Span`]
 pub fn get_span_trace_id(span: &Span) -> TraceId {
     let context = span.context();
     let span_ref = context.span();

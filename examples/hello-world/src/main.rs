@@ -1,5 +1,7 @@
-use fregate::axum::routing::get;
-use fregate::{axum::Router, bootstrap, Application, Empty};
+use fregate::{
+    axum::{routing::get, Router},
+    bootstrap, Application, Empty,
+};
 
 async fn handler() -> &'static str {
     "Hello, World!"

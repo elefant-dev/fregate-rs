@@ -1,16 +1,22 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 
+/// Trait to implement custom health check which will be used to response on health check requests
 #[axum::async_trait]
 pub trait Health: Send + Sync + 'static + Clone {
+    /// return [`ApplicationStatus`] on /health/alive endpoint
     async fn alive(&self) -> ApplicationStatus;
 
+    /// return [`ApplicationStatus`] on /health/ready endpoint
     async fn ready(&self) -> ApplicationStatus;
 }
 
+/// Variants to respond to health check request
 #[derive(Debug, Clone, Copy)]
 pub enum ApplicationStatus {
+    /// returns 200 StatusCode
     UP,
+    /// returns 501 StatusCode
     DOWN,
 }
 
@@ -23,6 +29,7 @@ impl IntoResponse for ApplicationStatus {
     }
 }
 
+/// Default structure to mark application always alive and ready.
 #[derive(Default, Debug, Clone)]
 pub struct AlwaysReadyAndAlive {}
 
@@ -34,19 +41,5 @@ impl Health for AlwaysReadyAndAlive {
 
     async fn ready(&self) -> ApplicationStatus {
         ApplicationStatus::UP
-    }
-}
-
-#[derive(Default, Debug, Clone)]
-pub struct NoHealth {}
-
-#[axum::async_trait]
-impl Health for NoHealth {
-    async fn alive(&self) -> ApplicationStatus {
-        ApplicationStatus::DOWN
-    }
-
-    async fn ready(&self) -> ApplicationStatus {
-        ApplicationStatus::DOWN
     }
 }

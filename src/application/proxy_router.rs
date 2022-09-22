@@ -10,7 +10,9 @@ use hyper::{client::HttpConnector, Body};
 
 type Client = hyper::client::Client<HttpConnector, Body>;
 
-// TODO: might need to be removed, review it on axum 0.16
+// TODO: might need to be removed, review it on axum 0.6
+// TODO: remove allow
+#[allow(clippy::expect_used)]
 async fn proxy_handler(
     Extension(client): Extension<Client>,
     Extension(destination): Extension<String>,
@@ -33,6 +35,7 @@ async fn proxy_handler(
     }
 }
 
+/// Returns [`Router`] with set handler which proxy all incoming requests to destination
 pub fn route_proxy(path: &str, destination: &str) -> Router {
     let client = Client::new();
 

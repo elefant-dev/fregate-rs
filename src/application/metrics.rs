@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle, PrometheusRecorder};
 use once_cell::sync::Lazy;
 
@@ -5,11 +7,16 @@ static RECORDER: Lazy<PrometheusRecorder> = Lazy::new(|| PrometheusBuilder::new(
 static HANDLE: Lazy<PrometheusHandle> = Lazy::new(|| RECORDER.handle());
 
 #[inline(always)]
+/// Return rendered metrics
 pub fn get_metrics() -> String {
     HANDLE.render()
 }
 
 #[inline(always)]
+#[allow(clippy::expect_used)]
+/// Initialise PrometheusRecorder
+///
+/// Panic if failed to initialise
 pub fn init_metrics() {
     metrics::set_recorder(&*RECORDER).expect("telemetry: Can't set recorder.");
 }
