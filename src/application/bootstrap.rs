@@ -27,9 +27,8 @@ where
         service_name,
         traces_endpoint.as_deref(),
     );
-    if let Some(socket) = metrics_endpoint {
-        init_metrics(socket);
-    }
+
+    init_metrics(metrics_endpoint);
 
     info!("Configuration: `{config:?}`.", config = config);
 

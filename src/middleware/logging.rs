@@ -68,15 +68,9 @@ pub struct BasicOnRequest {}
 
 impl<B> OnRequest<B> for BasicOnRequest {
     fn on_request(&mut self, request: &Request<B>, span: &Span) {
-        let trace_id = get_span_trace_id(span);
-        let span_id = get_span_span_id(span);
+        let (trace_id, span_id) = get_span_trace_and_span_ids(span);
         let method = request.method();
         let uri = request.uri();
-
-        info!("Incoming Request: method: [{method}], uri: {uri}, x-b3-traceid: {trace_id}, x-b3-spanid: {span_id}");
-
-        span.record("method", &display(method));
-        span.record("uri", &display(uri));
 
         let labels = [
             ("method", method.to_string()),
@@ -84,6 +78,11 @@ impl<B> OnRequest<B> for BasicOnRequest {
             ("trace_id", trace_id.to_string()),
             ("span_id", span_id.to_string()),
         ];
+
+        info!("Incoming Request: method: [{method}], uri: {uri}, x-b3-traceid: {trace_id}, x-b3-spanid: {span_id}");
+
+        span.record("method", &display(method));
+        span.record("uri", &display(uri));
 
         increment_counter!("http_requests_total", &labels);
     }
@@ -94,8 +93,7 @@ pub struct BasicOnResponse {}
 
 impl<B> OnResponse<B> for BasicOnResponse {
     fn on_response(self, response: &Response<B>, latency: Duration, span: &Span) {
-        let trace_id = get_span_trace_id(span);
-        let span_id = get_span_span_id(span);
+        let (trace_id, span_id) = get_span_trace_and_span_ids(span);
         let status = response.status();
         let latency_as_millis = latency.as_millis();
         let latency_as_sec = latency.as_secs_f64();
@@ -119,7 +117,7 @@ pub fn extract_context<B>(request: &Request<B>) -> Context {
     get_text_map_propagator(|propagator| propagator.extract(&HeaderExtractor(request.headers())))
 }
 
-pub fn get_span_trace_id(span: &Span) -> TraceId {
+pub fn get_span_trace_and_span_ids(span: &Span) -> (TraceId, SpanId) {
     let context = span.context();
     let span_ref = context.span();
     let span_context = span_ref.span_context();
@@ -127,22 +125,8 @@ pub fn get_span_trace_id(span: &Span) -> TraceId {
     // when logging trace_id, firstly set parent context for current span and then take from it trace_id
     // if context were invalid it will be generated, so we log correct trace_id
     if span_context.is_valid() {
-        span_context.trace_id()
+        (span_context.trace_id(), span_context.span_id())
     } else {
-        TraceId::INVALID
-    }
-}
-
-pub fn get_span_span_id(span: &Span) -> SpanId {
-    let context = span.context();
-    let span_ref = context.span();
-    let span_context = span_ref.span_context();
-
-    // when logging span_id, firstly set parent context for current span and then take from it span_id
-    // if context were invalid it will be generated, so we log correct span_id
-    if span_context.is_valid() {
-        span_context.span_id()
-    } else {
-        SpanId::INVALID
+        (TraceId::INVALID, SpanId::INVALID)
     }
 }
