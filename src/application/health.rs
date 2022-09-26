@@ -1,7 +1,7 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 
-/// Trait to implement custom health check which will be used to response on health check requests
+/// Trait to implement custom health check which will be used to respond to health check requests
 #[axum::async_trait]
 pub trait Health: Send + Sync + 'static + Clone {
     /// return [`ApplicationStatus`] on /health/alive endpoint
