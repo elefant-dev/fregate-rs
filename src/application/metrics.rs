@@ -11,19 +11,10 @@ pub fn get_metrics() -> String {
 }
 
 #[inline(always)]
-pub fn init_metrics(metrics_endpoint: &Option<String>) {
-    metrics::set_recorder(&*RECORDER).expect("telemetry: Can't set recorder.");
-
-    let socket = match metrics_endpoint {
-        Some(socket) => socket,
-        None => return,
-    };
-
-    PrometheusBuilder::new()
-        .with_push_gateway(socket, std::time::Duration::from_secs(10))
-        .expect("push gateway endpoint should be valid");
-
+pub fn init_metrics() {
     register_metrics();
+
+    metrics::set_recorder(&*RECORDER).expect("telemetry: Can't set recorder.");
 }
 
 fn register_metrics() {

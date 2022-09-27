@@ -14,7 +14,6 @@ const LOG_LEVEL_PTR: &str = "/log/level";
 const TRACE_LEVEL_PTR: &str = "/trace/level";
 const SERVICE_NAME_PTR: &str = "/service/name";
 const TRACES_ENDPOINT_PTR: &str = "/exporter/otlp/traces/endpoint";
-const METRICS_ENDPOINT_PTR: &str = "/exporter/otlp/metrics/endpoint";
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
 const DEFAULT_SEPARATOR: &str = "_";
 
@@ -42,7 +41,6 @@ pub struct LoggerConfig {
     pub trace_level: String,
     pub service_name: String,
     pub traces_endpoint: Option<String>,
-    pub metrics_endpoint: Option<String>,
 }
 
 impl<'de> Deserialize<'de> for LoggerConfig {
@@ -63,20 +61,11 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             None
         };
 
-        let metrics_endpoint_ptr = config.pointer_mut(METRICS_ENDPOINT_PTR);
-
-        let metrics_endpoint = if let Some(ptr) = metrics_endpoint_ptr {
-            Some(from_value::<String>(ptr.take()).map_err(Error::custom)?)
-        } else {
-            None
-        };
-
         Ok(LoggerConfig {
             log_level,
             trace_level,
             service_name,
             traces_endpoint,
-            metrics_endpoint,
         })
     }
 }

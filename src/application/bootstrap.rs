@@ -18,7 +18,6 @@ where
         trace_level,
         service_name,
         traces_endpoint,
-        metrics_endpoint,
     } = &config.logger;
 
     init_tracing(
@@ -28,7 +27,7 @@ where
         traces_endpoint.as_deref(),
     );
 
-    init_metrics(metrics_endpoint);
+    init_metrics();
 
     info!("Configuration: `{config:?}`.", config = config);
 

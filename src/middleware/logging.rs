@@ -13,10 +13,7 @@ use tower_http::{
 use tracing::{field::display, info, span, Level, Span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
-use metrics::{
-    decrement_gauge, describe_counter, describe_histogram, gauge, histogram, increment_counter,
-    increment_gauge,
-};
+use metrics::{histogram, increment_counter};
 
 #[allow(clippy::type_complexity)]
 pub fn http_trace_layer() -> TraceLayer<

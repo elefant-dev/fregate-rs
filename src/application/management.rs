@@ -15,6 +15,7 @@ pub(crate) fn build_management_router<H: Health>(health_indicator: Option<H>) ->
         .route(OPENAPI_PATH, get(|| async { yaml(OPENAPI) }))
         .route(FAVICON_PATH, get(|| async { png(&FAVICON) }))
         .merge_optional(build_health_router(health_indicator))
+        .merge_optional(build_metrics_router())
 }
 
 fn build_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router> {
@@ -30,4 +31,11 @@ fn build_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router>
             .route("/ready", get(ready_handler))
             .layer(Extension(health_indicator)),
     )
+}
+
+fn build_metrics_router() -> Option<Router> {
+    Some(Router::new().route(
+        "/metrics",
+        get(move || std::future::ready(crate::get_metrics())),
+    ))
 }
