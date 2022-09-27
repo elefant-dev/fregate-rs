@@ -1,4 +1,3 @@
-use crate::configuration::AppConfig;
 use crate::*;
 use axum::Router;
 use hyper::Server;
@@ -7,6 +6,7 @@ use std::net::SocketAddr;
 use tokio::signal;
 use tracing::info;
 
+/// Application to set up HTTP server with given config [`AppConfig`]
 #[derive(Debug)]
 pub struct Application<'a, H, T> {
     config: &'a AppConfig<T>,
@@ -15,6 +15,7 @@ pub struct Application<'a, H, T> {
 }
 
 impl<'a, T> Application<'a, AlwaysReadyAndAlive, T> {
+    /// Creates new Application with health checks always returning [200 OK]
     pub fn new(config: &'a AppConfig<T>) -> Self {
         Application::<'a, AlwaysReadyAndAlive, T> {
             config,
@@ -25,6 +26,7 @@ impl<'a, T> Application<'a, AlwaysReadyAndAlive, T> {
 }
 
 impl<'a, H, T> Application<'a, H, T> {
+    /// Set up new health indicator
     pub fn health_indicator<Hh>(self, health: Hh) -> Application<'a, Hh, T> {
         Application::<'a, Hh, T> {
             config: self.config,
@@ -33,6 +35,7 @@ impl<'a, H, T> Application<'a, H, T> {
         }
     }
 
+    /// Start serving at specified host and port in [AppConfig] accepting both HTTP1 and HTTP2
     pub async fn serve(self) -> hyper::Result<()>
     where
         H: Health,
@@ -43,12 +46,14 @@ impl<'a, H, T> Application<'a, H, T> {
         run_service(&application_socket, app).await
     }
 
+    /// Set up Router Application will serve to
     pub fn router(mut self, router: Router) -> Self {
         self.router = Some(router);
         self
     }
 }
 
+#[allow(clippy::expect_used)]
 async fn shutdown_signal() {
     let ctrl_c = async {
         signal::ctrl_c()
