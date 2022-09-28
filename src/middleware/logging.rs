@@ -68,7 +68,7 @@ pub struct BasicOnRequest {}
 
 impl<B> OnRequest<B> for BasicOnRequest {
     fn on_request(&mut self, request: &Request<B>, span: &Span) {
-        let (trace_id, span_id) = get_span_trace_and_span_ids(span);
+        let (trace_id, span_id) = get_trace_and_span_ids(span);
         let method = request.method();
         let uri = request.uri();
 
@@ -94,7 +94,7 @@ pub struct BasicOnResponse {}
 
 impl<B> OnResponse<B> for BasicOnResponse {
     fn on_response(self, response: &Response<B>, latency: Duration, span: &Span) {
-        let (trace_id, span_id) = get_span_trace_and_span_ids(span);
+        let (trace_id, span_id) = get_trace_and_span_ids(span);
         let status = response.status();
         let latency_as_millis = latency.as_millis();
         let latency_as_sec = latency.as_secs_f64();
@@ -120,7 +120,7 @@ pub fn extract_context<B>(request: &Request<B>) -> Context {
 }
 
 /// Get TraceId from given [`Span`]
-pub fn get_span_trace_and_span_ids(span: &Span) -> (TraceId, SpanId) {
+pub fn get_trace_and_span_ids(span: &Span) -> (TraceId, SpanId) {
     let context = span.context();
     let span_ref = context.span();
     let span_context = span_ref.span_context();

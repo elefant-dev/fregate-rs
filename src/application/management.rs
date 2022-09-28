@@ -11,11 +11,12 @@ static FAVICON: Bytes = Bytes::from_static(include_bytes!("../resources/favicon.
 const OPENAPI: &str = include_str!("../resources/openapi.yaml");
 
 pub(crate) fn build_management_router<H: Health>(health_indicator: Option<H>) -> Router {
+    println!("!!!!!!!build_management_router!!!!!");
     Router::new()
         .route(OPENAPI_PATH, get(|| async { yaml(OPENAPI) }))
         .route(FAVICON_PATH, get(|| async { png(&FAVICON) }))
         .merge_optional(build_health_router(health_indicator))
-        .merge_optional(build_metrics_router())
+        .merge(build_metrics_router())
 }
 
 fn build_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router> {
@@ -33,9 +34,9 @@ fn build_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router>
     )
 }
 
-fn build_metrics_router() -> Option<Router> {
-    Some(Router::new().route(
+fn build_metrics_router() -> Router {
+    Router::new().route(
         "/metrics",
         get(move || std::future::ready(crate::get_metrics())),
-    ))
+    )
 }
