@@ -1,4 +1,5 @@
 use hyper::{Request, Response};
+use metrics::{histogram, increment_counter};
 use opentelemetry::{
     global::get_text_map_propagator,
     trace::{SpanId, TraceContextExt, TraceId},
@@ -13,10 +14,7 @@ use tower_http::{
 use tracing::{field::display, info, span, Level, Span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
-use metrics::{histogram, increment_counter};
-
 /// Returns [`TraceLayer`] with basic functionality for logging incoming HTTP request and outgoing HTTP response. Creates info span on request. Uses [`ServerErrorsAsFailures`] as classifier to log errors.
-
 #[allow(clippy::type_complexity)]
 pub fn http_trace_layer() -> TraceLayer<
     SharedClassifier<ServerErrorsAsFailures>,
