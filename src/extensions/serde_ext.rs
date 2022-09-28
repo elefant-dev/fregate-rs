@@ -5,6 +5,7 @@ use serde_json::Value;
 // TODO: FIXME: https://github.com/serde-rs/serde/issues/2261
 /// Needed for overcoming overlapping path in config deserialization.
 pub trait DeserializeExt {
+    /// find value by given pointer and try to deserialize
     fn pointer_and_deserialize<'de, T, E>(&'de self, pointer: &'static str) -> Result<T, E>
     where
         T: Deserialize<'de>,

@@ -1,13 +1,18 @@
 # fregate-rs
 
-Developing a server requires to write code for logging, configuration, metrics, health checks etc.
-This crate aims to solve these problems providing user with `Application` builder for setting up http or/and grpc service.
+Developing an HTTP server requires to add code for logging, configuration, metrics, health checks etc.
+This crate aims to solve these problems providing user with `Application` builder for setting up HTTP service.
 
 ## Work in progress 
-This project in progress and might change a lot from version to version.
+This project is in progress and might change a lot from version to version.
 
 ## Usage example
 ```rust
+use fregate::{
+    axum::{routing::get, Router},
+    bootstrap, Application, Empty,
+};
+
 async fn handler() -> &'static str {
     "Hello, World!"
 }

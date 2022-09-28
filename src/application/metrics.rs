@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use metrics::{describe_counter, describe_histogram, register_counter, register_histogram, Unit};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle, PrometheusRecorder};
 use once_cell::sync::Lazy;
@@ -6,11 +7,16 @@ static RECORDER: Lazy<PrometheusRecorder> = Lazy::new(|| PrometheusBuilder::new(
 static HANDLE: Lazy<PrometheusHandle> = Lazy::new(|| RECORDER.handle());
 
 #[inline(always)]
+/// Return rendered metrics
 pub fn get_metrics() -> String {
     HANDLE.render()
 }
 
 #[inline(always)]
+#[allow(clippy::expect_used)]
+/// Initialise PrometheusRecorder
+///
+/// Panic if failed to initialise
 pub fn init_metrics() {
     register_metrics();
 

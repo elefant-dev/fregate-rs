@@ -1,13 +1,13 @@
-pub mod app;
-pub mod bootstrap;
-pub mod configuration;
-pub mod health;
-pub mod logging;
+mod app;
+mod bootstrap;
+mod configuration;
+mod health;
+mod logging;
 mod management;
-pub mod metrics;
-pub mod proxy_router;
+mod metrics;
+mod proxy_router;
 
-pub use crate::metrics::*;
+pub use ::metrics::*;
 pub use app::*;
 pub use bootstrap::*;
 pub use configuration::*;

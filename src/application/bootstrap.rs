@@ -6,6 +6,7 @@ use tracing::info;
 /// Reads AppConfig and initialise tracing.\
 /// Panic if fail to read AppConfig or initialise tracing.\
 /// Because of internal call to tracing_subscriber::registry().init() can't be called twice, otherwise panic.\
+#[allow(clippy::expect_used)]
 pub fn bootstrap<'a, T, S>(sources: S) -> AppConfig<T>
 where
     S: IntoIterator<Item = ConfigSource<'a>>,
