@@ -7,7 +7,7 @@ mod management;
 mod metrics;
 mod proxy_router;
 
-pub use ::metrics::*;
+pub use self::metrics::*;
 pub use app::*;
 pub use bootstrap::*;
 pub use configuration::*;

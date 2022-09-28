@@ -56,14 +56,10 @@ async fn send_hello(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::env::set_var("OTEL_SERVICE_NAME", "CLIENT");
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
-    std::env::set_var(
-        "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
-        "http://127.0.0.1:9091/metrics/job/client",
-    );
 
     let _config = bootstrap::<Empty, _>([]);
 
-    let channel = tonic::transport::Endpoint::from_static("http://0.0.0.0:3000")
+    let channel = tonic::transport::Endpoint::from_static("http://0.0.0.0:8000")
         .connect()
         .await
         .unwrap();
