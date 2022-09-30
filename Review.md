@@ -25,6 +25,8 @@ is it possible to remove dependency `axum`?
 
 # Review
 
+### ✅ No major problem
+
 ### ✅ Idiomatic: code is short and concise
 
 ### ✅ Disciplinar: Library code is mostly covered in unit tests
