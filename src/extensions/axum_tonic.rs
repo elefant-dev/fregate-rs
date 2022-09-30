@@ -7,7 +7,9 @@ use tonic::transport::NamedService;
 use tower::{Service, ServiceBuilder};
 use tower_http::ServiceBuilderExt;
 
+/// Takes Tonic [`Service`] and converts it into [`Router`]
 pub trait Tonicable {
+    /// Takes Tonic [`Service`] and converts it into [`Router`]
     fn from_tonic_service<S>(service: S) -> Self
     where
         Self: Sized,

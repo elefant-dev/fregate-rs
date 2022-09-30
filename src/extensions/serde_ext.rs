@@ -8,6 +8,7 @@ use serde_json::Value;
 // Why not just standard algorithm?
 /// Needed for overcoming overlapping path in config deserialization.
 pub trait DeserializeExt {
+    /// find value by given pointer and try to deserialize
     fn pointer_and_deserialize<'de, T, E>(&'de self, pointer: &'static str) -> Result<T, E>
     where
         T: Deserialize<'de>,

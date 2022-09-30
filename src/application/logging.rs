@@ -23,20 +23,25 @@ use tracing_subscriber::{
 
 static HANDLE_LOG_LAYER: OnceCell<HandleLogLayer> = OnceCell::const_new();
 
+/// Return Some(&'static HandleLogLayer) if Handler is set up, otherwise return None
+///
+/// Used to change log level filter
 pub fn get_handle_log_layer() -> Option<&'static HandleLogLayer> {
     HANDLE_LOG_LAYER.get()
 }
 
 type DefaultLayer = fmt::Layer<Registry, JsonFields, Format<Json, UtcTime<Rfc3339>>>;
 type DefaultLayered = Layered<LogLayer, Registry>;
-
 type LogFiltered = Filtered<DefaultLayer, EnvFilter, Registry>;
+/// Shortcut for log Layer type
 pub type LogLayer = reload::Layer<LogFiltered, Registry>;
+/// Shortcut for log Layer handler type
 pub type HandleLogLayer = Handle<LogFiltered, Registry>;
-
 type TraceFiltered = Filtered<OTLayer<DefaultLayered, Tracer>, EnvFilter, DefaultLayered>;
 // TODO: will be changed to reload
+/// Shortcut for trace Layer type
 pub type TraceLayer = TraceFiltered;
+/// Shortcut for trace Layer handler type
 pub type HandleTraceLayer = Handle<TraceFiltered, DefaultLayered>;
 
 fn get_log_layers(log_level: &str) -> (LogLayer, HandleLogLayer) {
@@ -55,6 +60,7 @@ fn get_log_layers(log_level: &str) -> (LogLayer, HandleLogLayer) {
     reload::Layer::new(log_filter)
 }
 
+#[allow(clippy::expect_used)]
 fn get_trace_layer(trace_level: &str, service_name: &str, traces_endpoint: &str) -> TraceLayer {
     global::set_text_map_propagator(opentelemetry_zipkin::Propagator::with_encoding(
         MultipleHeader,
@@ -109,7 +115,15 @@ fn set_panic_hook() {
     }));
 }
 
-/// Must be called in tokio runtime otherwise panic.
+/// Set up global subscriber with formatting log layer to print logs in json format to console and if traces_endpoint is provided opentelemetry exporter to send traces to grafana
+///
+/// Panics if:
+///
+/// Called out of tokio runtime
+///
+/// Called twice
+///
+/// Fails to set up opentelemetry_otlp pipeline
 pub fn init_tracing(
     log_level: &str,
     trace_level: &str,

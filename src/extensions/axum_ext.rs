@@ -5,7 +5,7 @@ use axum::{http, Router};
 use bytes::Bytes;
 
 // TODO(kos): Consider using crate `mime_guess`.
-
+/// Converts &str into Response and add Headers: Content-Type: "application/yaml" and "cache-control": "24 hours"
 pub fn yaml(content: &'static str) -> Response<BoxBody> {
     (
         [
@@ -23,6 +23,7 @@ pub fn yaml(content: &'static str) -> Response<BoxBody> {
         .into_response()
 }
 
+/// Converts Bytes into Response and add Headers: Content-Type: "image/png" and "cache-control": "24 hours"
 pub fn png(content: &Bytes) -> Response<BoxBody> {
     (
         [
@@ -41,9 +42,12 @@ pub fn png(content: &Bytes) -> Response<BoxBody> {
 }
 
 //TODO: Might be substituted with Router::nest(other.unwrap_or_default())
+/// Used to merge and nest Option<Router>
 pub trait Optional {
+    /// Used to merge Option<Router>
     fn merge_optional(self, other: Option<Router>) -> Self;
 
+    /// Used to nest Option<Router>
     fn nest_optional(self, path: &str, other: Option<Router>) -> Self;
 }
 

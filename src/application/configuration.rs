@@ -22,32 +22,48 @@ const TRACES_ENDPOINT_PTR: &str = "/exporter/otlp/traces/endpoint";
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
 const DEFAULT_SEPARATOR: &str = "_";
 
+/// Enum to specify configuration source type:
 #[derive(Clone, Debug)]
 pub enum ConfigSource<'a> {
+    /// Load from string
     String(&'a str, FileFormat),
+    /// Read file by given path
     File(&'a str),
+    /// Read environment variables with specified prefix
     EnvPrefix(&'a str),
 }
 
+/// Used as dummy structure to read [`AppConfig`] without private field
 #[derive(Deserialize, Debug, PartialEq, Eq, Copy, Clone)]
 pub struct Empty {}
 
 // FIXME(kos): ?
 // https://serde.rs/field-attrs.html#flatten
 //
-#[derive(Debug, Deserialize)]
+// #[derive(Debug, Deserialize)]
+/// AppConfig reads and saves application configuration from different sources
+#[derive(Debug)]
 pub struct AppConfig<T> {
+    /// host address where to start Application
     pub host: IpAddr,
+    /// port
     pub port: u16,
+    /// configuration for logs and traces
     pub logger: LoggerConfig,
+    /// field for each application specific configuration
     pub private: T,
 }
 
+/// configuration for logs and traces
 #[derive(Debug)]
 pub struct LoggerConfig {
+    /// log level read to string and later parsed into EnvFilter
     pub log_level: String,
+    /// trace level read to string and later parsed into EnvFilter
     pub trace_level: String,
+    /// service name to be used in opentelemetry exporter
     pub service_name: String,
+    /// endpoint where to export traces
     pub traces_endpoint: Option<String>,
 }
 
@@ -103,6 +119,7 @@ where
 }
 
 impl Default for AppConfig<Empty> {
+    #[allow(clippy::expect_used)]
     fn default() -> Self {
         AppConfig::builder()
             .add_default()
@@ -113,10 +130,14 @@ impl Default for AppConfig<Empty> {
 }
 
 impl<T> AppConfig<T> {
+    /// Creates [`AppConfigBuilder`] to add different sources to config
     pub fn builder() -> AppConfigBuilder<T> {
         AppConfigBuilder::new()
     }
 
+    /// Load file by given path and add environment variables with given prefix in addition to default config
+    ///
+    /// Environment variables have highet priority then file and then default configuration
     pub fn default_with(file_path: &str, env_prefix: &str) -> Result<Self, ConfigError>
     where
         T: Debug + DeserializeOwned,
@@ -129,6 +150,7 @@ impl<T> AppConfig<T> {
             .build()
     }
 
+    /// Load configuration from provided container with [`ConfigSource`] which override default config.
     pub fn load_from<'a, S>(sources: S) -> Result<Self, ConfigError>
     where
         T: Debug + DeserializeOwned,
@@ -153,6 +175,7 @@ impl<T> AppConfig<T> {
 // FIXME(kos): Why not exposing builder of crate `config`?
 // Method add_default should be used every time.
 // Methods add_file, add_str, add_env_prefixed are just wrappers and are barely useful.
+/// AppConfig builder to set up multiple sources
 #[derive(Debug, Default)]
 pub struct AppConfigBuilder<T> {
     builder: ConfigBuilder<DefaultState>,
@@ -161,6 +184,7 @@ pub struct AppConfigBuilder<T> {
 
 // TODO(kos): Parameter `T` should be not near struct, but wher it's used, near method `build`.
 impl<T> AppConfigBuilder<T> {
+    /// Creates new [`AppConfigBuilder`]
     pub fn new() -> Self {
         Self {
             builder: ConfigBuilder::default(),
@@ -168,6 +192,7 @@ impl<T> AppConfigBuilder<T> {
         }
     }
 
+    /// Reads all registered sources
     pub fn build(self) -> Result<AppConfig<T>, ConfigError>
     where
         T: Debug + DeserializeOwned,
@@ -179,6 +204,7 @@ impl<T> AppConfigBuilder<T> {
         Ok(config)
     }
 
+    /// Add default config
     pub fn add_default(mut self) -> Self {
         self.builder = self
             .builder
@@ -191,16 +217,19 @@ impl<T> AppConfigBuilder<T> {
         self
     }
 
+    /// Add file
     pub fn add_file(mut self, path: &str) -> Self {
         self.builder = self.builder.add_source(File::with_name(path));
         self
     }
 
+    /// Add string
     pub fn add_str(mut self, str: &str, format: FileFormat) -> Self {
         self.builder = self.builder.add_source(File::from_str(str, format));
         self
     }
 
+    /// Add environment variables with specified prefix and default separator: "_"
     pub fn add_env_prefixed(mut self, prefix: &str) -> Self {
         self.builder = self.builder.add_source(
             Environment::with_prefix(prefix)

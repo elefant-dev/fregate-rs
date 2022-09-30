@@ -39,6 +39,7 @@ where
 
 type Client = hyper::client::Client<HttpConnector, Body>;
 
+/// Layer that applies [`Proxy`].
 #[derive(Clone, Debug)]
 pub struct ProxyLayer<F> {
     client: Client,
@@ -47,6 +48,7 @@ pub struct ProxyLayer<F> {
 }
 
 impl<F> ProxyLayer<F> {
+    /// Creates new [`ProxyLayer`]
     pub fn new<B>(should_be_proxied_fn: F, client: Client, destination: &str) -> Self
     where
         F: Fn(&Request<B>) -> bool,
@@ -75,6 +77,7 @@ where
     }
 }
 
+/// Middleware that takes: Fn(&Request<Body>) -> bool which decides if to proxy request or not, and proxy it to destination using client
 #[derive(Clone, Debug)]
 pub struct Proxy<F, S> {
     client: Client,
@@ -84,6 +87,7 @@ pub struct Proxy<F, S> {
 }
 
 impl<F, S> Proxy<F, S> {
+    /// Creates new [`Proxy`] with given fn to decide if to proxy request, destination where to proxy request and client which will be used to proxy
     pub fn new(service: S, should_be_proxied_fn: F, destination: String, client: Client) -> Self {
         Self {
             inner: service,
@@ -91,18 +95,6 @@ impl<F, S> Proxy<F, S> {
             destination,
             client,
         }
-    }
-
-    pub fn get_ref(&self) -> &S {
-        &self.inner
-    }
-
-    pub fn get_mut(&mut self) -> &mut S {
-        &mut self.inner
-    }
-
-    pub fn into_inner(self) -> S {
-        self.inner
     }
 }
 
@@ -146,6 +138,7 @@ where
 }
 
 pin_project! {
+    /// Response future returned by [`Proxy`] middleware
     pub struct ResponseFuture<F> {
         #[pin]
         kind: FutureType<F>,
@@ -153,13 +146,13 @@ pin_project! {
 }
 
 impl<F> ResponseFuture<F> {
-    fn future(future: F) -> Self {
+    pub(crate) fn future(future: F) -> Self {
         Self {
             kind: FutureType::Axum { future },
         }
     }
 
-    fn hyper(future: hyper::client::ResponseFuture) -> Self {
+    pub(crate) fn hyper(future: hyper::client::ResponseFuture) -> Self {
         Self {
             kind: FutureType::Hyper { future },
         }
