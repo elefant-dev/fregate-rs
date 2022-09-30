@@ -27,11 +27,3 @@ version = "0.1"
 [server.tls]
 key_path = "/tls.key"
 cert_path = "/tls.cert"
-
-[private]
-key = "xxx"
-
-[aws]
-...
-...
-...
