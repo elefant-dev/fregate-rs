@@ -11,12 +11,12 @@ docker run -v {path to your otel-config.yaml}:/etc/otelcol/config.yaml -d -p 431
 
 Run Server:
 ```zsh
-cargo run --package grafana --bin hello-server
+cargo run --package grafana --bin server
 ```
 
 Run Client:
 ```zsh
-cargo run --package grafana --bin hello-client
+cargo run --package grafana --bin client
 ```
 
 View traces in grafana:
