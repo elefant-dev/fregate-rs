@@ -1,3 +1,4 @@
+// FIXME: rename this to tracing
 use hyper::{Request, Response};
 use opentelemetry::{
     global::get_text_map_propagator,

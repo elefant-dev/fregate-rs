@@ -48,6 +48,7 @@ fn get_log_layers(log_level: &str) -> (LogLayer, HandleLogLayer) {
         .flatten_event(true)
         .with_target(true)
         .with_current_span(false)
+        // TODO(kos): This probably should be `FmtSpan::ACTIVE`?
         .with_span_events(FmtSpan::NONE)
         .with_filter(log_level);
 
@@ -70,8 +71,13 @@ fn get_trace_layer(trace_level: &str, service_name: &str, traces_endpoint: &str)
             .with_trace_config(sdk::trace::config().with_resource(Resource::new(vec![
                 KeyValue::new("service.name", service_name.to_owned()),
             ])))
+            // FIXME(kos): ?
             .install_batch(opentelemetry::runtime::Tokio)
             .expect("failed to install opentelemetry_otlp pipeline");
+    // FIXME(kos): `get_trace_layer` should return Result<>.
+    // Caller of the function should handle the result properly.
+    // What is proper strategy of handling this error?
+    // Probably starting service and logging error, not halting.
 
     let trace_level = EnvFilter::from_str(trace_level).unwrap_or_default();
 
@@ -118,6 +124,7 @@ pub fn init_tracing(
     // This will panic if called twice
     registry().with(lag_layer).with(trace_layer).init();
 
+    // FIXME(kos): ?
     tokio::task::spawn(async {
         let _handle = HANDLE_LOG_LAYER
             .get_or_init(|| async { log_layer_handle })

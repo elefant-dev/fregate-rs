@@ -4,6 +4,8 @@ use axum::response::IntoResponse;
 use axum::{http, Router};
 use bytes::Bytes;
 
+// TODO(kos): Consider using crate `mime_guess`.
+
 pub fn yaml(content: &'static str) -> Response<BoxBody> {
     (
         [

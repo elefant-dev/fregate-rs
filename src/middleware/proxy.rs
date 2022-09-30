@@ -1,3 +1,7 @@
+// FIXME(kos): proxy should be already implemented
+// https://github.com/felipenoris/hyper-reverse-proxy
+// Does not fit your needs?
+
 use axum::{body::BoxBody, http::StatusCode, response::IntoResponse, BoxError};
 use bytes::Bytes;
 use hyper::{
@@ -23,6 +27,8 @@ where
 {
     match result {
         Ok(resp) => resp.into_response(),
+        // FIXME: this may leak private information to the client.
+        // Be careful of what gets sent in `err`.
         Err(err) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Failed with: {}", err),
