@@ -1,5 +1,5 @@
-use crate::DeserializeExt;
-use config::{builder::DefaultState, ConfigBuilder, ConfigError, Environment, File, FileFormat};
+use crate::{DeserializeExt, Result};
+use config::{builder::DefaultState, ConfigBuilder, Environment, File, FileFormat};
 use serde::{
     de::{DeserializeOwned, Error},
     Deserialize, Deserializer,
@@ -68,7 +68,7 @@ pub struct LoggerConfig {
 }
 
 impl<'de> Deserialize<'de> for LoggerConfig {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -98,7 +98,7 @@ impl<'de, T> Deserialize<'de> for AppConfig<T>
 where
     T: Debug + DeserializeOwned,
 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -138,7 +138,7 @@ impl<T> AppConfig<T> {
     /// Load file by given path and add environment variables with given prefix in addition to default config
     ///
     /// Environment variables have highet priority then file and then default configuration
-    pub fn default_with(file_path: &str, env_prefix: &str) -> Result<Self, ConfigError>
+    pub fn default_with(file_path: &str, env_prefix: &str) -> Result<Self>
     where
         T: Debug + DeserializeOwned,
     {
@@ -151,7 +151,7 @@ impl<T> AppConfig<T> {
     }
 
     /// Load configuration from provided container with [`ConfigSource`] which override default config.
-    pub fn load_from<'a, S>(sources: S) -> Result<Self, ConfigError>
+    pub fn load_from<'a, S>(sources: S) -> Result<Self>
     where
         T: Debug + DeserializeOwned,
         S: IntoIterator<Item = ConfigSource<'a>>,
@@ -193,7 +193,7 @@ impl<T> AppConfigBuilder<T> {
     }
 
     /// Reads all registered sources
-    pub fn build(self) -> Result<AppConfig<T>, ConfigError>
+    pub fn build(self) -> Result<AppConfig<T>>
     where
         T: Debug + DeserializeOwned,
     {

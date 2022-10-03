@@ -56,7 +56,7 @@ impl<'a, H, T> Application<'a, H, T> {
     }
 
     /// Start serving at specified host and port in [AppConfig] accepting both HTTP1 and HTTP2
-    pub async fn serve(self) -> hyper::Result<()>
+    pub async fn serve(self) -> Result<()>
     where
         H: Health,
     {
@@ -100,9 +100,9 @@ async fn shutdown_signal() {
     info!("Termination signal, starting shutdown...");
 }
 
-async fn run_service(socket: &SocketAddr, rest: Router) -> hyper::Result<()> {
+async fn run_service(socket: &SocketAddr, rest: Router) -> Result<()> {
     let server = Server::bind(socket).serve(rest.into_make_service());
     info!(target: "server", "Started: http://{socket}");
 
-    server.with_graceful_shutdown(shutdown_signal()).await
+    Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
 }

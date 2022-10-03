@@ -26,7 +26,7 @@ impl Health for CustomHealth {
 
 #[tokio::main]
 async fn main() {
-    let config = bootstrap::<Empty, _>([]);
+    let config = bootstrap::<Empty, _>([]).unwrap();
 
     Application::new(&config)
         .health_indicator(CustomHealth::default())

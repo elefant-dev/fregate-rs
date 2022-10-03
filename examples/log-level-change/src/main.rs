@@ -11,7 +11,7 @@ use tracing_subscriber::EnvFilter;
 // Will be changed to TRACE
 #[tokio::main]
 async fn main() {
-    let conf = bootstrap::<Empty, _>([]);
+    let conf = bootstrap::<Empty, _>([]).unwrap();
 
     tokio::spawn(async move {
         tokio::time::sleep(Duration::from_secs(10)).await;

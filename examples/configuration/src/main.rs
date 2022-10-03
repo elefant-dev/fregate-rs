@@ -31,7 +31,8 @@ async fn main() {
     let _conf: AppConfig<Empty> = bootstrap([
         ConfigSource::File("./examples/configuration/app.yaml"),
         ConfigSource::EnvPrefix("TEST"),
-    ]);
+    ])
+    .unwrap();
 
     let _conf = AppConfig::default();
 

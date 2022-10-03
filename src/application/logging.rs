@@ -1,3 +1,4 @@
+use crate::Result;
 use opentelemetry::{global, sdk, sdk::trace::Tracer, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_zipkin::B3Encoding::MultipleHeader;
@@ -60,8 +61,16 @@ fn get_log_layers(log_level: &str) -> (LogLayer, HandleLogLayer) {
     reload::Layer::new(log_filter)
 }
 
-#[allow(clippy::expect_used)]
-fn get_trace_layer(trace_level: &str, service_name: &str, traces_endpoint: &str) -> TraceLayer {
+// TODO: bug ? trace_id is not generated when used with reload Layer
+// let (traces_filter, traces_filter_reloader) = reload::Layer::new(opentelemetry_layer);
+// settings
+//     .traces_filter_reloader
+//     .replace(traces_filter_reloader);
+fn get_trace_layer(
+    trace_level: &str,
+    service_name: &str,
+    traces_endpoint: &str,
+) -> Result<TraceLayer> {
     global::set_text_map_propagator(opentelemetry_zipkin::Propagator::with_encoding(
         MultipleHeader,
     ));
@@ -77,25 +86,15 @@ fn get_trace_layer(trace_level: &str, service_name: &str, traces_endpoint: &str)
             .with_trace_config(sdk::trace::config().with_resource(Resource::new(vec![
                 KeyValue::new("service.name", service_name.to_owned()),
             ])))
-            // FIXME(kos): ?
-            .install_batch(opentelemetry::runtime::Tokio)
-            .expect("failed to install opentelemetry_otlp pipeline");
-    // FIXME(kos): `get_trace_layer` should return Result<>.
-    // Caller of the function should handle the result properly.
-    // What is proper strategy of handling this error?
-    // Probably starting service and logging error, not halting.
+            .install_batch(opentelemetry::runtime::Tokio)?;
 
     let trace_level = EnvFilter::from_str(trace_level).unwrap_or_default();
 
-    tracing_opentelemetry::layer()
+    let trace_layer = tracing_opentelemetry::layer()
         .with_tracer(tracer)
-        .with_filter(trace_level)
+        .with_filter(trace_level);
 
-    // TODO: bug ? trace_id is not generated when used with reload Layer
-    // let (traces_filter, traces_filter_reloader) = reload::Layer::new(opentelemetry_layer);
-    // settings
-    //     .traces_filter_reloader
-    //     .replace(traces_filter_reloader);
+    Ok(trace_layer)
 }
 
 fn set_panic_hook() {
@@ -129,14 +128,17 @@ pub fn init_tracing(
     trace_level: &str,
     service_name: &str,
     traces_endpoint: Option<&str>,
-) {
-    let (lag_layer, log_layer_handle) = get_log_layers(log_level);
+) -> Result<()> {
+    let (log_layer, log_layer_handle) = get_log_layers(log_level);
 
-    let trace_layer = traces_endpoint
-        .map(|traces_endpoint| get_trace_layer(trace_level, service_name, traces_endpoint));
+    let trace_layer = if let Some(traces_endpoint) = traces_endpoint {
+        Some(get_trace_layer(trace_level, service_name, traces_endpoint)?)
+    } else {
+        None
+    };
 
     // This will panic if called twice
-    registry().with(lag_layer).with(trace_layer).init();
+    registry().with(log_layer).with(trace_layer).try_init()?;
 
     // FIXME(kos): ?
     tokio::task::spawn(async {
@@ -146,4 +148,6 @@ pub fn init_tracing(
     });
 
     set_panic_hook();
+
+    Ok(())
 }

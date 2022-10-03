@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
-    let config = bootstrap::<Empty, _>([]);
+    let config = bootstrap::<Empty, _>([]).unwrap();
 
     // Start server where to proxy requests
     tokio::spawn(server());
