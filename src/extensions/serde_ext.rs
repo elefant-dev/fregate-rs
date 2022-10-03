@@ -3,6 +3,9 @@ use serde::Deserialize;
 use serde_json::Value;
 
 // TODO: FIXME: https://github.com/serde-rs/serde/issues/2261
+// TODO(kos): Is that really necessary?
+// Do we have `repr(transparent)`? Seems not.
+// Why not just standard algorithm?
 /// Needed for overcoming overlapping path in config deserialization.
 pub trait DeserializeExt {
     /// find value by given pointer and try to deserialize
