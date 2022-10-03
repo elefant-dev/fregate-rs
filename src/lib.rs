@@ -20,9 +20,21 @@ mod application;
 mod extensions;
 mod middleware;
 
+// TODO(kos): Use `#[doc(inline)]` whenever you reexport something publicly to have excellent documentation.
+
+// #[doc(inline)]
 pub use application::*;
+// #[doc(inline)]
 pub use extensions::*;
+// #[doc(inline)]
 pub use middleware::*;
+
+// TODO(kos):
+// Crate root namespace should be reserved for entities that will be immediately neede by the user.
+// Currently everything is exported through the crate root.
+// What is somewhat excessive.
+// Structs like NoHealth and AlwaysReadyAndAlive should not pollute the root namespace.
+// https://www.lurklurk.org/effective-rust/wildcard.html
 
 pub use axum;
 pub use config;

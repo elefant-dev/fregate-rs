@@ -22,6 +22,11 @@ async fn main() {
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
     std::env::set_var("OTEL_SERVICE_NAME", "CONFIGURATION");
 
+    // FIXME(kos): That's not practical example.
+    // It's rather set of smoke tests.
+    // Alternatively all these variants of usage should be in documentation of AppConfig as separate examples.
+    // Consider moving and spliting.
+
     // This will initialise tracing from environment variables read to AppConfig.
     let _conf: AppConfig<Empty> = bootstrap([
         ConfigSource::File("./examples/configuration/app.yaml"),

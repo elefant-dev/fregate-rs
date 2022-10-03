@@ -31,6 +31,8 @@ async fn proxy_handler(
     let response = client.request(request).await;
     match response {
         Ok(resp) => resp.into_response(),
+        // FIXME: this may leak private information to the client.
+        // Be careful of what gets sent in `err`.
         Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.message().to_string()).into_response(),
     }
 }
