@@ -13,8 +13,8 @@ use tracing::info;
 // FIXME(kos): redundant trailing slash after "panic".
 // FIXME(kos): a snipet with example?
 /// Reads AppConfig and initialise tracing.\
-/// Panic if fail to read AppConfig or initialise tracing.\
-/// Because of internal call to tracing_subscriber::registry().init() can't be called twice, otherwise panic.\
+/// Return Error if fails to read AppConfig or initialise tracing.\
+/// Return Error if called twice because of internal call to tracing_subscriber::registry().try_init().\
 pub fn bootstrap<'a, T, S>(sources: S) -> Result<AppConfig<T>>
 where
     S: IntoIterator<Item = ConfigSource<'a>>,

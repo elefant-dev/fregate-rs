@@ -20,13 +20,11 @@ mod application;
 mod extensions;
 mod middleware;
 
-// TODO(kos): Use `#[doc(inline)]` whenever you reexport something publicly to have excellent documentation.
-
-// #[doc(inline)]
+#[doc(inline)]
 pub use application::*;
-// #[doc(inline)]
+#[doc(inline)]
 pub use extensions::*;
-// #[doc(inline)]
+#[doc(inline)]
 pub use middleware::*;
 
 // TODO(kos):

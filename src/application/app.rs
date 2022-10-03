@@ -1,8 +1,6 @@
 use crate::*;
 use axum::Router;
 use hyper::Server;
-// TODO(kos): redundant use.
-use std::fmt::Debug;
 use std::net::SocketAddr;
 use tokio::signal;
 use tracing::info;

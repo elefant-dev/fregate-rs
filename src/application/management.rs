@@ -6,6 +6,9 @@ use crate::{Health, Optional};
 
 const OPENAPI_PATH: &str = "/openapi";
 const FAVICON_PATH: &str = "/favicon.ico";
+const HEALTH_PATH: &str = "/health";
+const LIVE_PATH: &str = "/live";
+const READY_PATH: &str = "/ready";
 
 // TODO(kos): Rust is great thing, but time of compilation is Achilles' heel of Rust.
 // Whenever possible compilation time should be reduced to keep it sane.
@@ -27,16 +30,14 @@ pub(crate) fn build_management_router<H: Health>(health_indicator: Option<H>) ->
 fn build_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router> {
     let health_indicator = health_indicator?;
 
-    // TODO(kos): Extension implements Deref into the inner value, so destructuring in
-    // function arguments is not needed.
-    let alive_handler = |Extension(health): Extension<H>| async move { health.alive().await };
-    let ready_handler = |Extension(health): Extension<H>| async move { health.ready().await };
+    let alive_handler = |health: Extension<H>| async move { health.alive().await };
+    let ready_handler = |health: Extension<H>| async move { health.ready().await };
 
     Some(
         Router::new()
-            .route("/health", get(alive_handler))
-            .route("/live", get(alive_handler))
-            .route("/ready", get(ready_handler))
+            .route(HEALTH_PATH, get(alive_handler))
+            .route(LIVE_PATH, get(alive_handler))
+            .route(READY_PATH, get(ready_handler))
             .layer(Extension(health_indicator)),
     )
 }
