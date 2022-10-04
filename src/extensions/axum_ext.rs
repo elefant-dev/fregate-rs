@@ -4,6 +4,7 @@ use axum::response::IntoResponse;
 use axum::{http, Router};
 use bytes::Bytes;
 
+// TODO(kos): Consider using crate `mime_guess`.
 /// Converts &str into Response and add Headers: Content-Type: "application/yaml" and "cache-control": "24 hours"
 pub fn yaml(content: &'static str) -> Response<BoxBody> {
     (

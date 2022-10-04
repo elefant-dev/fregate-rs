@@ -1,10 +1,27 @@
 use crate::*;
 use axum::Router;
 use hyper::Server;
+// TODO(kos): redundant use.
 use std::fmt::Debug;
 use std::net::SocketAddr;
 use tokio::signal;
 use tracing::info;
+
+// TODO(kos): Consider avoiding doing framework and eliminating Application. Better than the alternative.
+
+// TODO(kos): Alternatively
+// - hide as much as possiple, proxying what is needed by the Application
+// - accept constructor function in Application::router, that allows getting proxy accessors to various extensions, like logging or opentelemetry context.
+// - provide a function like with_application_state(impl FnOnce(ApplicationState)) that would be a single access point to the global state.
+// - init_metrics and init_tracing should be methods of Application
+// - bootstrap is redundant, move its content into Application::new
+// - make Application::new async if necessary
+// But removing the Application is a better option.
+
+// FIXME(kos): It's impossible to create several application instances.
+// If the Application stays, make it a module instead of a struct.
+
+// TODO(kos): Documentation with example is more useful.
 
 /// Application to set up HTTP server with given config [`AppConfig`]
 #[derive(Debug)]
@@ -25,6 +42,9 @@ impl<'a, T> Application<'a, AlwaysReadyAndAlive, T> {
     }
 }
 
+// TODO(kos): it looks like you're trying to implement Builder pattern.
+// But its name does not reflect it.
+// https://rust-unofficial.github.io/patterns/patterns/creational/builder.html
 impl<'a, H, T> Application<'a, H, T> {
     /// Set up new health indicator
     pub fn health_indicator<Hh>(self, health: Hh) -> Application<'a, Hh, T> {
