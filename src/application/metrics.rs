@@ -20,10 +20,20 @@ pub fn init_metrics() {
 }
 
 fn register_metrics() {
-    describe_counter!("traffic_count_total", "The accumulated counter for number of messages.");
+    describe_counter!(
+        "traffic_count_total",
+        "The accumulated counter for number of messages."
+    );
     register_counter!("traffic_count_total");
-    describe_counter!("traffic_sum_total", "The accumulated counter used for calculating traffic.");
+    describe_counter!(
+        "traffic_sum_total",
+        "The accumulated counter used for calculating traffic."
+    );
     register_counter!("traffic_sum_total");
-    describe_histogram!("processing_duration_seconds_sum_total", Unit::Seconds, "Response Times");
+    describe_histogram!(
+        "processing_duration_seconds_sum_total",
+        Unit::Seconds,
+        "Response Times"
+    );
     register_histogram!("processing_duration_seconds_sum_total");
 }
