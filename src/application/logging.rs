@@ -53,6 +53,7 @@ fn get_log_layers(log_level: &str) -> (LogLayer, HandleLogLayer) {
         .with_timer(UtcTime::rfc_3339())
         .flatten_event(true)
         .with_target(true)
+        .with_span_list(false)
         .with_current_span(false)
         // TODO(kos): This probably should be `FmtSpan::ACTIVE`?
         .with_span_events(FmtSpan::NONE)
