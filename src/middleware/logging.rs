@@ -72,45 +72,51 @@ impl<B> OnRequest<B> for BasicOnRequest {
         let method = request.method();
         let uri = request.uri();
 
-        let labels = [
-            ("method", method.to_string()),
-            ("uri", uri.to_string()),
-            ("trace_id", trace_id.to_string()),
-            ("span_id", span_id.to_string()),
-        ];
-
         info!("Incoming Request: method: [{method}], uri: {uri}, x-b3-traceid: {trace_id}, x-b3-spanid: {span_id}");
 
         span.record("method", &display(method));
         span.record("uri", &display(uri));
 
-        increment_counter!("http_requests_total", &labels);
+        let labels = [
+            ("protocol", method.to_string()),
+            ("channel", "reqresp".to_string()),
+        ];
+
+        increment_counter!("traffic_count_total", &labels);
+        increment_counter!("traffic_sum_total");
     }
 }
 
 /// Logs message on response: "Outgoing Response: status code: {status}, latency: {latency}ms, x-b3-traceid: {trace_id}".
 #[derive(Clone, Debug)]
 pub struct BasicOnResponse {}
-
+#[allow(clippy::expect_used)]
 impl<B> OnResponse<B> for BasicOnResponse {
     fn on_response(self, response: &Response<B>, latency: Duration, span: &Span) {
         let (trace_id, span_id) = get_trace_and_span_ids(span);
         let status = response.status();
         let latency_as_millis = latency.as_millis();
         let latency_as_sec = latency.as_secs_f64();
+        let protocol = match response.headers().get("content-type") {
+            Some(prot) => prot.to_str().expect("protocol invalid"),
+            None => "protocol unavailible",
+        };
 
         info!(
             "Outgoing Response: status code: {status}, latency: {latency_as_millis}ms, x-b3-traceid: {trace_id}, x-b3-spanid: {span_id}"
         );
 
         let labels = [
-            ("status", status.to_string()),
-            ("trace_id", trace_id.to_string()),
-            ("span_id", span_id.to_string()),
+            ("protocol", protocol.to_string()),
+            ("channel", "reqresp".to_string()),
+            ("code", status.to_string()),
         ];
 
-        increment_counter!("http_response_total", &labels);
-        histogram!("http_requests_duration_seconds", latency_as_sec, &labels);
+        histogram!(
+            "processing_duration_seconds_sum_total",
+            latency_as_sec,
+            &labels
+        );
     }
 }
 
