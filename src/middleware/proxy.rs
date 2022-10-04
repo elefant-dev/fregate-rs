@@ -101,7 +101,6 @@ impl<F, S> Proxy<F, S> {
             client,
         }
     }
-
 }
 
 // TODO(kos): Consider using `F: FnMut` as, the `call()` method accepts `&mut`

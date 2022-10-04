@@ -230,13 +230,13 @@ impl<T> AppConfigBuilder<T> {
         self.builder = self
             .builder
             .add_source(File::from_str(DEFAULT_CONFIG, FileFormat::Toml));
-            // TODO(kos): Embedding of textual file into bin files has several
-            //            disadvantages:
-            //            1. larger bin file;
-            //            2. slower initialization of program;
-            //            3. too late (in runtime) information about broken TOML
-            //               file;
-            //            Consider embedding all defaults into the code itself.
+        // TODO(kos): Embedding of textual file into bin files has several
+        //            disadvantages:
+        //            1. larger bin file;
+        //            2. slower initialization of program;
+        //            3. too late (in runtime) information about broken TOML
+        //               file;
+        //            Consider embedding all defaults into the code itself.
         self
     }
 
