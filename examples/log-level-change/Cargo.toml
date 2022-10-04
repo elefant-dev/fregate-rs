@@ -1,5 +1,5 @@
 [package]
-name = "examples-log-level-change"
+name = "log-level-change"
 version = "0.1.0"
 edition = "2021"
 
