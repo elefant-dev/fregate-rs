@@ -1,10 +1,12 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 
-// TODO(kos): Performance of async trait is not the best.
-// Async traits use dynamic dispatch under the hood, which has runtime performance cost.
-// - [Async trait downsides](https://internals.rust-lang.org/t/async-traits-the-less-dynamic-allocations-edition/13048/2)
-// - [Async trait under the hood](https://smallcultfollowing.com/babysteps/blog/2019/10/26/async-fn-in-traits-are-hard/)
+// TODO(kos): Performance of `async_trait` is not the best.
+//            Async traits use dynamic dispatch under the hood, which has
+//            runtime performance cost.
+//            - [Async trait downsides](https://internals.rust-lang.org/t/async-traits-the-less-dynamic-allocations-edition/13048/2)
+//            - [Async trait under the hood](https://smallcultfollowing.com/babysteps/blog/2019/10/26/async-fn-in-traits-are-hard/)
+//            Although there is no ergonomic alternative.
 
 /// Trait to implement custom health check which will be used to respond to health check requests
 #[axum::async_trait]

@@ -2,7 +2,8 @@ mod proto {
     tonic::include_proto!("hello");
 }
 
-// FIXME(kos): It seems using `fregate` makes no sense here since client doesn't need it at all.
+// FIXME(kos): It seems that using `fregate` makes no sense here, since the
+//             client doesn't need it at all.
 use fregate::{bootstrap, Empty};
 use opentelemetry::global::shutdown_tracer_provider;
 use opentelemetry::propagation::Injector;
@@ -57,7 +58,8 @@ async fn send_hello(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::env::set_var("OTEL_SERVICE_NAME", "CLIENT");
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
-    // FIXME(kos): It seems using `fregate` makes no sense here since client doesn't need it at all.
+    // FIXME(kos): It seems that using `fregate` makes no sense here, since the
+    //             client doesn't need it at all.
     let _config = bootstrap::<Empty, _>([]);
 
     let channel = tonic::transport::Endpoint::from_static("http://0.0.0.0:8000")
