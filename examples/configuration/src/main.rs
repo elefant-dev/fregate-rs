@@ -1,5 +1,6 @@
 use fregate::axum::{routing::get, Router};
 use fregate::config::FileFormat;
+use fregate::tokio;
 use fregate::{bootstrap, AppConfig, Application, ConfigSource, Empty};
 use serde::Deserialize;
 

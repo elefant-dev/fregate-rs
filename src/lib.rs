@@ -16,11 +16,11 @@ pub mod middleware;
 #[doc(inline)]
 pub use application::*;
 
-pub use self::logging;
 pub use axum;
 pub use config;
 pub use hyper;
 pub use thiserror;
+pub use tokio;
 pub use tonic;
 pub use tower;
 pub use tower_http;

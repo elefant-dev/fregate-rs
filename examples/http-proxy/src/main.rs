@@ -3,6 +3,7 @@ use fregate::axum::{
     Router, Server,
 };
 use fregate::hyper::{Client, StatusCode};
+use fregate::tokio;
 use fregate::{
     bootstrap,
     middleware::{http_trace_layer, ProxyLayer},

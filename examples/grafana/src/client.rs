@@ -3,6 +3,7 @@ mod proto {
 }
 
 use fregate::logging::init_tracing;
+use fregate::tokio;
 use opentelemetry::global::shutdown_tracer_provider;
 use opentelemetry::propagation::Injector;
 use proto::{hello_client::HelloClient, HelloRequest, HelloResponse};

@@ -1,6 +1,7 @@
 #![allow(clippy::derive_partial_eq_without_eq)]
 
 use fregate::axum::{routing::get, Router};
+use fregate::tokio;
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
 use fregate::{
     bootstrap,

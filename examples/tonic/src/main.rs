@@ -5,6 +5,7 @@ use fregate::axum::{
     Router,
 };
 use fregate::hyper::Request;
+use fregate::tokio;
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
 use fregate::{
     bootstrap,

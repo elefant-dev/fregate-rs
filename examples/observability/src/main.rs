@@ -2,7 +2,7 @@ use fregate::{
     axum::{routing::get, Router},
     bootstrap,
     middleware::http_trace_layer,
-    Application, Empty,
+    tokio, Application, Empty,
 };
 
 #[tokio::main]

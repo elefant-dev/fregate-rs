@@ -1,4 +1,5 @@
 use fregate::axum::Router;
+use fregate::tokio;
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
 use fregate::{
     bootstrap, extensions::RouterTonicExt, middleware::grpc_trace_layer, Application, Empty,

@@ -1,4 +1,5 @@
 use fregate::middleware::http_trace_layer;
+use fregate::tokio;
 use fregate::{
     axum::{routing::get, Router},
     bootstrap,

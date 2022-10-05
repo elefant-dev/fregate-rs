@@ -1,3 +1,4 @@
+use fregate::tokio;
 use fregate::{
     axum, bootstrap,
     health::{Health, HealthResponse},
