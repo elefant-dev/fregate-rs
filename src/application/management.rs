@@ -6,7 +6,6 @@ use axum::{routing::get, Extension, Router};
 use bytes::Bytes;
 
 const OPENAPI_PATH: &str = "/openapi";
-const FAVICON_PATH: &str = "/favicon.ico";
 const HEALTH_PATH: &str = "/health";
 const LIVE_PATH: &str = "/live";
 const READY_PATH: &str = "/ready";
@@ -20,13 +19,11 @@ const READY_PATH: &str = "/ready";
 //            loads the file from the filesystem during usual debug builds.
 //            Example is here:
 //            https://github.com/pyrossh/rust-embed/blob/master/examples/axum.rs#L64
-static FAVICON: Bytes = Bytes::from_static(include_bytes!("../resources/favicon.png"));
 const OPENAPI: &str = include_str!("../resources/openapi.yaml");
 
 pub(crate) fn build_management_router<H: Health>(health_indicator: Option<H>) -> Router {
     Router::new()
         .route(OPENAPI_PATH, get(|| async { yaml(OPENAPI) }))
-        .route(FAVICON_PATH, get(|| async { png(&FAVICON) }))
         .merge_optional(build_health_router(health_indicator))
 }
 

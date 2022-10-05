@@ -57,7 +57,6 @@ fn get_log_layers(log_level: &str) -> (LogLayer, HandleLogLayer) {
         .with_target(true)
         .with_span_list(false)
         .with_current_span(false)
-        // TODO(kos): This probably should be `FmtSpan::ACTIVE`?
         .with_span_events(FmtSpan::NONE)
         .with_filter(log_level);
 
@@ -132,7 +131,6 @@ pub fn init_tracing(
         None
     };
 
-    // This will panic if called twice
     registry().with(log_layer).with(trace_layer).try_init()?;
 
     // TODO(kos): No need for async `OnceCell` here, as the initialization code
