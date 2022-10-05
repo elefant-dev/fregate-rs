@@ -22,15 +22,19 @@ async fn main() {
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
     std::env::set_var("OTEL_SERVICE_NAME", "CONFIGURATION");
 
-    // This will initialise tracing from environment variables read to AppConfig.
+    // There are multiple ways to read AppConfig:
+
+    // This will read AppConfig and call init_tracing() with arguments read in AppConfig
     let _conf: AppConfig<Empty> = bootstrap([
         ConfigSource::File("./examples/configuration/app.yaml"),
         ConfigSource::EnvPrefix("TEST"),
     ])
     .unwrap();
 
+    // Read default AppConfig
     let _conf = AppConfig::default();
 
+    // Set up AppConfig through builder, nothing added by default
     let _conf = AppConfig::<Empty>::builder()
         .add_default()
         .add_env_prefixed("TEST")
@@ -39,6 +43,7 @@ async fn main() {
         .build()
         .unwrap();
 
+    // Read default config with private field struct Custom with specified file and environment variables with specified prefix and "_" separator
     let _conf: AppConfig<Custom> =
         AppConfig::default_with("./examples/configuration/app.yaml", "TEST").unwrap();
 
