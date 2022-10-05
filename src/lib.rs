@@ -24,3 +24,4 @@ pub use tokio;
 pub use tonic;
 pub use tower;
 pub use tower_http;
+pub use tracing;
