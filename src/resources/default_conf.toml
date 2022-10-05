@@ -1,5 +1,7 @@
-# TODO: Consider describing each field and adding example with all full config.
-# It will make more comfortable to use the crate.
+# TODO(kos): Consider describing each field and adding example with all full
+#            config. It will make more comfortable to use the crate.
+#            As example:
+#            https://github.com/coturn/coturn/blob/4.6.0/examples/etc/turnserver.conf
 
 host = "0.0.0.0"
 port = 8000
@@ -7,12 +9,13 @@ port = 8000
 [log]
 level = "info"
 # enabled = true              # Whether you want to store log in log files.
-# TODO: Should probably have extra parameters. Log to file?
+# TODO(kos): Should probably have extra parameters. Like, log to file, or
+#            exclude/include concrete modules from logging?
 
 [trace]
 level = "info"
 # enabled = true              # Whether tracing/telemetry is enabled.
-# TODO: Should probably have extra parameters.
+# TODO(kos): Should probably have extra parameters.
 
 [service]
 name = "Rust"

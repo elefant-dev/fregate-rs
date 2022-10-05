@@ -4,13 +4,13 @@
 
 # Questions
 
-### ❓ Dependancies logic
+### ❓ Dependencies logic
 
 https://github.com/Wandalen/fregate_review/blob/master/examples/grafana/Cargo.toml
 
-not clear what is logic of including dependencies
-lots of dependencies come from fregate and public
-but some are not public and included by user
+Not clear what is logic of including dependencies.
+Lots of dependencies come from `fregate` and public,
+but some are not public and included by a user
 
 ```toml
 fregate = { path = "../.." }
@@ -20,8 +20,12 @@ prost = "0.11.0"
 tonic = "0.8.0"
 ```
 
-why these dependencies are not in fregate?
-is it possible to remove dependency `axum`?
+Why these dependencies are not in `fregate`?
+Is it possible to remove dependency `axum`?
+
+### ❓ Consider vector
+
+Consider maybe [vector](https://vector.dev/).
 
 # Review
 
@@ -44,7 +48,7 @@ Read more on [deep module / information hiding] principles](https://medium.com/@
 `cargo clippy` - checks a package to catch common mistakes and improve your Rust code. Seems it's ignored ✅.
 Use (reasonable) preset of wanring/clippy rules  ✅.
 
-[`cargo miri`](https://github.com/rust-lang/miri) - an experimental interpreter for Rust's mid-level intermediate representation (MIR). It can run binaries and test suites of cargo projects and detect certain classes of undefined behavior. Use compile-time conditionals to separate code which `miri` can interpret.❕
+[`cargo miri`](https://github.com/rust-lang/miri) - an experimental interpreter for Rust's mid-level intermediate representation (MIR). It can run binaries and test suites of cargo projects and detect certain classes of undefined behavior. Use compile-time conditionals to separate code which `miri` can interpret. As long as crate has no `unsafe` code you can use `#![forbid(unsafe_code)]` to forbid unsafe code. If your library is not intended to have `unsafe`, consider adding `#![forbid(unsafe_code)]`, which will ease reasoning about the code for potential security auditors, and will require quite a reasoning to add any `unsafe` in future.❕
 
 [`cargo-audit`](https://github.com/RustSec/rustsec/tree/main/cargo-audit) - audit Cargo files for crates with security vulnerabilities reported to the RustSec Advisory Database ✅.
 
@@ -52,7 +56,7 @@ Use (reasonable) preset of wanring/clippy rules  ✅.
 
 [`cargo-udeps`](https://github.com/est31/cargo-udeps) - ensures there is no unused dependencies in Cargo.toml ✅.
 
-Consider having a Makefiel tools for audit as targets❕.
+Consider having a `Makefile` tools for audit as targets❕.
 
 These tools give free suggestion how to improve quality of code and to avoid common pitfalls.
 
@@ -60,17 +64,17 @@ These tools give free suggestion how to improve quality of code and to avoid com
 
 There is no sense to decompose the crate since it looks lightweight (seems to be design requirenment) and there is no advantages in transforming crate into complex system ✅.
 
-Pub usage of axum ✅
-Fregate manages the axum versions. The end-user cannot do anything with this. To have a single web server, the user must build his application based on fregate dependencies.
+Pub usage of `axum` ✅
+`fregate` manages the `axum` versions. The end-user cannot do anything with this. To have a single web server, the user must build his application based on `fregate` dependencies.
 
-No access to tokio ❕
-Crate does not provide public access to tokio, that's why even "hello world" example needs to add this dependency again to run the main function.
+No access to `tokio` ❕
+Crate does not provide public access to `tokio`, that's why even "hello world" example needs to add this dependency again to run the main function.
 
 Extensive wildcard imports into root ❕
-Crate root namespace should be reserved for entities that will be immediately neede by the user.
+Crate root namespace should be reserved for entities that will be immediately needed by a user.
 Currently everything is exported through the crate root.
 What is somewhat excessive.
-Structs like NoHealth and AlwaysReadyAndAlive should not pollute the root namespace.
+Structs like `NoHealth` and `AlwaysReadyAndAlive` should not pollute the root namespace.
 https://www.lurklurk.org/effective-rust/wildcard.html
 
 ### ❕ Architectural: framework vs toolkit approach ( vendorlock vs agnostic )
@@ -81,11 +85,11 @@ It creates several disadvantages:
 
 1. It decreases maintainability because isolatation from original crates by facade. New features are not necessarily available for user of the framework.
 2. It decreases flexibility and extendability of the codebase of users of the crate. Because many parameters are hidden. Interfaces are changed, but new interfaces are not necessarily better than original.
-3. It increase time for onboarding. New developers should spend more time to learn custom interfaces of fregate.
+3. It increase time for onboarding. New developers should spend more time to learn custom interfaces of `fregate`.
 
 There is risk that this crate will become framework. Better I would suggest to keep principle of being agnostics and transparent, providing fundamentals components instead of aggregating eagerly them into higher-order entities.
 
-### ❕ Architectural: risk of utility antipattern
+### ❕ Architectural: risk of utility anti-pattern
 
 What is responsibility of the crate? List all and evaluate does not it have too much responsibilities?
 
@@ -125,7 +129,7 @@ Async traits use dynamic dispatch under the hood, which has runtime performance 
 
 ### ❕ Structural: lack of features
 
-Forward control over features of exposed depdendencies and dependencies themselvs.
+Forward control over features of exposed dependencies and dependencies themselves.
 
 ### ❕ Structural: lack of documentation
 
@@ -143,6 +147,6 @@ The goal: to answer the question whether I should use this crate in my (includin
 * reputation of the company
 
 **CONS**
-* fregate doesn't give you any garantees about versions of it's dependencies
-* zero flexibility in chosing web frameworks. axum is required
-* too framework-like with disadvantages explaned above
+* `fregate` doesn't give you any guarantees about versions of it's dependencies
+* zero flexibility in choosing web frameworks. axum is required
+* too framework-like with disadvantages explained above
