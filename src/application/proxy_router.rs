@@ -31,8 +31,13 @@ async fn proxy_handler(
     let response = client.request(request).await;
     match response {
         Ok(resp) => resp.into_response(),
-        // FIXME: this may leak private information to the client.
-        // Be careful of what gets sent in `err`.
+        // FIXME(kos): This may leak private information to the client.
+        //             Be careful of what gets sent in `err`.
+        //
+        //             Alternatively you can do so only in "debug mode" (or at least a
+        //             debug build) of the application, and return some generic
+        //             error message to the client in production build, while
+        //             always writing to the logs the actual full error.
         Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.message().to_string()).into_response(),
     }
 }

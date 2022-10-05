@@ -4,14 +4,29 @@ use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use tracing::info;
 
-// TODO(kos): What is usecase of parameter T?
-// All calls looks similarly.
-// ```
-// let conf = bootstrap::<Empty, _>([]);
-// ```
+// FIXME(kos): For better navigation in code docs, use intra-doc links like:
+//             ```rust
+//             /// Reads [`AppConfig`] and initializes [`tracing`].
+//             ///
+//             /// # Panics
+//             ///
+//             /// - If fails to read [`AppConfig`] or to initialize [`tracing`].
+//             /// - If called twice (because of an internal call to
+//             ///   `tracing_subscriber::registry().init()`).
+//             ```
 
-// FIXME(kos): redundant trailing slash after "panic".
-// FIXME(kos): a snipet with example?
+// TODO(kos): What is the use-case of the parameter `T`?
+//            All calls looks similarly.
+//            ```rust
+//            let conf = bootstrap::<Empty, _>([]);
+//            ```
+//            Parameter `T` here is the custom-defined part of the `AppConfig`.
+//            It's named too poorly, so is quite unobvious.
+//            I suggested to remove it, but if not then consider to rename it.
+
+// FIXME(kos): Redundant trailing slash after "panic".
+// FIXME(kos): A snippet as an example?
+
 /// Reads AppConfig and initialise tracing.\
 /// Return Error if fails to read AppConfig or initialise tracing.\
 /// Return Error if called twice because of internal call to tracing_subscriber::registry().try_init().\

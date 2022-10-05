@@ -10,13 +10,15 @@ const HEALTH_PATH: &str = "/health";
 const LIVE_PATH: &str = "/live";
 const READY_PATH: &str = "/ready";
 
-// TODO(kos): Rust is great thing, but time of compilation is Achilles' heel of Rust.
-// Whenever possible compilation time should be reduced to keep it sane.
-// More than 10s for incremental build is hight risk for a project.
-// Use crate `rust-embed` instead of embedding assets into binary.
-// The crate expose macro which loads files into the rust binary at compile time during release and loads the file from the fs during dev.
-//
-// Example is here: https://github.com/pyrossh/rust-embed/blob/master/examples/axum.rs#L64
+// TODO(kos): Rust is great thing, but time of compilation is Achilles' heel of
+//            Rust. Whenever possible compilation time should be reduced to keep
+//            it sane. More than 10s for incremental build is a high risk for a
+//            project. Use the `rust-embed` crate instead of embedding assets
+//            into the binary. The crate exposes a macro which loads files into
+//            the rust binary at compile time during a release build only, and
+//            loads the file from the filesystem during usual debug builds.
+//            Example is here:
+//            https://github.com/pyrossh/rust-embed/blob/master/examples/axum.rs#L64
 static FAVICON: Bytes = Bytes::from_static(include_bytes!("../resources/favicon.png"));
 const OPENAPI: &str = include_str!("../resources/openapi.yaml");
 

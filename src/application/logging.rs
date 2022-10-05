@@ -141,7 +141,9 @@ pub fn init_tracing(
     // This will panic if called twice
     registry().with(log_layer).with(trace_layer).try_init()?;
 
-    // FIXME(kos): ?
+    // TODO(kos): No need for async `OnceCell` here, as the initialization code
+    //            contains no `.await` points. Sync `OnceCell` better be used
+    //            instead.
     tokio::task::spawn(async {
         let _handle = HANDLE_LOG_LAYER
             .get_or_init(|| async { log_layer_handle })
