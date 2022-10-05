@@ -6,8 +6,8 @@ mod metrics;
 
 pub mod error;
 pub mod health;
+pub mod logging;
 pub mod proxy_router;
-pub mod tracing;
 
 pub use self::metrics::*;
 pub use app::*;

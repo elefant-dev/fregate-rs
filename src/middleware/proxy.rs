@@ -48,11 +48,6 @@ pub struct ProxyLayer<F> {
 }
 
 impl<F> ProxyLayer<F> {
-    // TODO(kos): For ergonomic purposes, it would be nice to provide multiple
-    //            constructor function (or even a builder), where, by default,
-    //            the `Client` is created automatically, while still may be
-    //            specified a custom `Client` if the caller needs.
-    //            Alternatively consider introducing second constructor `new_with_client()`.
     /// Creates new [`ProxyLayer`]
     pub fn new<B>(should_be_proxied_fn: F, client: Client, destination: &str) -> Self
     where
@@ -103,11 +98,9 @@ impl<F, S> Proxy<F, S> {
     }
 }
 
-// TODO(kos): Consider using `F: FnMut` as, the `call()` method accepts `&mut`
-//            anyway.
 impl<F, S> Service<Request<Body>> for Proxy<F, S>
 where
-    F: Fn(&Request<Body>) -> bool,
+    F: FnMut(&Request<Body>) -> bool,
     S: Service<Request<Body>, Response = Response<BoxBody>>,
 {
     type Response = S::Response;

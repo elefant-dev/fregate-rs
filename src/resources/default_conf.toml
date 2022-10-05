@@ -8,14 +8,9 @@ port = 8000
 
 [log]
 level = "info"
-# enabled = true              # Whether you want to store log in log files.
-# TODO(kos): Should probably have extra parameters. Like, log to file, or
-#            exclude/include concrete modules from logging?
 
 [trace]
 level = "info"
-# enabled = true              # Whether tracing/telemetry is enabled.
-# TODO(kos): Should probably have extra parameters.
 
 [service]
 name = "Rust"
@@ -26,7 +21,6 @@ name = "Rust"
 name = "platform"
 version = "0.1"
 
-# TODO: This name has dot. Might be problem to get form environment variable.
 [server.tls]
 key_path = "/tls.key"
 cert_path = "/tls.cert"

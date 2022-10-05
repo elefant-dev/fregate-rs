@@ -16,7 +16,7 @@ pub mod middleware;
 #[doc(inline)]
 pub use application::*;
 
-pub use self::tracing;
+pub use self::logging;
 pub use axum;
 pub use config;
 pub use hyper;

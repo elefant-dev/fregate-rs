@@ -2,7 +2,7 @@ use fregate::middleware::http_trace_layer;
 use fregate::{
     axum::{routing::get, Router},
     bootstrap,
-    tracing::get_handle_log_layer,
+    logging::get_handle_log_layer,
     Application, Empty,
 };
 use std::str::FromStr;

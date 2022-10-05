@@ -67,24 +67,6 @@ impl<'a, H, T> Application<'a, H, T> {
     where
         H: Health,
     {
-        // FIXME(kos): Well, while it's obviously simpler, it's not very good to expose
-        //             API endpoints and infrastructure endpoints on the same port (and
-        //             router) because of the following reasons:
-        //             1. HTTP services using this library may expose their API to
-        //                public, while at the same time, in general case, we don't want
-        //                our metrics to be exposed publicly. Of course, we may forbid
-        //                metrics and liveness endpoints in external load-balancer
-        //                configuration, but, simply, why bother? Keeping these endpoints
-        //                on a different port, not being exposed publicly, cuts off
-        //                possible human factors like "forgot to forbid metrics in
-        //                load-balancer" and even removes the necessity to do so.
-        //             2. HTTP services using this library may want different middlewares
-        //                stack for API endpoints and infrastructure endpoints, like
-        //                using some sort of rate-limiting or throttling for API
-        //                endpoints, while fully omit them for metrics and liveness
-        //                probes. Or, for example, collect access logs of API endpoints
-        //                only and don't bother with the ones of metrics and liveness
-        //                probes.
         let app = build_management_router(self.health_indicator).merge_optional(self.router);
         let application_socket = SocketAddr::new(self.config.host, self.config.port);
 

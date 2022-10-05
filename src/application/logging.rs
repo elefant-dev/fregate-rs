@@ -1,12 +1,12 @@
-//! Tools initialise tracing
+//! Tools initialise logging and tracing
 
 use crate::error::Result;
+use once_cell::sync::OnceCell;
 use opentelemetry::{global, sdk, sdk::trace::Tracer, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_zipkin::B3Encoding::MultipleHeader;
 use std::str::FromStr;
 use time::format_description::well_known::Rfc3339;
-use tokio::sync::OnceCell;
 use tracing_opentelemetry::OpenTelemetryLayer as OTLayer;
 use tracing_subscriber::{
     filter::EnvFilter,
@@ -24,7 +24,7 @@ use tracing_subscriber::{
     Layer, Registry,
 };
 
-static HANDLE_LOG_LAYER: OnceCell<HandleLogLayer> = OnceCell::const_new();
+static HANDLE_LOG_LAYER: OnceCell<HandleLogLayer> = OnceCell::new();
 
 /// Return Some(&'static HandleLogLayer) if Handler is set up, otherwise return None
 ///
@@ -132,16 +132,7 @@ pub fn init_tracing(
     };
 
     registry().with(log_layer).with(trace_layer).try_init()?;
-
-    // TODO(kos): No need for async `OnceCell` here, as the initialization code
-    //            contains no `.await` points. Sync `OnceCell` better be used
-    //            instead.
-    tokio::task::spawn(async {
-        let _handle = HANDLE_LOG_LAYER
-            .get_or_init(|| async { log_layer_handle })
-            .await;
-    });
-
+    let _ = HANDLE_LOG_LAYER.get_or_init(|| log_layer_handle);
     set_panic_hook();
 
     Ok(())

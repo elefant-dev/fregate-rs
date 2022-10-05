@@ -1,4 +1,4 @@
-use fregate::{extensions::DeserializeExt, AppConfigBuilder};
+use fregate::{extensions::DeserializeExt, AppConfig};
 use serde::{
     de::{DeserializeOwned, Error as DeError},
     Deserialize, Deserializer,
@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn StdError>> {
     std::env::set_var("BOHEMIA_SCALICA_ADDRESS", "Earth");
     std::env::set_var("BOHEMIA_SCALICA_NEW_ADDRESS", "Mars");
 
-    let config = AppConfigBuilder::<Configuration<ExtendedConfiguration>>::new()
+    let config = AppConfig::<Configuration<ExtendedConfiguration>>::builder()
         .add_default()
         .add_env_prefixed("BOHEMIA")
         .build()?;
