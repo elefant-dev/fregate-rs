@@ -14,6 +14,7 @@ use std::{
     error::Error,
     future::Future,
     pin::Pin,
+    task,
     task::{Context, Poll},
 };
 use tower::{Layer, Service};
@@ -182,15 +183,9 @@ where
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.project().kind.project() {
             FutureProject::Axum { future } => future.poll(cx),
-            // TODO(kos): Consider using `future::ready!()` macro:
-            //            ```rust
-            //            Poll::Ready(Ok(handle_result(task::ready!(future.poll(cx))))
-            //            ```
-            //            https://doc.rust-lang.org/stable/std/task/macro.ready.html
-            FutureProject::Hyper { future } => match future.poll(cx) {
-                Poll::Ready(v) => Poll::Ready(Ok(handle_result(v))),
-                Poll::Pending => Poll::Pending,
-            },
+            FutureProject::Hyper { future } => {
+                Poll::Ready(Ok(handle_result(task::ready!(future.poll(cx)))))
+            }
         }
     }
 }
