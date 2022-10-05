@@ -1,9 +1,8 @@
 use crate::{
-    extensions::{png, yaml, RouterOptionalExt},
+    extensions::{yaml, RouterOptionalExt},
     health::Health,
 };
 use axum::{routing::get, Extension, Router};
-use bytes::Bytes;
 
 const OPENAPI_PATH: &str = "/openapi";
 const HEALTH_PATH: &str = "/health";
@@ -40,4 +39,77 @@ fn build_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router>
             .route(READY_PATH, get(ready_handler))
             .layer(Extension(health_indicator)),
     )
+}
+
+#[cfg(test)]
+mod management_test {
+    use super::*;
+    use crate::health::HealthResponse;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+
+    #[derive(Default, Debug, Clone)]
+    pub struct CustomHealth;
+
+    #[axum::async_trait]
+    impl Health for CustomHealth {
+        async fn alive(&self) -> HealthResponse {
+            HealthResponse::OK
+        }
+
+        async fn ready(&self) -> HealthResponse {
+            HealthResponse::UNAVAILABLE
+        }
+    }
+
+    #[tokio::test]
+    async fn health_test() {
+        let router = build_management_router(Some(CustomHealth));
+        let request = Request::builder()
+            .uri("http://0.0.0.0/health")
+            .method("GET")
+            .body(hyper::Body::empty())
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        let status = response.status();
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+
+        assert_eq!(StatusCode::OK, status);
+        assert_eq!(&body[..], b"OK");
+    }
+
+    #[tokio::test]
+    async fn live_test() {
+        let router = build_management_router(Some(CustomHealth));
+        let request = Request::builder()
+            .uri("http://0.0.0.0/live")
+            .method("GET")
+            .body(hyper::Body::empty())
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        let status = response.status();
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+
+        assert_eq!(StatusCode::OK, status);
+        assert_eq!(&body[..], b"OK");
+    }
+
+    #[tokio::test]
+    async fn ready_test() {
+        let router = build_management_router(Some(CustomHealth));
+        let request = Request::builder()
+            .uri("http://0.0.0.0/ready")
+            .method("GET")
+            .body(hyper::Body::empty())
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        let status = response.status();
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+
+        assert_eq!(StatusCode::SERVICE_UNAVAILABLE, status);
+        assert_eq!(&body[..], b"UNAVAILABLE");
+    }
 }

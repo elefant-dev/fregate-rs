@@ -34,8 +34,8 @@ impl IntoResponse for HealthResponse {
 }
 
 /// Default structure to mark application always alive and ready.
-#[derive(Default, Debug, Clone)]
-pub struct AlwaysReadyAndAlive {}
+#[derive(Default, Debug, Clone, Copy)]
+pub struct AlwaysReadyAndAlive;
 
 #[axum::async_trait]
 impl Health for AlwaysReadyAndAlive {
