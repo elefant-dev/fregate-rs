@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::Result;
+use crate::error::Result;
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle, PrometheusRecorder};
 use once_cell::sync::Lazy;
 
@@ -13,8 +13,6 @@ pub fn get_metrics() -> String {
 }
 
 /// Initialise PrometheusRecorder
-///
-/// Panic if failed to initialise
 pub fn init_metrics() -> Result<()> {
     Ok(metrics::set_recorder(&*RECORDER)?)
 }

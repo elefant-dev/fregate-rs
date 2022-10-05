@@ -1,8 +1,8 @@
-use crate::*;
+use crate::tracing::init_tracing;
+use crate::{error::Result, *};
+use ::tracing::info;
 use serde::de::DeserializeOwned;
-// TODO(kos): redundant usess
 use std::fmt::Debug;
-use tracing::info;
 
 // FIXME(kos): For better navigation in code docs, use intra-doc links like:
 //             ```rust

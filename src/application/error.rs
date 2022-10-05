@@ -1,3 +1,4 @@
+//! fregate Errors 
 use config::ConfigError;
 use hyper::Error as HyperError;
 use metrics::SetRecorderError;

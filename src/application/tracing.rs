@@ -1,4 +1,6 @@
-use crate::Result;
+//! Tools initialise tracing
+
+use crate::error::Result;
 use opentelemetry::{global, sdk, sdk::trace::Tracer, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_zipkin::B3Encoding::MultipleHeader;
@@ -116,14 +118,6 @@ fn set_panic_hook() {
 }
 
 /// Set up global subscriber with formatting log layer to print logs in json format to console and if traces_endpoint is provided opentelemetry exporter to send traces to grafana
-///
-/// Panics if:
-///
-/// Called out of tokio runtime
-///
-/// Called twice
-///
-/// Fails to set up opentelemetry_otlp pipeline
 pub fn init_tracing(
     log_level: &str,
     trace_level: &str,

@@ -2,7 +2,7 @@ mod proto {
     tonic::include_proto!("hello");
 }
 
-use fregate::init_tracing;
+use fregate::tracing::init_tracing;
 use opentelemetry::global::shutdown_tracer_provider;
 use opentelemetry::propagation::Injector;
 use proto::{hello_client::HelloClient, HelloRequest, HelloResponse};

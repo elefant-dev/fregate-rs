@@ -1,6 +1,8 @@
 use fregate::axum::Router;
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
-use fregate::{bootstrap, grpc_trace_layer, Application, Empty, Tonicable};
+use fregate::{
+    bootstrap, extensions::RouterTonicExt, middleware::grpc_trace_layer, Application, Empty,
+};
 use proto::{
     hello_server::{Hello, HelloServer},
     HelloRequest, HelloResponse,

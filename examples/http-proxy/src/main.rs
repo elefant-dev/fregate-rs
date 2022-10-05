@@ -3,7 +3,11 @@ use fregate::axum::{
     Router, Server,
 };
 use fregate::hyper::{Client, StatusCode};
-use fregate::{bootstrap, http_trace_layer, Application, Empty, ProxyLayer};
+use fregate::{
+    bootstrap,
+    middleware::{http_trace_layer, ProxyLayer},
+    Application, Empty,
+};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;

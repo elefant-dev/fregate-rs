@@ -1,4 +1,10 @@
-use crate::*;
+use crate::{
+    build_management_router,
+    error::Result,
+    extensions::RouterOptionalExt,
+    health::{AlwaysReadyAndAlive, Health},
+    AppConfig,
+};
 use axum::Router;
 use hyper::Server;
 use std::net::SocketAddr;
@@ -24,9 +30,6 @@ use tracing::info;
 //            - make `Application::new()` async if necessary.
 //            But removing the `Application` is a better option.
 
-// FIXME(kos): It's impossible to create several application instances.
-//             If the `Application` stays, make it a module instead of a struct.
-
 /// Application to set up HTTP server with given config [`AppConfig`]
 #[derive(Debug)]
 pub struct Application<'a, H, T> {
@@ -49,15 +52,9 @@ impl<'a, T> Application<'a, AlwaysReadyAndAlive, T> {
     }
 }
 
-// TODO(kos): it looks like you're trying to implement Builder pattern.
-// But its name does not reflect it.
-// https://rust-unofficial.github.io/patterns/patterns/creational/builder.html
 impl<'a, H, T> Application<'a, H, T> {
-    // FIXME(kos): Put here `Hh: Health` bound, so the possible error of not
-    //             implementing `Health` trait is cached earlier.
-    //             In this case error description will be more descriptive.
     /// Set up new health indicator
-    pub fn health_indicator<Hh>(self, health: Hh) -> Application<'a, Hh, T> {
+    pub fn health_indicator<Hh: Health>(self, health: Hh) -> Application<'a, Hh, T> {
         Application::<'a, Hh, T> {
             config: self.config,
             health_indicator: Some(health),

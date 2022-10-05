@@ -7,10 +7,9 @@ use tonic::transport::NamedService;
 use tower::{Service, ServiceBuilder};
 use tower_http::ServiceBuilderExt;
 
-// TODO(kos): Consider naming this trait as more idiomatic `RouterTonicExt`.
 // TODO(kos): Consider sealing this trait with `#[sealed]`.
 /// Takes Tonic [`Service`] and converts it into [`Router`]
-pub trait Tonicable {
+pub trait RouterTonicExt {
     /// Takes Tonic [`Service`] and converts it into [`Router`]
     fn from_tonic_service<S>(service: S) -> Self
     where
@@ -23,7 +22,7 @@ pub trait Tonicable {
         S::Future: Send + 'static;
 }
 
-impl Tonicable for Router {
+impl RouterTonicExt for Router {
     fn from_tonic_service<S>(service: S) -> Self
     where
         Self: Sized,

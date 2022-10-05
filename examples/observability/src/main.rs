@@ -1,6 +1,8 @@
 use fregate::{
     axum::{routing::get, Router},
-    bootstrap, http_trace_layer, Application, Empty,
+    bootstrap,
+    middleware::http_trace_layer,
+    Application, Empty,
 };
 
 #[tokio::main]

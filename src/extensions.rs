@@ -1,3 +1,4 @@
+//! Extensions traits for different crates
 mod axum_ext;
 mod axum_tonic;
 mod serde_ext;

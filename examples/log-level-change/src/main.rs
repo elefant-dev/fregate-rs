@@ -1,6 +1,9 @@
+use fregate::middleware::http_trace_layer;
 use fregate::{
     axum::{routing::get, Router},
-    bootstrap, get_handle_log_layer, http_trace_layer, Application, Empty,
+    bootstrap,
+    tracing::get_handle_log_layer,
+    Application, Empty,
 };
 use std::str::FromStr;
 use std::time::Duration;

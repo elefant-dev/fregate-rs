@@ -1,8 +1,9 @@
+use crate::{
+    extensions::{png, yaml, RouterOptionalExt},
+    health::Health,
+};
 use axum::{routing::get, Extension, Router};
 use bytes::Bytes;
-
-use crate::extensions::{png, yaml};
-use crate::{Health, Optional};
 
 const OPENAPI_PATH: &str = "/openapi";
 const FAVICON_PATH: &str = "/favicon.ico";

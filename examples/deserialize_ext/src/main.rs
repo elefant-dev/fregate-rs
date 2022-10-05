@@ -1,4 +1,4 @@
-use fregate::{AppConfigBuilder, DeserializeExt};
+use fregate::{extensions::DeserializeExt, AppConfigBuilder};
 use serde::{
     de::{DeserializeOwned, Error as DeError},
     Deserialize, Deserializer,

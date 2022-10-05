@@ -1,19 +1,16 @@
 mod app;
 mod bootstrap;
 mod configuration;
-mod error;
-mod health;
-mod logging;
 mod management;
 mod metrics;
-mod proxy_router;
+
+pub mod error;
+pub mod health;
+pub mod proxy_router;
+pub mod tracing;
 
 pub use self::metrics::*;
 pub use app::*;
 pub use bootstrap::*;
 pub use configuration::*;
-pub use error::*;
-pub use health::*;
-pub use logging::*;
 pub(crate) use management::*;
-pub use proxy_router::*;

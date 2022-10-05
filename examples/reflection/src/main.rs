@@ -2,7 +2,12 @@
 
 use fregate::axum::{routing::get, Router};
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
-use fregate::{bootstrap, grpc_trace_layer, http_trace_layer, Application, Empty, Tonicable};
+use fregate::{
+    bootstrap,
+    extensions::RouterTonicExt,
+    middleware::{grpc_trace_layer, http_trace_layer},
+    Application, Empty,
+};
 use proto::{
     echo_server::{Echo, EchoServer},
     EchoRequest, EchoResponse,

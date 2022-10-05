@@ -1,5 +1,6 @@
 mod bootstrap_fn_test {
-    use fregate::{bootstrap, get_handle_log_layer, Empty};
+    use fregate::tracing::get_handle_log_layer;
+    use fregate::{bootstrap, Empty};
     use std::net::{IpAddr, Ipv4Addr};
     use std::time::Duration;
 

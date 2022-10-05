@@ -1,4 +1,4 @@
-use crate::{DeserializeExt, Result};
+use crate::{error::Result, extensions::DeserializeExt};
 use config::{builder::DefaultState, ConfigBuilder, Environment, File, FileFormat};
 use serde::{
     de::{DeserializeOwned, Error},

@@ -77,7 +77,7 @@ pub fn png(content: &Bytes) -> Response<BoxBody> {
 // TODO(kos): Consider name this trait as more idiomatic `RouterOptionalExt`.
 // TODO(kos): Consider sealing this trait with `#[sealed]`.
 /// Used to merge and nest Option<Router>
-pub trait Optional {
+pub trait RouterOptionalExt {
     /// Used to merge Option<Router>
     fn merge_optional(self, other: Option<Router>) -> Self;
 
@@ -85,7 +85,7 @@ pub trait Optional {
     fn nest_optional(self, path: &str, other: Option<Router>) -> Self;
 }
 
-impl Optional for Router {
+impl RouterOptionalExt for Router {
     fn merge_optional(self, mut other: Option<Router>) -> Self {
         if let Some(other) = other.take() {
             self.merge(other)

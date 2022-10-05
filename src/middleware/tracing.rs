@@ -1,5 +1,3 @@
-// FIXME(kos): Rename this to `tracing`. It seems the module is about telemetry not about logging.
-
 use hyper::{Request, Response};
 use opentelemetry::{
     global::get_text_map_propagator,
@@ -15,8 +13,6 @@ use tower_http::{
 use tracing::{field::display, info, span, Level, Span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
-// FIXME(kos): Better consider this Clippy complain and refactor the type into
-//             its own type alias.
 /// Returns [`TraceLayer`] with basic functionality for logging incoming HTTP request and outgoing HTTP response. Creates info span on request. Uses [`ServerErrorsAsFailures`] as classifier to log errors.
 #[allow(clippy::type_complexity)]
 pub fn http_trace_layer() -> TraceLayer<
@@ -31,8 +27,6 @@ pub fn http_trace_layer() -> TraceLayer<
         .on_request(BasicOnRequest {})
 }
 
-// FIXME(kos): Better consider this Clippy complain and refactor the type into
-//             its own type alias.
 /// Returns [`TraceLayer`] with basic functionality for logging incoming HTTP request and outgoing HTTP response. Creates info span on request. Uses [`GrpcErrorsAsFailures`] as classifier to log errors.
 #[allow(clippy::type_complexity)]
 pub fn grpc_trace_layer() -> TraceLayer<
@@ -47,12 +41,9 @@ pub fn grpc_trace_layer() -> TraceLayer<
         .on_request(BasicOnRequest {})
 }
 
-// FIXME(kos): If it has `Clone`, that it's natural to have `Copy` for a ZST
-//             (zero-sized type).
-// FIXME(kos): Braces may be removed from the definition.
 /// Creates info span on incoming request
-#[derive(Clone, Debug)]
-pub struct BasicMakeSpan {}
+#[derive(Clone, Copy, Debug)]
+pub struct BasicMakeSpan;
 
 impl<B> MakeSpan<B> for BasicMakeSpan {
     fn make_span(&mut self, request: &Request<B>) -> Span {
@@ -70,12 +61,9 @@ impl<B> MakeSpan<B> for BasicMakeSpan {
     }
 }
 
-// FIXME(kos): If it has `Clone`, that it's natural to have `Copy` for a ZST
-//             (zero-sized type).
-// FIXME(kos): Braces may be removed from the definition.
 /// Logs message on request: "Incoming Request: method: \[{method}], uri: {uri}, x-b3-traceid: {trace_id}".
-#[derive(Clone, Debug)]
-pub struct BasicOnRequest {}
+#[derive(Clone, Copy, Debug)]
+pub struct BasicOnRequest;
 
 impl<B> OnRequest<B> for BasicOnRequest {
     fn on_request(&mut self, request: &Request<B>, span: &Span) {
@@ -90,12 +78,9 @@ impl<B> OnRequest<B> for BasicOnRequest {
     }
 }
 
-// FIXME(kos): If it has `Clone`, that it's natural to have `Copy` for a ZST
-//             (zero-sized type).
-// FIXME(kos): Braces may be removed from the definition.
 /// Logs message on response: "Outgoing Response: status code: {status}, latency: {latency}ms, x-b3-traceid: {trace_id}".
-#[derive(Clone, Debug)]
-pub struct BasicOnResponse {}
+#[derive(Clone, Copy, Debug)]
+pub struct BasicOnResponse;
 
 impl<B> OnResponse<B> for BasicOnResponse {
     fn on_response(self, response: &Response<B>, latency: Duration, span: &Span) {
