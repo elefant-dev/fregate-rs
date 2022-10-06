@@ -1,5 +1,4 @@
 mod app;
-mod bootstrap;
 mod configuration;
 mod management;
 mod metrics;
@@ -11,6 +10,5 @@ pub mod proxy_router;
 
 pub use self::metrics::*;
 pub use app::*;
-pub use bootstrap::*;
 pub use configuration::*;
 pub(crate) use management::*;

@@ -1,14 +1,14 @@
 #![allow(clippy::derive_partial_eq_without_eq)]
 
 use fregate::axum::{routing::get, Router};
-use fregate::tokio;
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
 use fregate::{
-    bootstrap,
     extensions::RouterTonicExt,
+    init_tracing_from_config,
     middleware::{grpc_trace_layer, http_trace_layer},
-    Application, Empty,
+    Application,
 };
+use fregate::{tokio, ApplicationConfig, TracingConfig};
 use proto::{
     echo_server::{Echo, EchoServer},
     EchoRequest, EchoResponse,
@@ -38,7 +38,10 @@ impl Echo for MyEcho {
 
 #[tokio::main]
 async fn main() {
-    let config = bootstrap::<Empty, _>([]).unwrap();
+    let conf = ApplicationConfig::default();
+    let trace_conf = TracingConfig::default();
+
+    init_tracing_from_config(trace_conf).unwrap();
 
     let echo_service = EchoServer::new(MyEcho);
 
@@ -56,7 +59,7 @@ async fn main() {
     let grpc = Router::from_tonic_service(echo_service).layer(grpc_trace_layer());
     let app_router = rest.merge(grpc).merge(reflection);
 
-    Application::new(&config)
+    Application::new(conf)
         .router(app_router)
         .serve()
         .await

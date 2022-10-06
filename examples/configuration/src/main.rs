@@ -1,17 +1,23 @@
 use fregate::axum::{routing::get, Router};
-use fregate::config::FileFormat;
-use fregate::tokio;
-use fregate::{bootstrap, AppConfig, Application, ConfigSource, Empty};
+use fregate::config::{File, FileFormat};
+use fregate::extensions::ConfigExt;
+use fregate::logging::init_tracing_from_config;
+use fregate::tracing::info;
+use fregate::{config_builder, load_default_config_with, Application, TracingConfig};
+use fregate::{tokio, ApplicationConfig};
 use serde::Deserialize;
+
+#[derive(Deserialize, Debug)]
+pub struct CustomConfig {
+    pub number: u32,
+    #[serde(flatten)]
+    pub app_config: ApplicationConfig,
+    #[serde(flatten)]
+    pub tracing_config: TracingConfig,
+}
 
 async fn handler() -> &'static str {
     "Hello, Configuration!"
-}
-
-#[allow(dead_code)]
-#[derive(Deserialize, Debug)]
-struct Custom {
-    number: u32,
 }
 
 #[tokio::main]
@@ -23,32 +29,32 @@ async fn main() {
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
     std::env::set_var("OTEL_SERVICE_NAME", "CONFIGURATION");
 
-    // There are multiple ways to read AppConfig:
+    // This will load default fregate config and File + Env Vars on top of it
+    let _custom_config: CustomConfig =
+        load_default_config_with(Some("./examples/configuration/app.yaml"), Some("TEST")).unwrap();
 
-    // This will read AppConfig and call init_tracing() with arguments read in AppConfig
-    let _conf: AppConfig<Empty> = bootstrap([
-        ConfigSource::File("./examples/configuration/app.yaml"),
-        ConfigSource::EnvPrefix("TEST"),
-    ])
-    .unwrap();
-
-    // Read default AppConfig
-    let _conf = AppConfig::default();
-
-    // Set up AppConfig through builder, nothing added by default
-    let _conf = AppConfig::<Empty>::builder()
-        .add_default()
+    // For more flexibility you may use builder
+    let custom_config: CustomConfig = config_builder()
+        .add_fregate_defaults()
+        .add_source(File::with_name("./examples/configuration/app.yaml"))
+        .add_source(File::from_str(
+            include_str!("../../configuration/app.yaml"),
+            FileFormat::Yaml,
+        ))
         .add_env_prefixed("TEST")
-        .add_file("./examples/configuration/app.yaml")
-        .add_str(include_str!("../app.yaml"), FileFormat::Yaml)
+        .add_env_prefixed("OTEL")
         .build()
+        .unwrap()
+        .try_deserialize()
         .unwrap();
 
-    // Read default config with private field struct Custom with specified file and environment variables with specified prefix and "_" separator
-    let _conf: AppConfig<Custom> =
-        AppConfig::default_with("./examples/configuration/app.yaml", "TEST").unwrap();
+    let app_config = custom_config.app_config.clone();
+    let tracing_config = custom_config.tracing_config.clone();
 
-    Application::new(&AppConfig::default())
+    init_tracing_from_config(tracing_config).unwrap();
+    info!("Loaded {custom_config:?}");
+
+    Application::new(app_config)
         .router(Router::new().route("/", get(handler)))
         .serve()
         .await

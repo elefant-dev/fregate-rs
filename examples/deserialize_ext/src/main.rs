@@ -1,4 +1,5 @@
-use fregate::{extensions::DeserializeExt, AppConfig};
+use fregate::config_builder;
+use fregate::extensions::{ConfigExt, DeserializeExt};
 use serde::{
     de::{DeserializeOwned, Error as DeError},
     Deserialize, Deserializer,
@@ -23,7 +24,7 @@ impl<'de, T: DeserializeOwned> Deserialize<'de> for Configuration<T> {
         let value = Value::deserialize(deserializer)?;
 
         let scalica_address = value.pointer_and_deserialize(SCALICA_ADDRESS_PATH)?;
-        let private = T::deserialize(value).map_err(DeError::custom)?;
+        let private = T::deserialize(&value).map_err(DeError::custom)?;
 
         Ok(Self {
             scalica_address,
@@ -56,13 +57,15 @@ fn main() -> Result<(), Box<dyn StdError>> {
     std::env::set_var("BOHEMIA_SCALICA_ADDRESS", "Earth");
     std::env::set_var("BOHEMIA_SCALICA_NEW_ADDRESS", "Mars");
 
-    let config = AppConfig::<Configuration<ExtendedConfiguration>>::builder()
-        .add_default()
+    let config: Configuration<ExtendedConfiguration> = config_builder()
         .add_env_prefixed("BOHEMIA")
-        .build()?;
+        .build()
+        .unwrap()
+        .try_deserialize()
+        .unwrap();
 
-    assert_eq!(config.private.scalica_address.as_ref(), "Earth");
-    assert_eq!(config.private.private.scalica_new_address.as_ref(), "Mars");
+    assert_eq!(config.scalica_address.as_ref(), "Earth");
+    assert_eq!(config.private.scalica_new_address.as_ref(), "Mars");
 
     println!("configuration: `{config:#?}`.");
 

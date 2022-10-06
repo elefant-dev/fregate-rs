@@ -3,7 +3,7 @@ use crate::{
     error::Result,
     extensions::RouterOptionalExt,
     health::{AlwaysReadyAndAlive, Health},
-    AppConfig,
+    ApplicationConfig,
 };
 use axum::Router;
 use hyper::Server;
@@ -11,40 +11,18 @@ use std::net::SocketAddr;
 use tokio::signal;
 use tracing::info;
 
-// TODO(kos): Consider avoiding doing framework and eliminating `Application`.
-//            Better than the alternative.
-
-// TODO(kos): Alternatively:
-//            - hide as much as possible, proxying what is needed by the
-//              `Application`.
-//            - accept constructor function in `Application::router`, that
-//              allows getting proxy accessors to various extensions, like
-//              `logging` or `opentelemetry` context.
-//            - provide a function like
-//              `with_application_state(impl FnOnce(ApplicationState))`, that
-//              would be a single access point to the global state.
-//            - `init_metrics` and `init_tracing` should be methods of
-//              `Application`.
-//            - `bootstrap()` is redundant, move its content into
-//              `Application::new()`
-//            - make `Application::new()` async if necessary.
-//            But removing the `Application` is a better option.
-
-/// Application to set up HTTP server with given config [`AppConfig`]
+/// Application to set up HTTP server with given config [`ApplicationConfig`]
 #[derive(Debug)]
-pub struct Application<'a, H, T> {
-    // TODO(kos): Consider owning the `AppConfig` rather than referring it.
-    //            It would simplify `Application` code and seems natural this
-    //            way.
-    config: &'a AppConfig<T>,
+pub struct Application<H> {
+    config: ApplicationConfig,
     health_indicator: Option<H>,
     router: Option<Router>,
 }
 
-impl<'a, T> Application<'a, AlwaysReadyAndAlive, T> {
+impl Application<AlwaysReadyAndAlive> {
     /// Creates new Application with health checks always returning [200 OK]
-    pub fn new(config: &'a AppConfig<T>) -> Self {
-        Application::<'a, AlwaysReadyAndAlive, T> {
+    pub fn new(config: ApplicationConfig) -> Self {
+        Application::<AlwaysReadyAndAlive> {
             config,
             health_indicator: Some(AlwaysReadyAndAlive {}),
             router: None,
@@ -52,17 +30,17 @@ impl<'a, T> Application<'a, AlwaysReadyAndAlive, T> {
     }
 }
 
-impl<'a, H, T> Application<'a, H, T> {
+impl<H> Application<H> {
     /// Set up new health indicator
-    pub fn health_indicator<Hh: Health>(self, health: Hh) -> Application<'a, Hh, T> {
-        Application::<'a, Hh, T> {
+    pub fn health_indicator<Hh: Health>(self, health: Hh) -> Application<Hh> {
+        Application::<Hh> {
             config: self.config,
             health_indicator: Some(health),
             router: self.router,
         }
     }
 
-    /// Start serving at specified host and port in [AppConfig] accepting both HTTP1 and HTTP2
+    /// Start serving at specified host and port in [ApplicationConfig] accepting both HTTP1 and HTTP2
     pub async fn serve(self) -> Result<()>
     where
         H: Health,

@@ -1,6 +1,7 @@
 //! Tools initialise logging and tracing
 
 use crate::error::Result;
+use crate::TracingConfig;
 use once_cell::sync::OnceCell;
 use opentelemetry::{global, sdk, sdk::trace::Tracer, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
@@ -136,4 +137,21 @@ pub fn init_tracing(
     set_panic_hook();
 
     Ok(())
+}
+
+/// Set up global subscriber with formatting log layer to print logs in json format to console and if traces_endpoint is provided opentelemetry exporter to send traces to grafana
+pub fn init_tracing_from_config(tracing_config: TracingConfig) -> Result<()> {
+    let TracingConfig {
+        log_level,
+        trace_level,
+        service_name,
+        traces_endpoint,
+    } = &tracing_config;
+
+    init_tracing(
+        log_level,
+        trace_level,
+        service_name,
+        traces_endpoint.as_deref(),
+    )
 }

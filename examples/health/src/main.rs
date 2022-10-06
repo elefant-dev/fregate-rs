@@ -1,8 +1,8 @@
 use fregate::tokio;
 use fregate::{
-    axum, bootstrap,
+    axum,
     health::{Health, HealthResponse},
-    Application, Empty,
+    Application, ApplicationConfig,
 };
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
@@ -31,9 +31,9 @@ impl Health for CustomHealth {
 
 #[tokio::main]
 async fn main() {
-    let config = bootstrap::<Empty, _>([]).unwrap();
+    let config = ApplicationConfig::default();
 
-    Application::new(&config)
+    Application::new(config)
         .health_indicator(CustomHealth::default())
         .serve()
         .await

@@ -1,9 +1,8 @@
 use fregate::axum::Router;
-use fregate::tokio;
+use fregate::logging::init_tracing_from_config;
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
-use fregate::{
-    bootstrap, extensions::RouterTonicExt, middleware::grpc_trace_layer, Application, Empty,
-};
+use fregate::{extensions::RouterTonicExt, middleware::grpc_trace_layer, Application};
+use fregate::{tokio, ApplicationConfig, TracingConfig};
 use proto::{
     hello_server::{Hello, HelloServer},
     HelloRequest, HelloResponse,
@@ -35,14 +34,13 @@ async fn main() {
     std::env::set_var("OTEL_SERVICE_NAME", "SERVER");
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
 
-    let config = bootstrap::<Empty, _>([]).unwrap();
+    let app = ApplicationConfig::default();
+    let tracing = TracingConfig::default();
+
+    init_tracing_from_config(tracing).unwrap();
 
     let hello_service = HelloServer::new(MyHello);
     let grpc = Router::from_tonic_service(hello_service).layer(grpc_trace_layer());
 
-    Application::new(&config)
-        .router(grpc)
-        .serve()
-        .await
-        .unwrap();
+    Application::new(app).router(grpc).serve().await.unwrap();
 }

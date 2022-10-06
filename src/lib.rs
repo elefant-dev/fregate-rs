@@ -15,6 +15,8 @@ pub mod middleware;
 
 #[doc(inline)]
 pub use application::*;
+#[doc(inline)]
+pub use logging::{init_tracing, init_tracing_from_config};
 
 pub use axum;
 pub use config;
