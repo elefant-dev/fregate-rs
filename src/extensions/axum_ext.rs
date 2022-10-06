@@ -2,6 +2,7 @@ use axum::body::BoxBody;
 use axum::http::{HeaderValue, Response};
 use axum::response::IntoResponse;
 use axum::{http, Router};
+use sealed::sealed;
 
 /// Converts &str into Response and add Headers: Content-Type: "application/yaml" and "cache-control": "24 hours"
 pub(crate) fn yaml(content: &'static str) -> Response<BoxBody> {
@@ -22,8 +23,8 @@ pub(crate) fn yaml(content: &'static str) -> Response<BoxBody> {
 }
 
 //TODO: Might be substituted with Router::nest(other.unwrap_or_default())
-// TODO(kos): Consider sealing this trait with `#[sealed]`.
 /// Used to merge and nest Option<Router>
+#[sealed]
 pub trait RouterOptionalExt {
     /// Used to merge Option<Router>
     fn merge_optional(self, other: Option<Router>) -> Self;
@@ -32,6 +33,7 @@ pub trait RouterOptionalExt {
     fn nest_optional(self, path: &str, other: Option<Router>) -> Self;
 }
 
+#[sealed]
 impl RouterOptionalExt for Router {
     fn merge_optional(self, mut other: Option<Router>) -> Self {
         if let Some(other) = other.take() {

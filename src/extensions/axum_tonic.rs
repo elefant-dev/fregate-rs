@@ -1,14 +1,15 @@
 use axum::body::boxed;
 use axum::Router;
 use hyper::{Body, Request, Response};
+use sealed::sealed;
 use std::convert::Infallible;
 use tonic::body::BoxBody;
 use tonic::transport::NamedService;
 use tower::{Service, ServiceBuilder};
 use tower_http::ServiceBuilderExt;
 
-// TODO(kos): Consider sealing this trait with `#[sealed]`.
 /// Takes Tonic [`Service`] and converts it into [`Router`]
+#[sealed]
 pub trait RouterTonicExt {
     /// Takes Tonic [`Service`] and converts it into [`Router`]
     fn from_tonic_service<S>(service: S) -> Self
@@ -22,6 +23,7 @@ pub trait RouterTonicExt {
         S::Future: Send + 'static;
 }
 
+#[sealed]
 impl RouterTonicExt for Router {
     fn from_tonic_service<S>(service: S) -> Self
     where
