@@ -10,7 +10,7 @@ This project is in progress and might change a lot from version to version.
 ```rust
 use fregate::{
     axum::{routing::get, Router},
-    bootstrap, Application, Empty,
+    tokio, Application, ApplicationConfig,
 };
 
 async fn handler() -> &'static str {
@@ -19,9 +19,7 @@ async fn handler() -> &'static str {
 
 #[tokio::main]
 async fn main() {
-    let config = bootstrap::<Empty, _>([]).unwrap();
-
-    Application::new(&config)
+    Application::new(ApplicationConfig::default())
         .router(Router::new().route("/", get(handler)))
         .serve()
         .await

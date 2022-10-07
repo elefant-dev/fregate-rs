@@ -9,9 +9,7 @@ async fn handler() -> &'static str {
 
 #[tokio::main]
 async fn main() {
-    let config = ApplicationConfig::default();
-
-    Application::new(config)
+    Application::new(ApplicationConfig::default())
         .router(Router::new().route("/", get(handler)))
         .serve()
         .await
