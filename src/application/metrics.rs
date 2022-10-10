@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+
 use crate::error::Result;
 use metrics::{describe_counter, describe_histogram, register_counter, register_histogram, Unit};
 
