@@ -1,37 +1,42 @@
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
-  check:
-    name: Cargo fmt, clippy, test
+  fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install minimal stable with clippy and rustfmt
-        uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          components: rustfmt, clippy
-          override: true
-          
-      - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
+          components: rustfmt
+      - uses: arduino/setup-protoc@v1
+      - uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: -- --check
-          
-      - name: Run cargo clippy
-        uses: actions-rs/cargo@v1
+          args: --all -- --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
         with:
-          command: clippy  
-          args: -- -D warnings 
-          
-      - name: Run cargo test
-        uses: actions-rs/cargo@v1
+          toolchain: stable
+          components: clippy
+      - uses: arduino/setup-protoc@v1
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: arduino/setup-protoc@v1
+      - uses: actions-rs/cargo@v1
         with:
           command: test
           args: --all-features
-          

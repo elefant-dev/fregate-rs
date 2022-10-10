@@ -8,6 +8,14 @@ use serde_json::{from_value, Value};
 use std::{fmt::Debug, marker::PhantomData, net::IpAddr};
 use tracing::log::info;
 
+// FIXME(kos): There is simpler way of loading config: just use the
+//             `Deserialize` derive.
+//             Custom algorithm might has some advantages, but drawbacks are
+//             such:
+//             - it makes extension of config difficult, every service has its
+//               own structure of config;
+//             - it makes code more complicated.
+//             After refactoring less than 50 lines will stay.
 const HOST_PTR: &str = "/host";
 const PORT_PTR: &str = "/port";
 const LOG_LEVEL_PTR: &str = "/log/level";
@@ -32,6 +40,10 @@ pub enum ConfigSource<'a> {
 #[derive(Deserialize, Debug, PartialEq, Eq, Copy, Clone)]
 pub struct Empty {}
 
+// FIXME(kos): ?
+// https://serde.rs/field-attrs.html#flatten
+//
+// #[derive(Debug, Deserialize)]
 /// AppConfig reads and saves application configuration from different sources
 #[derive(Debug)]
 pub struct AppConfig<T> {
@@ -58,6 +70,15 @@ pub struct LoggerConfig {
     pub traces_endpoint: Option<String>,
 }
 
+// TODO(kos): Quite a tedious code for such simple task as configuration parsing
+//            and initialization.
+//            Consider to omit specifying JSON pointers explicitly and rely onto
+//            `config` crate merging capabilities with possibly custom section
+//            separators.
+//            https://github.com/mehcode/config-rs/blob/0.13.2/examples/hierarchical-env/settings.rs
+//            Thus, requiring some restructuring or providing some limitations
+//            in edge cases, this scheme is much more simpler, straightforward,
+//            and clear for high majority of cases.
 impl<'de> Deserialize<'de> for LoggerConfig {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -163,6 +184,10 @@ impl<T> AppConfig<T> {
     }
 }
 
+// FIXME(kos): Why not exposing builder of crate `config`?
+//             Method `add_default()` should be used every time.
+//             Methods `add_file()`, `add_str()`, `add_env_prefixed()` are just
+//             wrappers and are barely useful.
 /// AppConfig builder to set up multiple sources
 #[derive(Debug, Default)]
 pub struct AppConfigBuilder<T> {
@@ -170,6 +195,8 @@ pub struct AppConfigBuilder<T> {
     phantom: PhantomData<T>,
 }
 
+// TODO(kos): Parameter `T` should be not near struct, but where it's used, near
+//            method `build`.
 impl<T> AppConfigBuilder<T> {
     /// Creates new [`AppConfigBuilder`]
     pub fn new() -> Self {
@@ -191,11 +218,25 @@ impl<T> AppConfigBuilder<T> {
         Ok(config)
     }
 
+    // TODO(kos): Consider having default values declared directly in the code,
+    //            rather than parsing from a default file.
+    //            This makes the application independent of any external files,
+    //            which may be missing, allows to understand defaults directly
+    //            from the code being read, and eliminates any possible parsing
+    //            errors for the defaults, which may happen accidentally.
+    //            Could be useful: https://crates.io/crates/smart-default
     /// Add default config
     pub fn add_default(mut self) -> Self {
         self.builder = self
             .builder
             .add_source(File::from_str(DEFAULT_CONFIG, FileFormat::Toml));
+        // TODO(kos): Embedding of textual file into bin files has several
+        //            disadvantages:
+        //            1. larger bin file;
+        //            2. slower initialization of program;
+        //            3. too late (in runtime) information about broken TOML
+        //               file;
+        //            Consider embedding all defaults into the code itself.
         self
     }
 

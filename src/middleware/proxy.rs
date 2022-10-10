@@ -1,3 +1,7 @@
+// FIXME(kos): Proxy should be already implemented:
+//             https://github.com/felipenoris/hyper-reverse-proxy
+//             Does not it fit your needs?
+
 use axum::{body::BoxBody, http::StatusCode, response::IntoResponse, BoxError};
 use bytes::Bytes;
 use hyper::{
@@ -23,6 +27,8 @@ where
 {
     match result {
         Ok(resp) => resp.into_response(),
+        // FIXME: this may leak private information to the client.
+        // Be careful of what gets sent in `err`.
         Err(err) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Failed with: {}", err),
@@ -42,6 +48,11 @@ pub struct ProxyLayer<F> {
 }
 
 impl<F> ProxyLayer<F> {
+    // TODO(kos): For ergonomic purposes, it would be nice to provide multiple
+    //            constructor function (or even a builder), where, by default,
+    //            the `Client` is created automatically, while still may be
+    //            specified a custom `Client` if the caller needs.
+    //            Alternatively consider introducing second constructor `new_with_client()`.
     /// Creates new [`ProxyLayer`]
     pub fn new<B>(should_be_proxied_fn: F, client: Client, destination: &str) -> Self
     where
@@ -92,6 +103,8 @@ impl<F, S> Proxy<F, S> {
     }
 }
 
+// TODO(kos): Consider using `F: FnMut` as, the `call()` method accepts `&mut`
+//            anyway.
 impl<F, S> Service<Request<Body>> for Proxy<F, S>
 where
     F: Fn(&Request<Body>) -> bool,
@@ -176,6 +189,11 @@ where
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.project().kind.project() {
             FutureProject::Axum { future } => future.poll(cx),
+            // TODO(kos): Consider using `future::ready!()` macro:
+            //            ```rust
+            //            Poll::Ready(Ok(handle_result(task::ready!(future.poll(cx))))
+            //            ```
+            //            https://doc.rust-lang.org/stable/std/task/macro.ready.html
             FutureProject::Hyper { future } => match future.poll(cx) {
                 Poll::Ready(v) => Poll::Ready(Ok(handle_result(v))),
                 Poll::Pending => Poll::Pending,

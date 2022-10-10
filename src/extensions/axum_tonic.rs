@@ -7,6 +7,8 @@ use tonic::transport::NamedService;
 use tower::{Service, ServiceBuilder};
 use tower_http::ServiceBuilderExt;
 
+// TODO(kos): Consider naming this trait as more idiomatic `RouterTonicExt`.
+// TODO(kos): Consider sealing this trait with `#[sealed]`.
 /// Takes Tonic [`Service`] and converts it into [`Router`]
 pub trait Tonicable {
     /// Takes Tonic [`Service`] and converts it into [`Router`]
