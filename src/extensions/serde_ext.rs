@@ -1,3 +1,4 @@
+use sealed::sealed;
 use serde::de::Error;
 use serde::Deserialize;
 use serde_json::Value;
@@ -13,7 +14,7 @@ use serde_json::Value;
 //            in edge cases, this scheme is much more simpler, straightforward,
 //            and clear for high majority of cases.
 /// Needed for overcoming overlapping path in config deserialization.
-// TODO(kos): Consider sealing this trait with `#[sealed]`.
+#[sealed]
 pub trait DeserializeExt {
     /// find value by given pointer and try to deserialize
     fn pointer_and_deserialize<'de, T, E>(&'de self, pointer: &'static str) -> Result<T, E>
@@ -22,6 +23,7 @@ pub trait DeserializeExt {
         E: Error;
 }
 
+#[sealed]
 impl DeserializeExt for Value {
     fn pointer_and_deserialize<'de, T, E>(&'de self, pointer: &'static str) -> Result<T, E>
     where

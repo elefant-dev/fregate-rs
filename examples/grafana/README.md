@@ -7,8 +7,6 @@ After otel-config.yaml set up run:
 
 ```zsh
 docker run -v {path to your otel-config.yaml}:/etc/otelcol/config.yaml -d -p 4317:4317 otel/opentelemetry-collector:0.54.0
-docker run -v /home/kos/pro/subject/etring/fregate_review/examples/grafana:/etc/otelcol -d -p 4317:4317 otel/opentelemetry-collector:0.54.0
-
 ```
 
 Run Server:
