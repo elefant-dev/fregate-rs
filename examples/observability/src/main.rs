@@ -1,11 +1,13 @@
 use fregate::{
     axum::{routing::get, Router},
-    bootstrap, http_trace_layer, Application, Empty,
+    bootstrap,
+    middleware::http_trace_layer,
+    tokio, Application, Empty,
 };
 
 #[tokio::main]
 async fn main() {
-    let config = bootstrap::<Empty, _>([]);
+    let config = bootstrap::<Empty, _>([]).unwrap();
 
     let rest = Router::new()
         .route("/", get(handler))

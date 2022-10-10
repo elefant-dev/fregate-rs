@@ -1,6 +1,6 @@
 use fregate::{
     axum::{routing::get, Router},
-    bootstrap, Application, Empty,
+    bootstrap, tokio, Application, Empty,
 };
 
 async fn handler() -> &'static str {
@@ -9,7 +9,7 @@ async fn handler() -> &'static str {
 
 #[tokio::main]
 async fn main() {
-    let config = bootstrap::<Empty, _>([]);
+    let config = bootstrap::<Empty, _>([]).unwrap();
 
     Application::new(&config)
         .router(Router::new().route("/", get(handler)))

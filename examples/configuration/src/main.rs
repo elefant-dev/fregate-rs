@@ -1,5 +1,6 @@
 use fregate::axum::{routing::get, Router};
 use fregate::config::FileFormat;
+use fregate::tokio;
 use fregate::{bootstrap, AppConfig, Application, ConfigSource, Empty};
 use serde::Deserialize;
 
@@ -22,20 +23,19 @@ async fn main() {
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
     std::env::set_var("OTEL_SERVICE_NAME", "CONFIGURATION");
 
-    // FIXME(kos): That's not a practical example.
-    //             It's better to rather provide a set of smoke tests.
-    //             Alternatively, all these variants of usage should be in
-    //             documentation of `AppConfig` as separate examples.
-    //             Consider moving and splitting.
+    // There are multiple ways to read AppConfig:
 
-    // This will initialise tracing from environment variables read to AppConfig.
+    // This will read AppConfig and call init_tracing() with arguments read in AppConfig
     let _conf: AppConfig<Empty> = bootstrap([
         ConfigSource::File("./examples/configuration/app.yaml"),
         ConfigSource::EnvPrefix("TEST"),
-    ]);
+    ])
+    .unwrap();
 
+    // Read default AppConfig
     let _conf = AppConfig::default();
 
+    // Set up AppConfig through builder, nothing added by default
     let _conf = AppConfig::<Empty>::builder()
         .add_default()
         .add_env_prefixed("TEST")
@@ -44,6 +44,7 @@ async fn main() {
         .build()
         .unwrap();
 
+    // Read default config with private field struct Custom with specified file and environment variables with specified prefix and "_" separator
     let _conf: AppConfig<Custom> =
         AppConfig::default_with("./examples/configuration/app.yaml", "TEST").unwrap();
 

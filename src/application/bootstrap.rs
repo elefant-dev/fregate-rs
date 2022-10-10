@@ -1,42 +1,41 @@
-use crate::*;
+use crate::logging::init_tracing;
+use crate::{error::Result, *};
+use ::tracing::info;
 use serde::de::DeserializeOwned;
-// TODO(kos): redundant usess
 use std::fmt::Debug;
-use tracing::info;
 
-// FIXME(kos): For better navigation in code docs, use intra-doc links like:
-//             ```rust
-//             /// Reads [`AppConfig`] and initializes [`tracing`].
-//             ///
-//             /// # Panics
-//             ///
-//             /// - If fails to read [`AppConfig`] or to initialize [`tracing`].
-//             /// - If called twice (because of an internal call to
-//             ///   `tracing_subscriber::registry().init()`).
-//             ```
-
-// TODO(kos): What is the use-case of the parameter `T`?
-//            All calls looks similarly.
-//            ```rust
-//            let conf = bootstrap::<Empty, _>([]);
-//            ```
-//            Parameter `T` here is the custom-defined part of the `AppConfig`.
-//            It's named too poorly, so is quite unobvious.
-//            I suggested to remove it, but if not then consider to rename it.
-
-// FIXME(kos): Redundant trailing slash after "panic".
-// FIXME(kos): A snippet as an example?
-
-/// Reads AppConfig and initialise tracing.\
-/// Panic if fail to read AppConfig or initialise tracing.\
-/// Because of internal call to tracing_subscriber::registry().init() can't be called twice, otherwise panic.\
-#[allow(clippy::expect_used)]
-pub fn bootstrap<'a, T, S>(sources: S) -> AppConfig<T>
+/// Reads AppConfig and [`init_tracing`].\
+/// Return Error if fails to read [`AppConfig`] or [`init_tracing`].\
+/// Return Error if called twice because of internal call to tracing_subscriber::registry().try_init().
+///```no_run
+/// use fregate::*;
+/// use fregate::axum::{Router, routing::get, response::IntoResponse};
+///
+/// #[tokio::main]
+/// async fn main() {
+///     
+///    std::env::set_var("TEST_PORT", "3333");
+///    std::env::set_var("TEST_NUMBER", "1010");
+///
+///     let config: AppConfig<Empty> = bootstrap([
+///         ConfigSource::File("./examples/configuration/app.yaml"),
+///         ConfigSource::EnvPrefix("TEST"),
+///     ])
+///     .unwrap();
+///
+///     Application::new(&config)
+///         .router(Router::new().route("/", get(|| async { "Hello World"})))
+///         .serve()
+///         .await
+///         .unwrap();
+/// }
+/// ```
+pub fn bootstrap<'a, ConfigExt, S>(sources: S) -> Result<AppConfig<ConfigExt>>
 where
     S: IntoIterator<Item = ConfigSource<'a>>,
-    T: Debug + DeserializeOwned,
+    ConfigExt: Debug + DeserializeOwned,
 {
-    let config = AppConfig::<T>::load_from(sources).expect("Failed to load AppConfig");
+    let config = AppConfig::<ConfigExt>::load_from(sources)?;
 
     let LoggerConfig {
         log_level,
@@ -50,9 +49,9 @@ where
         trace_level,
         service_name,
         traces_endpoint.as_deref(),
-    );
+    )?;
 
-    info!("Configuration: `{config:?}`.", config = config);
+    info!("Configuration: `{config:?}`.");
 
-    config
+    Ok(config)
 }
