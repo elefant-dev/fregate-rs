@@ -5,7 +5,6 @@ use once_cell::sync::Lazy;
 static RECORDER: Lazy<PrometheusRecorder> = Lazy::new(|| PrometheusBuilder::new().build_recorder());
 static HANDLE: Lazy<PrometheusHandle> = Lazy::new(|| RECORDER.handle());
 
-
 // TODO(kos): Don't make compiler to inline, unless explicitly proven that the
 //            concrete inline removes bottle-neck. Aggressive manual inlining
 //            may increase compilation time and worsen the performance. Let the

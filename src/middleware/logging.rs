@@ -1,6 +1,5 @@
 // FIXME(kos): Rename this to `tracing`. It seems the module is about telemetry not about logging.
-
-use hyper::{Request, Response};
+use hyper::{header::HeaderMap, header::HeaderValue, Request, Response};
 use metrics::{histogram, increment_counter};
 use opentelemetry::{
     global::get_text_map_propagator,
@@ -83,6 +82,7 @@ impl<B> OnRequest<B> for BasicOnRequest {
         let (trace_id, span_id) = get_trace_and_span_ids(span);
         let method = request.method();
         let uri = request.uri();
+        let protocol = get_protocol_type(request.headers());
 
         info!("Incoming Request: method: [{method}], uri: {uri}, x-b3-traceid: {trace_id}, x-b3-spanid: {span_id}");
 
@@ -90,7 +90,7 @@ impl<B> OnRequest<B> for BasicOnRequest {
         span.record("uri", &display(uri));
 
         let labels = [
-            ("protocol", method.to_string()),
+            ("protocol", protocol.to_string()),
             ("channel", "reqresp".to_string()),
         ];
 
@@ -112,10 +112,7 @@ impl<B> OnResponse<B> for BasicOnResponse {
         let status = response.status();
         let latency_as_millis = latency.as_millis();
         let latency_as_sec = latency.as_secs_f64();
-        let protocol = match response.headers().get("content-type") {
-            Some(prot) => prot.to_str().expect("protocol invalid"),
-            None => "protocol unavailible",
-        };
+        let protocol = get_protocol_type(response.headers());
 
         info!(
             "Outgoing Response: status code: {status}, latency: {latency_as_millis}ms, x-b3-traceid: {trace_id}, x-b3-spanid: {span_id}"
@@ -153,4 +150,19 @@ pub fn get_trace_and_span_ids(span: &Span) -> (TraceId, SpanId) {
     } else {
         (TraceId::INVALID, SpanId::INVALID)
     }
+}
+
+fn get_protocol_type(headers: &HeaderMap<HeaderValue>) -> &str {
+    if content_type(headers)
+        .unwrap_or("invalid contant type")
+        .starts_with("application/grpc")
+    {
+        "grpc"
+    } else {
+        "http"
+    }
+}
+
+fn content_type(headers: &HeaderMap<HeaderValue>) -> Option<&str> {
+    headers.get("content-type")?.to_str().ok()
 }
