@@ -1,5 +1,5 @@
 [package]
-name = "examples-observability"
+name = "observability"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 fregate = { path = "../.." }
-tokio = { version = "1.0", features = ["full"] }

@@ -1,6 +1,10 @@
+use fregate::middleware::http_trace_layer;
+use fregate::tokio;
 use fregate::{
     axum::{routing::get, Router},
-    bootstrap, get_handle_log_layer, http_trace_layer, Application, Empty,
+    bootstrap,
+    logging::get_handle_log_layer,
+    Application, Empty,
 };
 use std::str::FromStr;
 use std::time::Duration;
@@ -11,7 +15,7 @@ use tracing_subscriber::EnvFilter;
 // Will be changed to TRACE
 #[tokio::main]
 async fn main() {
-    let conf = bootstrap::<Empty, _>([]);
+    let conf = bootstrap::<Empty, _>([]).unwrap();
 
     tokio::spawn(async move {
         tokio::time::sleep(Duration::from_secs(10)).await;

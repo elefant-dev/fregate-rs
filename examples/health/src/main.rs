@@ -1,4 +1,9 @@
-use fregate::{axum, bootstrap, Application, ApplicationStatus, Empty, Health};
+use fregate::tokio;
+use fregate::{
+    axum, bootstrap,
+    health::{Health, HealthResponse},
+    Application, Empty,
+};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 
@@ -9,24 +14,24 @@ pub struct CustomHealth {
 
 #[axum::async_trait]
 impl Health for CustomHealth {
-    async fn alive(&self) -> ApplicationStatus {
+    async fn alive(&self) -> HealthResponse {
         match self.status.fetch_add(1, Ordering::SeqCst) {
-            0..=2 => ApplicationStatus::DOWN,
-            _ => ApplicationStatus::UP,
+            0..=2 => HealthResponse::OK,
+            _ => HealthResponse::UNAVAILABLE,
         }
     }
 
-    async fn ready(&self) -> ApplicationStatus {
+    async fn ready(&self) -> HealthResponse {
         match self.status.load(Ordering::SeqCst) {
-            0..=3 => ApplicationStatus::DOWN,
-            _ => ApplicationStatus::UP,
+            0..=3 => HealthResponse::OK,
+            _ => HealthResponse::UNAVAILABLE,
         }
     }
 }
 
 #[tokio::main]
 async fn main() {
-    let config = bootstrap::<Empty, _>([]);
+    let config = bootstrap::<Empty, _>([]).unwrap();
 
     Application::new(&config)
         .health_indicator(CustomHealth::default())

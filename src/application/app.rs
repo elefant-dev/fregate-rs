@@ -1,8 +1,12 @@
-use crate::*;
+use crate::{
+    build_management_router,
+    error::Result,
+    extensions::RouterOptionalExt,
+    health::{AlwaysReadyAndAlive, Health},
+    AppConfig,
+};
 use axum::Router;
 use hyper::Server;
-// FIXME(kos): Redundant `use`.
-use std::fmt::Debug;
 use std::net::SocketAddr;
 use tokio::signal;
 use tracing::info;
@@ -26,9 +30,6 @@ use tracing::info;
 //            - make `Application::new()` async if necessary.
 //            But removing the `Application` is a better option.
 
-// FIXME(kos): It's impossible to create several application instances.
-//             If the `Application` stays, make it a module instead of a struct.
-
 /// Application to set up HTTP server with given config [`AppConfig`]
 #[derive(Debug)]
 pub struct Application<'a, H, T> {
@@ -51,15 +52,9 @@ impl<'a, T> Application<'a, AlwaysReadyAndAlive, T> {
     }
 }
 
-// TODO(kos): it looks like you're trying to implement Builder pattern.
-// But its name does not reflect it.
-// https://rust-unofficial.github.io/patterns/patterns/creational/builder.html
 impl<'a, H, T> Application<'a, H, T> {
-    // FIXME(kos): Put here `Hh: Health` bound, so the possible error of not
-    //             implementing `Health` trait is cached earlier.
-    //             In this case error description will be more descriptive.
     /// Set up new health indicator
-    pub fn health_indicator<Hh>(self, health: Hh) -> Application<'a, Hh, T> {
+    pub fn health_indicator<Hh: Health>(self, health: Hh) -> Application<'a, Hh, T> {
         Application::<'a, Hh, T> {
             config: self.config,
             health_indicator: Some(health),
@@ -68,28 +63,10 @@ impl<'a, H, T> Application<'a, H, T> {
     }
 
     /// Start serving at specified host and port in [AppConfig] accepting both HTTP1 and HTTP2
-    pub async fn serve(self) -> hyper::Result<()>
+    pub async fn serve(self) -> Result<()>
     where
         H: Health,
     {
-        // FIXME(kos): Well, while it's obviously simpler, it's not very good to expose
-        //             API endpoints and infrastructure endpoints on the same port (and
-        //             router) because of the following reasons:
-        //             1. HTTP services using this library may expose their API to
-        //                public, while at the same time, in general case, we don't want
-        //                our metrics to be exposed publicly. Of course, we may forbid
-        //                metrics and liveness endpoints in external load-balancer
-        //                configuration, but, simply, why bother? Keeping these endpoints
-        //                on a different port, not being exposed publicly, cuts off
-        //                possible human factors like "forgot to forbid metrics in
-        //                load-balancer" and even removes the necessity to do so.
-        //             2. HTTP services using this library may want different middlewares
-        //                stack for API endpoints and infrastructure endpoints, like
-        //                using some sort of rate-limiting or throttling for API
-        //                endpoints, while fully omit them for metrics and liveness
-        //                probes. Or, for example, collect access logs of API endpoints
-        //                only and don't bother with the ones of metrics and liveness
-        //                probes.
         let app = build_management_router(self.health_indicator).merge_optional(self.router);
         let application_socket = SocketAddr::new(self.config.host, self.config.port);
 
@@ -130,9 +107,9 @@ async fn shutdown_signal() {
     info!("Termination signal, starting shutdown...");
 }
 
-async fn run_service(socket: &SocketAddr, rest: Router) -> hyper::Result<()> {
+async fn run_service(socket: &SocketAddr, rest: Router) -> Result<()> {
     let server = Server::bind(socket).serve(rest.into_make_service());
     info!(target: "server", "Started: http://{socket}");
 
-    server.with_graceful_shutdown(shutdown_signal()).await
+    Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
 }

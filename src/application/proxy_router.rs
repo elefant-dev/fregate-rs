@@ -1,3 +1,5 @@
+//! Tool to implement reverse-proxy logic in axum::Router
+
 use axum::{
     extract::Extension,
     http::StatusCode,

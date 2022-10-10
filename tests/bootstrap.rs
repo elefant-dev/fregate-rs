@@ -1,14 +1,11 @@
 mod bootstrap_fn_test {
-    use fregate::{bootstrap, get_handle_log_layer, Empty};
+    use fregate::logging::get_handle_log_layer;
+    use fregate::{bootstrap, Empty};
     use std::net::{IpAddr, Ipv4Addr};
-    use std::time::Duration;
 
     #[tokio::test]
     async fn bootstrap_test() {
-        let config = bootstrap::<Empty, _>([]);
-
-        // bootstrap() fn internally spawns tasks, let's give it a little time
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        let config = bootstrap::<Empty, _>([]).unwrap();
 
         assert_eq!(config.port, 8000);
         assert_eq!(config.host, IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)));

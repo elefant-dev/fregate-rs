@@ -1,5 +1,6 @@
-mod logging;
+//! Middlewares to be used with axum::Router
 mod proxy;
+mod tracing;
 
-pub use logging::*;
+pub use self::tracing::*;
 pub use proxy::*;

@@ -98,22 +98,6 @@ What is responsibility of the crate? List all and evaluate does not it have too 
 
 https://www.yanglinzhao.com/posts/utils-antipattern/
 
-### ❕ Architectural: singletone
-
-It's not possible to create several instances of Application.
-Application has global state.
-If Application stays, make it module instead of being struct.
-
-```rust
-let config = bootstrap::<Empty, _>([]);
-
-Application::new(&config)
-    .health_indicator(CustomHealth::default())
-    .serve();
-```
-
-Eliminate either `bootstrap` or `Application::new`.
-
 ### ❕ Security: Potential sensitive information leak through errors
 
 in `src/middleware/proxy.rs:fn handle_result`, Error is directly
