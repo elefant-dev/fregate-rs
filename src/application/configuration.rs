@@ -7,7 +7,6 @@ use serde::{
 use serde_json::{from_value, Value};
 use std::marker::PhantomData;
 use std::{fmt::Debug, net::IpAddr};
-use tracing::log::info;
 
 // FIXME(kos): There is simpler way of loading config: just use the
 //             `Deserialize` derive.
@@ -203,11 +202,7 @@ impl<T> AppConfigBuilder<T> {
     where
         T: Debug + DeserializeOwned,
     {
-        let config = self.builder.build()?.try_deserialize::<AppConfig<T>>()?;
-
-        info!("Configuration: `{config:?}`.");
-
-        Ok(config)
+        Ok(self.builder.build()?.try_deserialize::<AppConfig<T>>()?)
     }
 
     /// Add default config
