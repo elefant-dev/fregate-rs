@@ -1,8 +1,5 @@
-#![allow(dead_code)]
-
 use crate::error::Result;
 use metrics::{describe_counter, describe_histogram, register_counter, register_histogram, Unit};
-
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle, PrometheusRecorder};
 use once_cell::sync::Lazy;
 
@@ -15,7 +12,6 @@ pub fn get_metrics() -> String {
 }
 
 /// Initialise PrometheusRecorder
-
 pub fn init_metrics() -> Result<()> {
     register_metrics();
     Ok(metrics::set_recorder(&*RECORDER)?)

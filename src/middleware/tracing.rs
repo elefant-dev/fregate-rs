@@ -1,7 +1,6 @@
-// FIXME(kos): Rename this to `tracing`. It seems the module is about telemetry not about logging.
+use axum::http::header::CONTENT_TYPE;
 use hyper::{header::HeaderMap, header::HeaderValue, Request, Response};
 use metrics::{histogram, increment_counter};
-
 use opentelemetry::{
     global::get_text_map_propagator,
     trace::{SpanId, TraceContextExt, TraceId},
@@ -93,7 +92,6 @@ impl<B> OnRequest<B> for BasicOnRequest {
 /// Logs message on response: "Outgoing Response: status code: {status}, latency: {latency}ms, x-b3-traceid: {trace_id}".
 #[derive(Clone, Copy, Debug)]
 pub struct BasicOnResponse;
-#[allow(clippy::expect_used)]
 impl<B> OnResponse<B> for BasicOnResponse {
     fn on_response(self, response: &Response<B>, latency: Duration, span: &Span) {
         let (trace_id, span_id) = get_trace_and_span_ids(span);
@@ -141,16 +139,14 @@ pub fn get_trace_and_span_ids(span: &Span) -> (TraceId, SpanId) {
 }
 
 fn get_protocol_type(headers: &HeaderMap<HeaderValue>) -> &str {
-    if content_type(headers)
-        .unwrap_or("invalid contant type")
-        .starts_with("application/grpc")
-    {
-        "grpc"
-    } else {
-        "http"
-    }
-}
-
-fn content_type(headers: &HeaderMap<HeaderValue>) -> Option<&str> {
-    headers.get("content-type")?.to_str().ok()
+    headers
+        .get(CONTENT_TYPE)
+        .map(|content_type| {
+            if content_type.as_bytes().starts_with(b"application/grpc") {
+                "grpc"
+            } else {
+                "http"
+            }
+        })
+        .unwrap_or("http")
 }
