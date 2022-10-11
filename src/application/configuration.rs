@@ -22,8 +22,8 @@ const PORT_PTR: &str = "/port";
 const LOG_LEVEL_PTR: &str = "/log/level";
 const TRACE_LEVEL_PTR: &str = "/trace/level";
 const SERVICE_NAME_PTR: &str = "/service/name";
-const COMPONENT_PTR: &str = "/service/component";
-const VERSION_PTR: &str = "/service/version";
+const COMPONENT_NAME_PTR: &str = "/component/name";
+const COMPONENT_VERSION_PTR: &str = "/component/version";
 const TRACES_ENDPOINT_PTR: &str = "/exporter/otlp/traces/endpoint";
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
 const DEFAULT_SEPARATOR: &str = "_";
@@ -63,10 +63,10 @@ pub struct LoggerConfig {
     pub log_level: String,
     /// trace level read to string and later parsed into EnvFilter
     pub trace_level: String,
-    /// service name to be used in logs and traces
+    /// service name to be used in logs
     pub service_name: String,
     /// component name to be used in logs and traces
-    pub component: String,
+    pub component_name: String,
     /// component version
     pub version: String,
     /// endpoint where to export traces
@@ -83,8 +83,8 @@ impl<'de> Deserialize<'de> for LoggerConfig {
         let log_level = config.pointer_and_deserialize(LOG_LEVEL_PTR)?;
         let trace_level = config.pointer_and_deserialize(TRACE_LEVEL_PTR)?;
         let service_name = config.pointer_and_deserialize(SERVICE_NAME_PTR)?;
-        let component = config.pointer_and_deserialize(COMPONENT_PTR)?;
-        let version = config.pointer_and_deserialize(VERSION_PTR)?;
+        let component_name = config.pointer_and_deserialize(COMPONENT_NAME_PTR)?;
+        let version = config.pointer_and_deserialize(COMPONENT_VERSION_PTR)?;
         let traces_endpoint_ptr = config.pointer_mut(TRACES_ENDPOINT_PTR);
 
         let traces_endpoint = if let Some(ptr) = traces_endpoint_ptr {
@@ -98,7 +98,7 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             version,
             trace_level,
             service_name,
-            component,
+            component_name,
             traces_endpoint,
         })
     }

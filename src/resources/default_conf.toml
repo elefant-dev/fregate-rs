@@ -14,8 +14,10 @@ level = "info"
 
 [service]
 name = "fregate"
+
+[component]
+name = "example"
 version = "0.1.0"
-component = "web"
 
 [private]
 

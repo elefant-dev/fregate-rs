@@ -42,15 +42,15 @@ const DEFAULT_FIELDS: [&str; 8] = [
 pub fn fregate_layer(
     version: &str,
     service_name: &str,
-    component: &str,
+    component_name: &str,
     filter: &str,
 ) -> Result<FregateLogLayer> {
     let mut formatter = EventFormatter::new();
 
     formatter.add_default_event_field(VERSION, version)?;
     // TODO: THIS LOOKS STRANGE:
-    formatter.add_default_event_field(SERVICE, component)?;
-    formatter.add_default_event_field(COMPONENT, service_name)?;
+    formatter.add_default_event_field(SERVICE, service_name)?;
+    formatter.add_default_event_field(COMPONENT, component_name)?;
 
     let filter = EnvFilter::from_str(filter).unwrap_or_default();
 

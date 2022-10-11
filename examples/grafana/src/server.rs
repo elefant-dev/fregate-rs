@@ -32,7 +32,7 @@ impl Hello for MyHello {
 
 #[tokio::main]
 async fn main() {
-    std::env::set_var("OTEL_SERVICE_NAME", "SERVER");
+    std::env::set_var("OTEL_COMPONENT_NAME", "server");
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
 
     let config = bootstrap::<Empty, _>([]).unwrap();

@@ -28,7 +28,7 @@ pub fn get_handle_log_layer() -> Option<&'static HandleFregateLogLayer> {
 //     .replace(traces_filter_reloader);
 fn get_trace_layer<S>(
     trace_level: &str,
-    service_name: &str,
+    component_name: &str,
     traces_endpoint: &str,
 ) -> Result<impl Layer<S>>
 where
@@ -38,18 +38,18 @@ where
         MultipleHeader,
     ));
 
-    let tracer =
-        opentelemetry_otlp::new_pipeline()
-            .tracing()
-            .with_exporter(
-                opentelemetry_otlp::new_exporter()
-                    .tonic()
-                    .with_endpoint(traces_endpoint),
-            )
-            .with_trace_config(sdk::trace::config().with_resource(Resource::new(vec![
-                KeyValue::new("service.name", service_name.to_owned()),
-            ])))
-            .install_batch(opentelemetry::runtime::Tokio)?;
+    let tracer = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_exporter(
+            opentelemetry_otlp::new_exporter()
+                .tonic()
+                .with_endpoint(traces_endpoint),
+        )
+        .with_trace_config(sdk::trace::config().with_resource(Resource::new(vec![
+            // TODO: Here it is service.name, but we will have component.name
+            KeyValue::new("service.name", component_name.to_owned()),
+        ])))
+        .install_batch(opentelemetry::runtime::Tokio)?;
 
     let trace_level = EnvFilter::from_str(trace_level).unwrap_or_default();
 
@@ -83,14 +83,18 @@ pub fn init_tracing(
     trace_level: &str,
     version: &str,
     service_name: &str,
-    component: &str,
+    component_name: &str,
     traces_endpoint: Option<&str>,
 ) -> Result<()> {
-    let log_layer = fregate_layer(version, service_name, component, log_level)?;
+    let log_layer = fregate_layer(version, service_name, component_name, log_level)?;
     let (log_layer, reload_layer) = reload::Layer::new(log_layer);
 
     let trace_layer = if let Some(traces_endpoint) = traces_endpoint {
-        Some(get_trace_layer(trace_level, service_name, traces_endpoint)?)
+        Some(get_trace_layer(
+            trace_level,
+            component_name,
+            traces_endpoint,
+        )?)
     } else {
         None
     };

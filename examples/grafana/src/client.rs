@@ -55,7 +55,15 @@ async fn send_hello(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    init_tracing("info", "info", "CLIENT", Some("http://0.0.0.0:4317")).unwrap();
+    init_tracing(
+        "info",
+        "info",
+        "0.0.0",
+        "fregate",
+        "client",
+        Some("http://0.0.0.0:4317"),
+    )
+    .unwrap();
 
     let channel = tonic::transport::Endpoint::from_static("http://0.0.0.0:8000")
         .connect()

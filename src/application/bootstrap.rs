@@ -42,7 +42,7 @@ where
         version,
         trace_level,
         service_name,
-        component,
+        component_name,
         traces_endpoint,
     } = &config.logger;
 
@@ -52,7 +52,7 @@ where
         trace_level,
         version,
         service_name,
-        component,
+        component_name,
         traces_endpoint.as_deref(),
     )?;
 
