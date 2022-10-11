@@ -20,7 +20,7 @@ mod app_config_tests {
         let logger = config.logger;
 
         assert_eq!(logger.traces_endpoint, None);
-        assert_eq!(logger.service_name, "Rust".to_owned());
+        assert_eq!(logger.service_name, "fregate".to_owned());
         assert_eq!(logger.trace_level, "info".to_owned());
         assert_eq!(logger.log_level, "info".to_owned());
     }
@@ -44,7 +44,7 @@ mod app_config_tests {
         let logger = config.logger;
 
         assert_eq!(logger.traces_endpoint, None);
-        assert_eq!(logger.service_name, "Rust".to_owned());
+        assert_eq!(logger.service_name, "fregate".to_owned());
         assert_eq!(logger.trace_level, "info".to_owned());
         assert_eq!(logger.log_level, "info".to_owned());
     }

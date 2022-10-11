@@ -1,66 +1,24 @@
 //! Tools initialise logging and tracing
-
 use crate::error::Result;
+use crate::log_fmt::{fregate_layer, HandleFregateLogLayer};
 use once_cell::sync::OnceCell;
-use opentelemetry::{global, sdk, sdk::trace::Tracer, sdk::Resource, KeyValue};
+use opentelemetry::{global, sdk, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_zipkin::B3Encoding::MultipleHeader;
 use std::str::FromStr;
-use time::format_description::well_known::Rfc3339;
-use tracing_opentelemetry::OpenTelemetryLayer as OTLayer;
+use tracing::Subscriber;
+use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::{
-    filter::EnvFilter,
-    filter::Filtered,
-    fmt,
-    fmt::{
-        format::{FmtSpan, Format, Json, JsonFields},
-        layer,
-        time::UtcTime,
-    },
-    layer::{Layered, SubscriberExt},
-    registry, reload,
-    reload::Handle,
-    util::SubscriberInitExt,
-    Layer, Registry,
+    filter::EnvFilter, layer::SubscriberExt, registry, reload, util::SubscriberInitExt, Layer,
 };
 
-static HANDLE_LOG_LAYER: OnceCell<HandleLogLayer> = OnceCell::new();
+static HANDLE_LOG_LAYER: OnceCell<HandleFregateLogLayer> = OnceCell::new();
 
 /// Return Some(&'static HandleLogLayer) if Handler is set up, otherwise return None
 ///
 /// Used to change log level filter
-pub fn get_handle_log_layer() -> Option<&'static HandleLogLayer> {
+pub fn get_handle_log_layer() -> Option<&'static HandleFregateLogLayer> {
     HANDLE_LOG_LAYER.get()
-}
-
-type DefaultLayer = fmt::Layer<Registry, JsonFields, Format<Json, UtcTime<Rfc3339>>>;
-type DefaultLayered = Layered<LogLayer, Registry>;
-type LogFiltered = Filtered<DefaultLayer, EnvFilter, Registry>;
-/// Shortcut for log Layer type
-pub type LogLayer = reload::Layer<LogFiltered, Registry>;
-/// Shortcut for log Layer handler type
-pub type HandleLogLayer = Handle<LogFiltered, Registry>;
-type TraceFiltered = Filtered<OTLayer<DefaultLayered, Tracer>, EnvFilter, DefaultLayered>;
-// TODO: will be changed to reload
-/// Shortcut for trace Layer type
-pub type TraceLayer = TraceFiltered;
-/// Shortcut for trace Layer handler type
-pub type HandleTraceLayer = Handle<TraceFiltered, DefaultLayered>;
-
-fn get_log_layers(log_level: &str) -> (LogLayer, HandleLogLayer) {
-    let log_level = EnvFilter::from_str(log_level).unwrap_or_default();
-
-    let log_filter = layer()
-        .json()
-        .with_timer(UtcTime::rfc_3339())
-        .flatten_event(true)
-        .with_target(true)
-        .with_span_list(false)
-        .with_current_span(false)
-        .with_span_events(FmtSpan::NONE)
-        .with_filter(log_level);
-
-    reload::Layer::new(log_filter)
 }
 
 // TODO: bug ? trace_id is not generated when used with reload Layer
@@ -68,11 +26,14 @@ fn get_log_layers(log_level: &str) -> (LogLayer, HandleLogLayer) {
 // settings
 //     .traces_filter_reloader
 //     .replace(traces_filter_reloader);
-fn get_trace_layer(
+fn get_trace_layer<S>(
     trace_level: &str,
     service_name: &str,
     traces_endpoint: &str,
-) -> Result<TraceLayer> {
+) -> Result<impl Layer<S>>
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+{
     global::set_text_map_propagator(opentelemetry_zipkin::Propagator::with_encoding(
         MultipleHeader,
     ));
@@ -120,10 +81,13 @@ fn set_panic_hook() {
 pub fn init_tracing(
     log_level: &str,
     trace_level: &str,
+    version: &str,
     service_name: &str,
+    component: &str,
     traces_endpoint: Option<&str>,
 ) -> Result<()> {
-    let (log_layer, log_layer_handle) = get_log_layers(log_level);
+    let log_layer = fregate_layer(version, service_name, component, log_level)?;
+    let (log_layer, reload_layer) = reload::Layer::new(log_layer);
 
     let trace_layer = if let Some(traces_endpoint) = traces_endpoint {
         Some(get_trace_layer(trace_level, service_name, traces_endpoint)?)
@@ -132,8 +96,8 @@ pub fn init_tracing(
     };
 
     registry().with(log_layer).with(trace_layer).try_init()?;
-    let _ = HANDLE_LOG_LAYER.get_or_init(|| log_layer_handle);
-    set_panic_hook();
+    let _ = HANDLE_LOG_LAYER.get_or_init(|| reload_layer);
 
+    set_panic_hook();
     Ok(())
 }

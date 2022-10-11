@@ -39,15 +39,20 @@ where
 
     let LoggerConfig {
         log_level,
+        version,
         trace_level,
         service_name,
+        component,
         traces_endpoint,
     } = &config.logger;
 
+    // TODO: SERVICE ?
     init_tracing(
         log_level,
         trace_level,
+        version,
         service_name,
+        component,
         traces_endpoint.as_deref(),
     )?;
 

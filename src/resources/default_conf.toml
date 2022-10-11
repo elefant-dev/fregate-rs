@@ -13,7 +13,9 @@ level = "info"
 level = "info"
 
 [service]
-name = "Rust"
+name = "fregate"
+version = "0.1.0"
+component = "web"
 
 [private]
 

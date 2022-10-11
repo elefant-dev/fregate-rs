@@ -6,6 +6,7 @@ mod metrics;
 
 pub mod error;
 pub mod health;
+pub mod log_fmt;
 pub mod logging;
 pub mod proxy_router;
 
