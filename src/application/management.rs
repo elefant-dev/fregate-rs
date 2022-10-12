@@ -8,6 +8,7 @@ const OPENAPI_PATH: &str = "/openapi";
 const HEALTH_PATH: &str = "/health";
 const LIVE_PATH: &str = "/live";
 const READY_PATH: &str = "/ready";
+const METRICS_PATH: &str = "/metrics";
 
 // TODO consider: https://github.com/pyrossh/rust-embed/blob/master/examples/axum.rs#L64
 const OPENAPI: &str = include_str!("../resources/openapi.yaml");
@@ -16,6 +17,7 @@ pub(crate) fn build_management_router<H: Health>(health_indicator: Option<H>) ->
     Router::new()
         .route(OPENAPI_PATH, get(|| async { yaml(OPENAPI) }))
         .merge_optional(build_health_router(health_indicator))
+        .merge(build_metrics_router())
 }
 
 fn build_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router> {
@@ -30,6 +32,13 @@ fn build_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router>
             .route(LIVE_PATH, get(alive_handler))
             .route(READY_PATH, get(ready_handler))
             .layer(Extension(health_indicator)),
+    )
+}
+
+fn build_metrics_router() -> Router {
+    Router::new().route(
+        METRICS_PATH,
+        get(move || std::future::ready(crate::get_metrics())),
     )
 }
 

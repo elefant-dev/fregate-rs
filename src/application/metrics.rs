@@ -1,6 +1,5 @@
-#![allow(dead_code)]
-
 use crate::error::Result;
+use metrics::{describe_counter, describe_histogram, register_counter, register_histogram, Unit};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle, PrometheusRecorder};
 use once_cell::sync::Lazy;
 
@@ -14,14 +13,25 @@ pub fn get_metrics() -> String {
 
 /// Initialise PrometheusRecorder
 pub fn init_metrics() -> Result<()> {
+    register_metrics();
     Ok(metrics::set_recorder(&*RECORDER)?)
 }
 
-/*
-use metrics::{register_counter, register_histogram, Unit};
 fn register_metrics() {
-    register_counter!("http_requests_total", "Incoming Requests");
-    register_counter!("http_requests", "Incoming Requests");
-    register_histogram!("http_response_time", Unit::Seconds, "Response Times");
+    describe_counter!(
+        "traffic_count_total",
+        "The accumulated counter for number of messages."
+    );
+    register_counter!("traffic_count_total");
+    describe_counter!(
+        "traffic_sum_total",
+        "The accumulated counter used for calculating traffic."
+    );
+    register_counter!("traffic_sum_total");
+    describe_histogram!(
+        "processing_duration_seconds_sum_total",
+        Unit::Seconds,
+        "Response Times"
+    );
+    register_histogram!("processing_duration_seconds_sum_total");
 }
-*/
