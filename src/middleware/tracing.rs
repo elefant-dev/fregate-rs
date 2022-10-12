@@ -79,6 +79,7 @@ impl<B> OnRequest<B> for BasicOnRequest {
         span.record("method", &display(method));
         span.record("uri", &display(uri));
 
+        // TODO: remove remove .to_string()
         let labels = [
             ("protocol", protocol.to_string()),
             ("channel", "reqresp".to_string()),
@@ -104,6 +105,7 @@ impl<B> OnResponse<B> for BasicOnResponse {
             "Outgoing Response: status code: {status}, latency: {latency_as_millis}ms, x-b3-traceid: {trace_id}, x-b3-spanid: {span_id}"
         );
 
+        // TODO: remove remove .to_string()
         let labels = [
             ("protocol", protocol.to_string()),
             ("channel", "reqresp".to_string()),
