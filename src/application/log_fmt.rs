@@ -181,7 +181,7 @@ impl JsonVisitor {
 }
 
 impl tracing::field::Visit for JsonVisitor {
-    #[cfg(tracing_unstable)]
+    // #[cfg(tracing_unstable)]
     fn record_value(&mut self, field: &Field, value: valuable::Value<'_>) {
         let serde_value = serde_json::json!(Serializable::new(value));
         let structurable = value.as_structable();
@@ -189,7 +189,7 @@ impl tracing::field::Visit for JsonVisitor {
         if let Some(structurable) = structurable {
             let definition = structurable.definition();
 
-            if definition.fields().is_named() {
+            if definition.is_dynamic() && definition.name() == "log_marker" {
                 match serde_value.as_object() {
                     Some(value) => {
                         value.into_iter().for_each(|(k, v)| {
@@ -246,6 +246,7 @@ impl tracing::field::Visit for JsonVisitor {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::log_marker::{LogMarker, MarkerExt};
     use std::{
         collections::HashMap,
         io,
@@ -256,6 +257,36 @@ mod test {
 
     #[cfg(tracing_unstable)]
     use valuable::Valuable;
+
+    #[cfg(tracing_unstable)]
+    #[derive(Serialize, Debug, valuable_derive::Valuable)]
+    pub struct MarkerTest {
+        pub numnber: u32,
+        pub string: String,
+        pub vector: Vec<u32>,
+        pub map: HashMap<u32, u32>,
+    }
+
+    impl MarkerExt for MarkerTest {
+        fn get_log_marker(&self) -> LogMarker<'_, Self> {
+            let MarkerTest {
+                numnber,
+                string,
+                vector,
+                map,
+            } = &self;
+
+            let mut marker = LogMarker::with_capacity(self, 5);
+
+            marker.append("number", numnber);
+            marker.append("string", string);
+            marker.append("vector", vector);
+            marker.append("map", map);
+            marker.append_str("random_str", "random_str");
+
+            marker
+        }
+    }
 
     #[derive(Clone, Debug)]
     struct MockWriter {
@@ -405,7 +436,7 @@ mod test {
         });
 
         let content = mock_writer.get_content();
-        let expected = "{\"val\":123,\"LogLevel\":\"INFO\",\"msg\":\"test\",\"target\":\"fregate::application::log_fmt::test\"}\n";
+        let expected = "{\"test\":{\"val\":123},\"LogLevel\":\"INFO\",\"msg\":\"test\",\"target\":\"fregate::application::log_fmt::test\"}\n";
 
         compare(expected, content.as_str());
     }
@@ -459,7 +490,7 @@ mod test {
         });
 
         let content = mock_writer.get_content();
-        let expected = "{\"named\":{\"0\":1,\"1\":2},\"LogLevel\":\"INFO\",\"msg\":\"test\",\"target\":\"fregate::application::log_fmt::test\"}\n";
+        let expected = "{\"test\":{\"named\":{\"0\":1,\"1\":2}},\"LogLevel\":\"INFO\",\"msg\":\"test\",\"target\":\"fregate::application::log_fmt::test\"}\n";
 
         compare(expected, content.as_str());
     }
@@ -497,7 +528,36 @@ mod test {
         });
 
         let content = mock_writer.get_content();
-        let expected = "{\"named\":{\"0\":1,\"1\":2},\"another\":{\"named\":{\"0\":1,\"1\":2}},\"LogLevel\":\"INFO\",\"msg\":\"test\",\"target\":\"fregate::application::log_fmt::test\"}\n";
+        let expected = "{\"test\":{\"named\":{\"0\":1,\"1\":2},\"another\":{\"named\":{\"0\":1,\"1\":2}}},\"LogLevel\":\"INFO\",\"msg\":\"test\",\"target\":\"fregate::application::log_fmt::test\"}\n";
+
+        compare(expected, content.as_str());
+    }
+
+    #[test]
+    #[cfg(tracing_unstable)]
+    fn marker_test() {
+        let mock_writer = MockMakeWriter::new();
+        let formatter = EventFormatter::new();
+
+        let subscriber = subscriber(formatter)
+            .with_writer(mock_writer.clone())
+            .finish();
+
+        let test = MarkerTest {
+            numnber: 999,
+            string: "string".to_string(),
+            vector: vec![1, 2, 3, 4],
+            map: HashMap::from_iter([(0, 1), (2, 3)]),
+        };
+
+        let marker = test.get_log_marker();
+
+        with_default(subscriber, || {
+            tracing::info!(marker = marker.as_value(), "marker_test");
+        });
+
+        let content = mock_writer.get_content();
+        let expected = "{\"number\":999,\"string\":\"string\",\"vector\":[1,2,3,4],\"map\":{\"0\":1,\"2\":3},\"random_str\":\"random_str\",\"LogLevel\":\"INFO\",\"msg\":\"marker_test\",\"target\":\"fregate::application::log_fmt::test\"}\n";
 
         compare(expected, content.as_str());
     }
