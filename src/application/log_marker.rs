@@ -1,71 +1,81 @@
-//! ADD DOCUMENTATION
+//! [`LogMarker`] implementation
+//! Example:
+//! This is how [`LogMarker`] is serialized to logs if used with tracing_unstable feature and [`crate::log_fmt::EventFormatter`]
+//!```rust
+//! use fregate::{log_marker::LogMarker, logging::init_tracing, tokio, tracing::info};
+//! use valuable::Valuable;
+//!
+//! const STATIC: &str = "STATIC";
+//!
+//! #[tokio::main]
+//! async fn main() {
+//!     init_tracing("info", "info", "0.0.0", "fregate", "marker", None).unwrap();
+//!
+//!     let mut marker = LogMarker::with_capacity(10);
+//!     let local_key = "NON_STATIC".to_owned();
+//!     let local_var = 1000;
+//!
+//!     marker.insert(STATIC, &local_var);
+//!     marker.insert(local_key.as_str(), &local_var);
+//!     marker.insert_str("str", "str");
+//!
+//!     info!(marker = marker.as_value(), "message");
+//! }
+//! ```
+//! Output:
+//!```json
+//!  {"component":"marker","service":"fregate","version":"0.0.0","NON_STATIC":1000,"STATIC":1000,"str":"str","msg":"message","target":"check_fregate","LogLevel":"INFO","time":1665656359172240000,"timestamp":"2022-10-13T10:19:19.172Z"}
+//!```
 use std::collections::HashMap;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 use valuable::{Fields, NamedField, NamedValues, StructDef, Structable, Valuable, Value, Visit};
 
-///
-pub trait MarkerExt {
-    ///
-    fn get_log_marker(&self) -> LogMarker<'_, Self>
-    where
-        Self: Sized;
-}
+pub(crate) const LOG_MARKER_STRUCTURE_NAME: &str =
+    "log_marker:fc848aeb-3723-438e-b3c3-35162b737a98";
 
-/// Log Marker
-pub struct LogMarker<'a, T> {
-    _source: &'a T,
+/// [`LogMarker<'a>`] structure saves references to key/values in [`HashMap`]
+#[derive(Debug, Default)]
+pub struct LogMarker<'a> {
     fields: HashMap<&'a str, Value<'a>>,
 }
 
-impl<'a, T> Debug for LogMarker<'a, T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("log_marker")
-            .field("dummy_field", &"dummy_value")
-            .finish()
-    }
-}
-
-impl<'a, T> LogMarker<'a, T> {
-    ///
-    pub fn new(source: &'a T) -> Self {
-        Self {
-            _source: source,
-            fields: HashMap::new(),
-        }
+impl<'a> LogMarker<'a> {
+    /// Creates empty [`LogMarker`]
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    ///
-    pub fn with_capacity(source: &'a T, capacity: usize) -> Self {
+    /// Creates empty [`LogMarker`] with specified capacity
+    pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            _source: source,
             fields: HashMap::with_capacity(capacity),
         }
     }
 
-    ///
-    pub fn append<V: Valuable>(&mut self, key: &'a str, value: &'a V) {
+    /// Inserts a key-value pair of references into the map. If key is present its value is overwritten.
+    pub fn insert<V: Valuable>(&mut self, key: &'a str, value: &'a V) {
         self.fields.insert(key, value.as_value());
     }
 
-    ///
-    pub fn append_str(&mut self, key: &'a str, value: &'a str) {
+    /// Inserts a key-value pair into the map where value is [`str`]. If key is present its value is overwritten.
+    pub fn insert_str(&mut self, key: &'a str, value: &'a str) {
         self.fields.insert(key, Value::String(value));
     }
 
-    ///
+    /// Removes key-value pairs from the by given keys.
     pub fn remove_keys<'b>(&mut self, keys: impl IntoIterator<Item = &'b str>) {
         for key in keys {
             self.remove_by_key(key);
         }
     }
 
-    ///
+    /// Removes key-value pair by key.
     pub fn remove_by_key(&mut self, key: &str) {
         self.fields.remove(key);
     }
 }
 
-impl<'a, T> Valuable for LogMarker<'a, T> {
+impl<'a> Valuable for LogMarker<'a> {
     fn as_value(&self) -> Value<'_> {
         Value::Structable(self)
     }
@@ -80,8 +90,8 @@ impl<'a, T> Valuable for LogMarker<'a, T> {
     }
 }
 
-impl<'a, T> Structable for LogMarker<'a, T> {
+impl<'a> Structable for LogMarker<'a> {
     fn definition(&self) -> StructDef<'_> {
-        StructDef::new_dynamic("log_marker", Fields::Named(&[]))
+        StructDef::new_dynamic(LOG_MARKER_STRUCTURE_NAME, Fields::Named(&[]))
     }
 }

@@ -46,7 +46,6 @@ where
         traces_endpoint,
     } = &config.logger;
 
-    // TODO: SERVICE ?
     init_tracing(
         log_level,
         trace_level,

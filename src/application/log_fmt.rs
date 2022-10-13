@@ -1,4 +1,4 @@
-//! Fregate [`FormatEvent`] trait implementation to use with [`tracing_subscriber::fmt::layer()`]
+//! Fregate [`FormatEvent`] trait implementation
 use crate::error::Result;
 use serde::{ser::SerializeMap, Serialize, Serializer};
 use serde_json::Value;
@@ -15,13 +15,14 @@ use tracing_subscriber::{
 };
 
 #[cfg(tracing_unstable)]
+use crate::log_marker::LOG_MARKER_STRUCTURE_NAME;
+#[cfg(tracing_unstable)]
 use valuable_serde::Serializable;
 
 pub(crate) type FregateLogLayer =
     Filtered<ts_fmt::Layer<Registry, DefaultFields, EventFormatter>, EnvFilter, Registry>;
 pub(crate) type HandleFregateLogLayer = Handle<FregateLogLayer, Registry>;
 
-// TODO: Duplicated with default fields in container
 const VERSION: &str = "version";
 const SERVICE: &str = "service";
 const COMPONENT: &str = "component";
@@ -32,12 +33,10 @@ const LOG_LEVEL: &str = "LogLevel";
 const TIME: &str = "time";
 const TIMESTAMP: &str = "timestamp";
 
-const DEFAULT_FIELDS: [&str; 8] = [
-    VERSION, SERVICE, COMPONENT, TARGET, MSG, LOG_LEVEL, TIME, TIMESTAMP,
+const DEFAULT_FIELDS: [&str; 9] = [
+    VERSION, SERVICE, COMPONENT, TARGET, MSG, LOG_LEVEL, TIME, TIMESTAMP, MESSAGE,
 ];
 
-// TODO: examples
-// TODO: Configure outside
 /// Returns [`tracing_subscriber::Layer`] with custom event formatter [`EventFormatter`]
 pub fn fregate_layer(
     version: &str,
@@ -47,10 +46,9 @@ pub fn fregate_layer(
 ) -> Result<FregateLogLayer> {
     let mut formatter = EventFormatter::new();
 
-    formatter.add_default_event_field(VERSION, version)?;
-    // TODO: THIS LOOKS STRANGE:
-    formatter.add_default_event_field(SERVICE, service_name)?;
-    formatter.add_default_event_field(COMPONENT, component_name)?;
+    formatter.add_default_field_to_events(VERSION, version)?;
+    formatter.add_default_field_to_events(SERVICE, service_name)?;
+    formatter.add_default_field_to_events(COMPONENT, component_name)?;
 
     let filter = EnvFilter::from_str(filter).unwrap_or_default();
 
@@ -59,7 +57,7 @@ pub fn fregate_layer(
         .with_filter(filter))
 }
 
-// TODO: docs
+// TODO: Add Usage Example
 /// Fregate [`EventFormatter`]
 #[derive(Debug, Default)]
 pub struct EventFormatter {
@@ -72,18 +70,25 @@ impl EventFormatter {
         Self::default()
     }
 
-    /// add "key: value" to be added to each event
-    pub fn add_default_event_field<V: Serialize>(&mut self, key: &str, value: V) -> Result<()> {
-        if key == MESSAGE {
-            Err(crate::error::Error::CustomError(
-                "Prohibited to add key: \"message\"".to_owned(),
-            ))
+    /// add "key: value" which will be added to event
+    pub fn add_field_to_events<V: Serialize>(&mut self, key: &str, value: V) -> Result<()> {
+        if DEFAULT_FIELDS.contains(&key) {
+            Err(crate::error::Error::CustomError(format!(
+                "Prohibited to add key: {key} to EventFormatter"
+            )))
         } else {
-            let val = serde_json::to_value(value)?;
-            self.default_fields.insert(key.to_owned(), val);
-
-            Ok(())
+            self.add_default_field_to_events(key, value)
         }
+    }
+
+    pub(crate) fn add_default_field_to_events<V: Serialize>(
+        &mut self,
+        key: &str,
+        value: V,
+    ) -> Result<()> {
+        let val = serde_json::to_value(value)?;
+        self.default_fields.insert(key.to_owned(), val);
+        Ok(())
     }
 }
 
@@ -108,7 +113,7 @@ where
 
             // serialize event fields
             let mut event_storage = visitor.storage;
-            let message = event_storage.remove("message").unwrap_or_default();
+            let message = event_storage.remove(MESSAGE).unwrap_or_default();
 
             // serialize default fields
             self.default_fields
@@ -158,7 +163,6 @@ where
             Ok(formatted) => {
                 write!(writer, "{}", String::from_utf8_lossy(&formatted))?;
             }
-            // TODO: ARE WE OK WITH IT: ???
             Err(err) => {
                 write!(writer, "{}", err)?;
             }
@@ -181,7 +185,7 @@ impl JsonVisitor {
 }
 
 impl tracing::field::Visit for JsonVisitor {
-    // #[cfg(tracing_unstable)]
+    #[cfg(tracing_unstable)]
     fn record_value(&mut self, field: &Field, value: valuable::Value<'_>) {
         let serde_value = serde_json::json!(Serializable::new(value));
         let structurable = value.as_structable();
@@ -189,7 +193,7 @@ impl tracing::field::Visit for JsonVisitor {
         if let Some(structurable) = structurable {
             let definition = structurable.definition();
 
-            if definition.is_dynamic() && definition.name() == "log_marker" {
+            if definition.is_dynamic() && definition.name() == LOG_MARKER_STRUCTURE_NAME {
                 match serde_value.as_object() {
                     Some(value) => {
                         value.into_iter().for_each(|(k, v)| {
@@ -246,7 +250,6 @@ impl tracing::field::Visit for JsonVisitor {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::log_marker::{LogMarker, MarkerExt};
     use std::{
         collections::HashMap,
         io,
@@ -267,26 +270,8 @@ mod test {
         pub map: HashMap<u32, u32>,
     }
 
-    impl MarkerExt for MarkerTest {
-        fn get_log_marker(&self) -> LogMarker<'_, Self> {
-            let MarkerTest {
-                numnber,
-                string,
-                vector,
-                map,
-            } = &self;
-
-            let mut marker = LogMarker::with_capacity(self, 5);
-
-            marker.append("number", numnber);
-            marker.append("string", string);
-            marker.append("vector", vector);
-            marker.append("map", map);
-            marker.append_str("random_str", "random_str");
-
-            marker
-        }
-    }
+    #[cfg(tracing_unstable)]
+    use crate::log_marker::LogMarker;
 
     #[derive(Clone, Debug)]
     struct MockWriter {
@@ -371,7 +356,7 @@ mod test {
     fn same_fields() {
         let mock_writer = MockMakeWriter::new();
         let mut formatter = EventFormatter::new();
-        formatter.add_default_event_field("check", 999).unwrap();
+        formatter.add_field_to_events("check", 999).unwrap();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -392,13 +377,11 @@ mod test {
         let mock_writer = MockMakeWriter::new();
         let mut formatter = EventFormatter::new();
 
-        formatter.add_default_event_field("field_1", 999).unwrap();
+        formatter.add_field_to_events("field_1", 999).unwrap();
         formatter
-            .add_default_event_field("field_2", vec![1, 2, 3, 4, 5])
+            .add_field_to_events("field_2", vec![1, 2, 3, 4, 5])
             .unwrap();
-        formatter
-            .add_default_event_field("field_3", "value_3")
-            .unwrap();
+        formatter.add_field_to_events("field_3", "value_3").unwrap();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -535,6 +518,28 @@ mod test {
 
     #[test]
     #[cfg(tracing_unstable)]
+    fn empty_marker() {
+        let mock_writer = MockMakeWriter::new();
+        let formatter = EventFormatter::new();
+
+        let subscriber = subscriber(formatter)
+            .with_writer(mock_writer.clone())
+            .finish();
+
+        let new_marker = LogMarker::new();
+
+        with_default(subscriber, || {
+            tracing::info!(marker = new_marker.as_value(), "marker_test");
+        });
+
+        let content = mock_writer.get_content();
+        let expected = "{\"LogLevel\":\"INFO\",\"msg\":\"marker_test\",\"target\":\"fregate::application::log_fmt::test\"}\n";
+
+        compare(expected, content.as_str());
+    }
+
+    #[test]
+    #[cfg(tracing_unstable)]
     fn marker_test() {
         let mock_writer = MockMakeWriter::new();
         let formatter = EventFormatter::new();
@@ -550,7 +555,12 @@ mod test {
             map: HashMap::from_iter([(0, 1), (2, 3)]),
         };
 
-        let marker = test.get_log_marker();
+        let mut marker = LogMarker::with_capacity(4);
+        marker.insert("number", &test.numnber);
+        marker.insert("string", &test.string);
+        marker.insert("vector", &test.vector);
+        marker.insert("map", &test.map);
+        marker.insert_str("random_str", "random_str");
 
         with_default(subscriber, || {
             tracing::info!(marker = marker.as_value(), "marker_test");
@@ -566,7 +576,7 @@ mod test {
     #[should_panic]
     fn default_field_with_message() {
         EventFormatter::new()
-            .add_default_event_field("message", "Hello")
+            .add_field_to_events("message", "Hello")
             .unwrap();
     }
 }
