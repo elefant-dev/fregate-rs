@@ -7,8 +7,7 @@ use time::format_description::well_known::iso8601::{Config, Iso8601, TimePrecisi
 use tracing::{field::Field, Event, Subscriber};
 use tracing_subscriber::{
     filter::Filtered,
-    fmt as ts_fmt,
-    fmt::{format, format::DefaultFields, FmtContext, FormatEvent, FormatFields},
+    fmt::{format, FmtContext, FormatEvent, FormatFields},
     registry::LookupSpan,
     reload::Handle,
     EnvFilter, Layer, Registry,
@@ -18,7 +17,7 @@ use tracing_subscriber::{
 use valuable_serde::Serializable;
 
 pub(crate) type FregateLogLayer =
-    Filtered<ts_fmt::Layer<Registry, DefaultFields, EventFormatter>, EnvFilter, Registry>;
+    Filtered<Box<dyn Layer<Registry> + Send + Sync>, EnvFilter, Registry>;
 pub(crate) type HandleFregateLogLayer = Handle<FregateLogLayer, Registry>;
 
 // TODO: Duplicated with default fields in container
@@ -56,6 +55,7 @@ pub fn fregate_layer(
 
     Ok(tracing_subscriber::fmt::layer()
         .event_format(formatter)
+        .boxed()
         .with_filter(filter))
 }
 
@@ -253,6 +253,7 @@ mod test {
         sync::{Arc, Mutex},
     };
     use tracing::subscriber::with_default;
+    use tracing_subscriber::fmt::format::DefaultFields;
     use tracing_subscriber::fmt::{MakeWriter, SubscriberBuilder};
 
     #[cfg(tracing_unstable)]
