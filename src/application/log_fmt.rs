@@ -2,15 +2,13 @@
 use crate::error::Result;
 use serde::{ser::SerializeMap, Serialize, Serializer};
 use serde_json::Value;
-use std::{collections::BTreeMap, fmt, num::NonZeroU8, str::FromStr};
+use std::{collections::BTreeMap, fmt, num::NonZeroU8};
 use time::format_description::well_known::iso8601::{Config, Iso8601, TimePrecision};
 use tracing::{field::Field, Event, Subscriber};
 use tracing_subscriber::{
-    filter::Filtered,
     fmt::{format, FmtContext, FormatEvent, FormatFields},
     registry::LookupSpan,
-    reload::Handle,
-    EnvFilter, Layer, Registry,
+    Layer,
 };
 
 #[cfg(tracing_unstable)]
@@ -18,43 +16,26 @@ use crate::log_marker::LOG_MARKER_STRUCTURE_NAME;
 #[cfg(tracing_unstable)]
 use valuable_serde::Serializable;
 
-pub(crate) type FregateLogLayer =
-    Filtered<Box<dyn Layer<Registry> + Send + Sync>, EnvFilter, Registry>;
-pub(crate) type HandleFregateLogLayer = Handle<FregateLogLayer, Registry>;
-
-const VERSION: &str = "version";
-const SERVICE: &str = "service";
-const COMPONENT: &str = "component";
-const TARGET: &str = "target";
-const MSG: &str = "msg";
-const MESSAGE: &str = "message";
-const LOG_LEVEL: &str = "LogLevel";
-const TIME: &str = "time";
-const TIMESTAMP: &str = "timestamp";
+pub(crate) const VERSION: &str = "version";
+pub(crate) const SERVICE: &str = "service";
+pub(crate) const COMPONENT: &str = "component";
+pub(crate) const TARGET: &str = "target";
+pub(crate) const MSG: &str = "msg";
+pub(crate) const MESSAGE: &str = "message";
+pub(crate) const LOG_LEVEL: &str = "LogLevel";
+pub(crate) const TIME: &str = "time";
+pub(crate) const TIMESTAMP: &str = "timestamp";
 
 const DEFAULT_FIELDS: [&str; 9] = [
     VERSION, SERVICE, COMPONENT, TARGET, MSG, LOG_LEVEL, TIME, TIMESTAMP, MESSAGE,
 ];
 
 /// Returns [`tracing_subscriber::Layer`] with custom event formatter [`EventFormatter`]
-pub fn fregate_layer(
-    version: &str,
-    service_name: &str,
-    component_name: &str,
-    filter: &str,
-) -> Result<FregateLogLayer> {
-    let mut formatter = EventFormatter::new();
-
-    formatter.add_default_field_to_events(VERSION, version)?;
-    formatter.add_default_field_to_events(SERVICE, service_name)?;
-    formatter.add_default_field_to_events(COMPONENT, component_name)?;
-
-    let filter = EnvFilter::from_str(filter).unwrap_or_default();
-
-    Ok(tracing_subscriber::fmt::layer()
-        .event_format(formatter)
-        .boxed()
-        .with_filter(filter))
+pub fn fregate_layer<S>(formatter: EventFormatter) -> impl Layer<S>
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+{
+    tracing_subscriber::fmt::layer().event_format(formatter)
 }
 
 // TODO: Add Usage Example
@@ -561,7 +542,7 @@ mod test {
         marker.insert("string", &test.string);
         marker.insert("vector", &test.vector);
         marker.insert("map", &test.map);
-        marker.insert_str("random_str", "random_str");
+        marker.insert("random_str", &"random_str");
 
         with_default(subscriber, || {
             tracing::info!(marker = marker.as_value(), "marker_test");

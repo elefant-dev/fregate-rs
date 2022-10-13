@@ -1,36 +1,33 @@
 //! Tools initialise logging and tracing
 use crate::error::Result;
-use crate::log_fmt::{fregate_layer, HandleFregateLogLayer};
+use crate::log_fmt::{fregate_layer, EventFormatter, COMPONENT, SERVICE, VERSION};
 use once_cell::sync::OnceCell;
 use opentelemetry::{global, sdk, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_zipkin::B3Encoding::MultipleHeader;
 use std::str::FromStr;
 use tracing::Subscriber;
-use tracing_subscriber::registry::LookupSpan;
+use tracing_subscriber::filter::Filtered;
 use tracing_subscriber::{
-    filter::EnvFilter, layer::SubscriberExt, registry, reload, util::SubscriberInitExt, Layer,
+    filter::EnvFilter, layer::SubscriberExt, registry, registry::LookupSpan, reload,
+    reload::Handle, util::SubscriberInitExt, Layer, Registry,
 };
 
-static HANDLE_LOG_LAYER: OnceCell<HandleFregateLogLayer> = OnceCell::new();
+static HANDLE_LOG_LAYER: OnceCell<HandleLogLayer> = OnceCell::new();
+
+/// Alias for [`Handle<Filtered<Box<dyn Layer<Registry> + Send + Sync>, EnvFilter, Registry>, Registry>`]
+pub type HandleLogLayer =
+    Handle<Filtered<Box<dyn Layer<Registry> + Send + Sync>, EnvFilter, Registry>, Registry>;
 
 /// Return Some(&'static HandleLogLayer) if Handler is set up, otherwise return None
-///
+/// Initialised through [`init_tracing`] fn call
 /// Used to change log level filter
-pub fn get_handle_log_layer() -> Option<&'static HandleFregateLogLayer> {
+pub fn get_handle_log_layer() -> Option<&'static HandleLogLayer> {
     HANDLE_LOG_LAYER.get()
 }
 
-// TODO: bug ? trace_id is not generated when used with reload Layer
-// let (traces_filter, traces_filter_reloader) = reload::Layer::new(opentelemetry_layer);
-// settings
-//     .traces_filter_reloader
-//     .replace(traces_filter_reloader);
-fn get_trace_layer<S>(
-    trace_level: &str,
-    component_name: &str,
-    traces_endpoint: &str,
-) -> Result<impl Layer<S>>
+/// Configures [`tracing_opentelemetry::OpenTelemetryLayer`] and returns [`Layer`]
+pub fn get_trace_layer<S>(component_name: &str, traces_endpoint: &str) -> Result<impl Layer<S>>
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
@@ -51,11 +48,7 @@ where
         ])))
         .install_batch(opentelemetry::runtime::Tokio)?;
 
-    let trace_level = EnvFilter::from_str(trace_level).unwrap_or_default();
-
-    let trace_layer = tracing_opentelemetry::layer()
-        .with_tracer(tracer)
-        .with_filter(trace_level);
+    let trace_layer = tracing_opentelemetry::layer().with_tracer(tracer);
 
     Ok(trace_layer)
 }
@@ -86,20 +79,29 @@ pub fn init_tracing(
     component_name: &str,
     traces_endpoint: Option<&str>,
 ) -> Result<()> {
-    let log_layer = fregate_layer(version, service_name, component_name, log_level)?;
-    let (log_layer, reload_layer) = reload::Layer::new(log_layer);
+    let mut formatter = EventFormatter::new();
+
+    formatter.add_default_field_to_events(VERSION, version)?;
+    formatter.add_default_field_to_events(SERVICE, service_name)?;
+    formatter.add_default_field_to_events(COMPONENT, component_name)?;
+
+    let log_layer = fregate_layer(formatter).boxed();
+    let filtered_log_layer =
+        log_layer.with_filter(EnvFilter::from_str(log_level).unwrap_or_default());
+
+    let (log_layer, reload_layer) = reload::Layer::new(filtered_log_layer);
 
     let trace_layer = if let Some(traces_endpoint) = traces_endpoint {
-        Some(get_trace_layer(
-            trace_level,
-            component_name,
-            traces_endpoint,
-        )?)
+        let trace_layer = get_trace_layer(component_name, traces_endpoint)?;
+        let filtered_trace_layer =
+            trace_layer.with_filter(EnvFilter::from_str(trace_level).unwrap_or_default());
+        Some(filtered_trace_layer)
     } else {
         None
     };
 
     registry().with(log_layer).with(trace_layer).try_init()?;
+
     let _ = HANDLE_LOG_LAYER.get_or_init(|| reload_layer);
 
     set_panic_hook();
