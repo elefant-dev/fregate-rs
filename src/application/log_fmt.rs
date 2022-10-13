@@ -6,6 +6,7 @@ use std::{collections::BTreeMap, fmt, num::NonZeroU8, str::FromStr};
 use time::format_description::well_known::iso8601::{Config, Iso8601, TimePrecision};
 use tracing::{field::Field, Event, Subscriber};
 use tracing_subscriber::{
+    filter::Filtered,
     fmt::{format, FmtContext, FormatEvent, FormatFields},
     registry::LookupSpan,
     reload::Handle,
@@ -15,7 +16,8 @@ use tracing_subscriber::{
 #[cfg(tracing_unstable)]
 use valuable_serde::Serializable;
 
-pub(crate) type FregateLogLayer = Box<dyn Layer<Registry> + Send + Sync>;
+pub(crate) type FregateLogLayer =
+    Filtered<Box<dyn Layer<Registry> + Send + Sync>, EnvFilter, Registry>;
 pub(crate) type HandleFregateLogLayer = Handle<FregateLogLayer, Registry>;
 
 // TODO: Duplicated with default fields in container
@@ -53,8 +55,8 @@ pub fn fregate_layer(
 
     Ok(tracing_subscriber::fmt::layer()
         .event_format(formatter)
-        .with_filter(filter)
-        .boxed())
+        .boxed()
+        .with_filter(filter))
 }
 
 // TODO: docs
@@ -251,6 +253,7 @@ mod test {
         sync::{Arc, Mutex},
     };
     use tracing::subscriber::with_default;
+    use tracing_subscriber::fmt::format::DefaultFields;
     use tracing_subscriber::fmt::{MakeWriter, SubscriberBuilder};
 
     #[cfg(tracing_unstable)]
