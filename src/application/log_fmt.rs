@@ -38,8 +38,34 @@ where
     tracing_subscriber::fmt::layer().event_format(formatter)
 }
 
-// TODO: Add Usage Example
 /// Fregate [`EventFormatter`]
+///
+/// Example:
+/// ```
+/// use fregate::log_fmt::{fregate_layer, EventFormatter};
+/// use fregate::tokio;
+/// use fregate::tracing::{debug, info, trace, warn};
+/// use fregate::tracing_subscriber::{layer::SubscriberExt, registry, util::SubscriberInitExt};
+///
+/// #[tokio::main]
+/// async fn main() {
+///     let mut formatter = EventFormatter::new();
+///     formatter.add_field_to_events("test", vec![0, 1]).unwrap();
+///     registry().with(fregate_layer(formatter)).init();
+///
+///     info!("info message");
+///     debug!("debug message");
+///     trace!("trace message");
+///     warn!("warn message");
+/// }
+///```
+///
+///```json
+/// {"test":[0,1],"msg":"info message","target":"check_fregate","LogLevel":"INFO","time":1665672717498107000,"timestamp":"2022-10-13T14:51:57.498Z"}
+/// {"test":[0,1],"msg":"info message","target":"check_fregate","LogLevel":"DEBUG","time":1665672717498210000,"timestamp":"2022-10-13T14:51:57.498Z"}
+/// {"test":[0,1],"msg":"info message","target":"check_fregate","LogLevel":"TRACE","time":1665672717498247000,"timestamp":"2022-10-13T14:51:57.498Z"}
+/// {"test":[0,1],"msg":"info message","target":"check_fregate","LogLevel":"WARN","time":1665672717498279000,"timestamp":"2022-10-13T14:51:57.498Z"}
+/// ```
 #[derive(Debug, Default)]
 pub struct EventFormatter {
     default_fields: BTreeMap<String, Value>,
@@ -51,7 +77,19 @@ impl EventFormatter {
         Self::default()
     }
 
-    /// add "key: value" which will be added to event
+    /// add key-value pair which will be added to all events\
+    /// returns [`crate::error::Error`] if one of possible keys are added:
+    /// ```rust
+    /// pub(crate) const VERSION: &str = "version";
+    /// pub(crate) const SERVICE: &str = "service";
+    /// pub(crate) const COMPONENT: &str = "component";
+    /// pub(crate) const TARGET: &str = "target";
+    /// pub(crate) const MSG: &str = "msg";
+    /// pub(crate) const MESSAGE: &str = "message";
+    /// pub(crate) const LOG_LEVEL: &str = "LogLevel";
+    /// pub(crate) const TIME: &str = "time";
+    /// pub(crate) const TIMESTAMP: &str = "timestamp";
+    /// ```
     pub fn add_field_to_events<V: Serialize>(&mut self, key: &str, value: V) -> Result<()> {
         if DEFAULT_FIELDS.contains(&key) {
             Err(crate::error::Error::CustomError(format!(
