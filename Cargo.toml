@@ -12,8 +12,13 @@ keywords = ["http", "grpc", "service"]
 [workspace]
 members = ["examples/*"]
 
+[features]
+default = []
+tls-rustls = ["axum-server/tls-rustls"]
+
 [dependencies]
 axum = { version = "0.5.7", features = ["headers", "http1", "http2", "json", "matched-path", "original-uri", "ws"] }
+axum-server = { version = "0.4.2" }
 bytes = "1"
 config = "0.13.1"
 http-body = "0.4.4"

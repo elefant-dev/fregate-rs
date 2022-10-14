@@ -20,6 +20,9 @@ pub enum Error {
     /// Error returned on Application::serve()
     #[error("Got HyperError: `{0}`")]
     HyperError(#[from] HyperError),
+    /// Error returned on Application::serve_tls()
+    #[error("Got IoError: `{0}`")]
+    IoError(#[from] std::io::Error),
     /// Error returned on init_metrics()
     #[error("Got SetRecorderError: `{0}`")]
     SetRecorderError(#[from] SetRecorderError),

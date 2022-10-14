@@ -6,8 +6,9 @@ use crate::{
     AppConfig,
 };
 use axum::Router;
-use hyper::Server;
+use axum_server::Handle;
 use std::net::SocketAddr;
+use std::time::Duration;
 use tokio::signal;
 use tracing::info;
 
@@ -67,10 +68,20 @@ impl<'a, H, T> Application<'a, H, T> {
     where
         H: Health,
     {
-        let app = build_management_router(self.health_indicator).merge_optional(self.router);
-        let application_socket = SocketAddr::new(self.config.host, self.config.port);
+        let (app, application_socket) = self.prepare_application();
+        run_service(application_socket, app).await
+    }
 
-        run_service(&application_socket, app).await
+    #[cfg(feature = "tls-rustls")]
+    /// Start serving at specified host and port in [AppConfig] accepting both HTTP1 and HTTP2 by TLS
+    pub async fn server_tls<Cert, Key>(self, cert: Cert, key: Key) -> Result<()>
+    where
+        H: Health,
+        Cert: Into<Vec<u8>>,
+        Key: Into<Vec<u8>>,
+    {
+        let (app, application_socket) = self.prepare_application();
+        run_tls_service(application_socket, app, cert, key).await
     }
 
     /// Set up Router Application will serve to
@@ -78,10 +89,19 @@ impl<'a, H, T> Application<'a, H, T> {
         self.router = Some(router);
         self
     }
+
+    fn prepare_application(self) -> (Router, SocketAddr)
+    where
+        H: Health,
+    {
+        let app = build_management_router(self.health_indicator).merge_optional(self.router);
+        let application_socket = SocketAddr::new(self.config.host, self.config.port);
+        (app, application_socket)
+    }
 }
 
 #[allow(clippy::expect_used)]
-async fn shutdown_signal() {
+async fn shutdown_signal(handle: Handle) {
     let ctrl_c = async {
         signal::ctrl_c()
             .await
@@ -105,11 +125,41 @@ async fn shutdown_signal() {
     }
 
     info!("Termination signal, starting shutdown...");
+
+    handle.graceful_shutdown(Some(Duration::from_secs(30)));
 }
 
-async fn run_service(socket: &SocketAddr, rest: Router) -> Result<()> {
-    let server = Server::bind(socket).serve(rest.into_make_service());
+async fn run_service(socket: SocketAddr, rest: Router) -> Result<()> {
+    let handle = Handle::new();
+
+    tokio::spawn(shutdown_signal(handle.clone()));
+
+    let server = axum_server::bind(socket)
+        .handle(handle)
+        .serve(rest.into_make_service());
     info!(target: "server", "Started: http://{socket}");
 
-    Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
+    Ok(server.await?)
+}
+
+#[cfg(feature = "tls-rustls")]
+async fn run_tls_service<Cert: Into<Vec<u8>>, Key: Into<Vec<u8>>>(
+    socket: SocketAddr,
+    rest: Router,
+    cert: Cert,
+    key: Key,
+) -> Result<()> {
+    let tls_config =
+        axum_server::tls_rustls::RustlsConfig::from_pem(cert.into(), key.into()).await?;
+
+    let handle = Handle::new();
+
+    tokio::spawn(shutdown_signal(handle.clone()));
+
+    let server = axum_server::bind_rustls(socket, tls_config)
+        .handle(handle)
+        .serve(rest.into_make_service());
+    info!(target: "server", "Started: http://{socket}");
+
+    Ok(server.await?)
 }
