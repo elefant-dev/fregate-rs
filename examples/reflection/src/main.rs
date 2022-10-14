@@ -2,22 +2,20 @@
 
 use fregate::axum::{routing::get, Router};
 use fregate::tokio;
-use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
+use fregate::tonic::{self, Request as TonicRequest, Response as TonicResponse, Status};
 use fregate::{
     bootstrap,
     extensions::RouterTonicExt,
     middleware::{grpc_trace_layer, http_trace_layer},
     Application, Empty,
 };
-use proto::{
-    echo_server::{Echo, EchoServer},
-    EchoRequest, EchoResponse,
+use resources::{
+    proto::{
+        echo::echo_server::{Echo, EchoServer},
+        echo::{EchoRequest, EchoResponse},
+    },
+    FILE_DESCRIPTOR_SET,
 };
-
-mod proto {
-    include!("echo.rs");
-    pub(crate) const FILE_DESCRIPTOR_SET: &[u8] = include_bytes!("echo_descriptor.bin");
-}
 
 #[derive(Default)]
 struct MyEcho;
@@ -43,7 +41,7 @@ async fn main() {
     let echo_service = EchoServer::new(MyEcho);
 
     let service = tonic_reflection::server::Builder::configure()
-        .register_encoded_file_descriptor_set(proto::FILE_DESCRIPTOR_SET)
+        .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
         .build()
         .unwrap();
 
