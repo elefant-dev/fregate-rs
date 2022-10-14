@@ -6,23 +6,22 @@ use fregate::axum::{
 };
 use fregate::hyper::Request;
 use fregate::tokio;
-use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
+use fregate::tonic::{async_trait, Request as TonicRequest, Response as TonicResponse, Status};
 use fregate::{
     bootstrap,
     extensions::RouterTonicExt,
     middleware::{grpc_trace_layer, http_trace_layer},
     Application, Empty,
 };
-use proto::{
-    echo_server::{Echo, EchoServer},
-    hello_server::{Hello, HelloServer},
-    EchoRequest, EchoResponse, HelloRequest, HelloResponse,
+use resources::{
+    proto::{
+        echo::echo_server::{Echo, EchoServer},
+        echo::{EchoRequest, EchoResponse},
+        hello::hello_server::{Hello, HelloServer},
+        hello::{HelloRequest, HelloResponse},
+    },
+    TLS_CERTIFICATE, TLS_PRIVATE_KEY,
 };
-
-mod proto {
-    tonic::include_proto!("hello");
-    tonic::include_proto!("echo");
-}
 
 #[derive(Default)]
 struct MyHello;
@@ -30,7 +29,7 @@ struct MyHello;
 #[derive(Default)]
 struct MyEcho;
 
-#[tonic::async_trait]
+#[async_trait]
 impl Hello for MyHello {
     async fn say_hello(
         &self,
@@ -44,7 +43,7 @@ impl Hello for MyHello {
     }
 }
 
-#[tonic::async_trait]
+#[async_trait]
 impl Echo for MyEcho {
     async fn ping(
         &self,
@@ -83,10 +82,7 @@ async fn main() {
 
     Application::new(&config)
         .router(app_router)
-        .server_tls(
-            include_bytes!("../certs/server.crt").to_vec(),
-            include_bytes!("../certs/server.key").to_vec(),
-        )
+        .server_tls(TLS_CERTIFICATE, TLS_PRIVATE_KEY)
         .await
         .unwrap();
 }
