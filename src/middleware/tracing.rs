@@ -26,11 +26,16 @@ const REQ_RESP: &str = "reqresp";
 pub struct Attributes(Arc<Inner>);
 
 impl Attributes {
-    /// Creates [`Attributes`] from [`AppConfig`]
+    /// Creates new [`Attributes`] from [`AppConfig`]
     pub fn new_from_config<T>(config: &AppConfig<T>) -> Self {
+        Self::new(&config.logger.service_name, &config.logger.component_name)
+    }
+
+    /// Creates new [`Attributes`]
+    pub fn new(service_name: &str, component_name: &str) -> Self {
         Self(Arc::new(Inner {
-            service_name: config.logger.service_name.clone(),
-            component_name: config.logger.component_name.clone(),
+            service_name: service_name.to_owned(),
+            component_name: component_name.to_owned(),
         }))
     }
 }
