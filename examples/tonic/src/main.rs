@@ -8,18 +8,18 @@ use fregate::hyper::Request;
 use fregate::tokio;
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
 use fregate::{
-    bootstrap, extensions::RouterTonicExt, middleware::trace_request, Application, Empty,
+    bootstrap, extensions::RouterTonicExt, middleware::trace_request, tonic, Application, Empty,
 };
-use proto::{
-    echo_server::{Echo, EchoServer},
-    hello_server::{Hello, HelloServer},
-    EchoRequest, EchoResponse, HelloRequest, HelloResponse,
+use resources::proto::{
+    echo::{
+        echo_server::{Echo, EchoServer},
+        EchoRequest, EchoResponse,
+    },
+    hello::{
+        hello_server::{Hello, HelloServer},
+        HelloRequest, HelloResponse,
+    },
 };
-
-mod proto {
-    tonic::include_proto!("hello");
-    tonic::include_proto!("echo");
-}
 
 #[derive(Default)]
 struct MyHello;

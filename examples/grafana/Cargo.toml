@@ -13,11 +13,6 @@ path = "src/client.rs"
 
 [dependencies]
 fregate = { path = "../.." }
-tracing = "0.1.36"
-prost = "0.11.0"
-tonic = "0.8.0"
+resources = { path = "../examples_resources" }
 opentelemetry = { version = "0.18.0", features = ["rt-tokio", "trace"]}
 tracing-opentelemetry = "0.18.0"
-
-[build-dependencies]
-tonic-build = { version = "0.8.0", features = ["prost"] }

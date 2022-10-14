@@ -1,12 +1,8 @@
-mod proto {
-    tonic::include_proto!("hello");
-}
-
 use fregate::logging::init_tracing;
-use fregate::tokio;
+use fregate::{tokio, tonic, tracing};
 use opentelemetry::global::shutdown_tracer_provider;
 use opentelemetry::propagation::Injector;
-use proto::{hello_client::HelloClient, HelloRequest, HelloResponse};
+use resources::proto::hello::{hello_client::HelloClient, HelloRequest, HelloResponse};
 use tonic::transport::Channel;
 use tonic::{
     metadata::{MetadataKey, MetadataValue},
