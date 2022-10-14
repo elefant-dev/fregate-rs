@@ -3,22 +3,20 @@ use crate::{error::Result, *};
 use ::tracing::info;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
-use std::sync::Arc;
 
-/// Reads AppConfig and [`init_tracing`].\
-/// Return Error if fails to read [`AppConfig`] or [`init_tracing`].\
+/// Reads AppConfig and [`init_tracing`].
+/// Return Error if fails to read [`AppConfig`] or [`init_tracing`].
 /// Return Error if called twice because of internal call to tracing_subscriber::registry().try_init().
 ///```no_run
 /// use fregate::*;
 /// use fregate::axum::{Router, routing::get, response::IntoResponse};
-/// use std::sync::Arc;
 ///
 /// #[tokio::main]
 /// async fn main() {
 ///    std::env::set_var("TEST_PORT", "3333");
 ///    std::env::set_var("TEST_NUMBER", "1010");
 ///
-///     let config: Arc<AppConfig<Empty>> = bootstrap([
+///     let config: AppConfig<Empty> = bootstrap([
 ///         ConfigSource::File("./examples/configuration/app.yaml"),
 ///         ConfigSource::EnvPrefix("TEST"),
 ///     ])
@@ -31,7 +29,7 @@ use std::sync::Arc;
 ///         .unwrap();
 /// }
 /// ```
-pub fn bootstrap<'a, ConfigExt, S>(sources: S) -> Result<Arc<AppConfig<ConfigExt>>>
+pub fn bootstrap<'a, ConfigExt, S>(sources: S) -> Result<AppConfig<ConfigExt>>
 where
     S: IntoIterator<Item = ConfigSource<'a>>,
     ConfigExt: Debug + DeserializeOwned,
@@ -60,5 +58,5 @@ where
 
     info!("Configuration: `{config:?}`.");
 
-    Ok(Arc::new(config))
+    Ok(config)
 }

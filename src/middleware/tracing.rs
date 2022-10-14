@@ -21,23 +21,47 @@ const PROTOCOL_GRPC: &str = "grpc";
 const PROTOCOL_HTTP: &str = "http";
 const REQ_RESP: &str = "reqresp";
 
-/// Fn to be used with [`axum::middleware::from_fn`]
-pub async fn trace_request<B, T>(
-    req: Request<B>,
-    next: Next<B>,
-    config: Arc<AppConfig<T>>,
-) -> impl IntoResponse {
-    if is_grpc(req.headers()) {
-        trace_grpc_request(req, next, config).await.into_response()
-    } else {
-        trace_http_request(req, next, config).await.into_response()
+#[derive(Default, Debug, Clone)]
+/// Structure which contains needed for [`trace_request`] [`Span`] attributes
+pub struct Attributes(Arc<Inner>);
+
+impl Attributes {
+    /// Creates [`Attributes`] from [`AppConfig`]
+    pub fn new_from_config<T>(config: &AppConfig<T>) -> Self {
+        Self(Arc::new(Inner {
+            service_name: config.logger.service_name.clone(),
+            component_name: config.logger.component_name.clone(),
+        }))
     }
 }
 
-async fn trace_http_request<B, T>(
+#[derive(Default, Debug, Clone)]
+struct Inner {
+    service_name: String,
+    component_name: String,
+}
+
+/// Fn to be used with [`axum::middleware::from_fn`]
+pub async fn trace_request<B>(
+    req: Request<B>,
+    next: Next<B>,
+    attributes: Attributes,
+) -> impl IntoResponse {
+    if is_grpc(req.headers()) {
+        trace_grpc_request(req, next, &attributes)
+            .await
+            .into_response()
+    } else {
+        trace_http_request(req, next, &attributes)
+            .await
+            .into_response()
+    }
+}
+
+async fn trace_http_request<B>(
     request: Request<B>,
     next: Next<B>,
-    config: Arc<AppConfig<T>>,
+    attributes: &Attributes,
 ) -> impl IntoResponse {
     let span = make_http_span();
     let parent_context = extract_context(&request);
@@ -48,8 +72,8 @@ async fn trace_http_request<B, T>(
     let req_method = request.method().to_string();
     let remote_address = extract_remote_address(&request);
 
-    span.record("service", &config.logger.service_name);
-    span.record("component", &config.logger.component_name);
+    span.record("service", &attributes.0.service_name);
+    span.record("component", &attributes.0.component_name);
     span.record("http.method", &req_method);
     span.record("net.peer.ip", remote_address.ip);
     span.record("net.peer.port", remote_address.port);
@@ -110,10 +134,10 @@ async fn trace_http_request<B, T>(
     response
 }
 
-async fn trace_grpc_request<B, T>(
+async fn trace_grpc_request<B>(
     request: Request<B>,
     next: Next<B>,
-    config: Arc<AppConfig<T>>,
+    attributes: &Attributes,
 ) -> impl IntoResponse {
     let span = make_grpc_span();
     let parent_context = extract_context(&request);
@@ -134,8 +158,8 @@ async fn trace_grpc_request<B, T>(
 
     let labels = [("protocol", PROTOCOL_GRPC), ("channel", REQ_RESP)];
 
-    span.record("service", &config.logger.service_name);
-    span.record("component", &config.logger.component_name);
+    span.record("service", &attributes.0.service_name);
+    span.record("component", &attributes.0.component_name);
     span.record("rpc.method", &grpc_method);
     span.record("net.peer.ip", remote_address.ip);
     span.record("net.peer.port", remote_address.port);

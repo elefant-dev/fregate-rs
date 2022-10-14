@@ -2,6 +2,7 @@
 
 use fregate::axum::middleware::from_fn;
 use fregate::axum::{routing::get, Router};
+use fregate::middleware::Attributes;
 use fregate::tokio;
 use fregate::tonic::{self, Request as TonicRequest, Response as TonicResponse, Status};
 use fregate::{
@@ -35,7 +36,7 @@ impl Echo for MyEcho {
 #[tokio::main]
 async fn main() {
     let config = bootstrap::<Empty, _>([]).unwrap();
-    let conf = config.clone();
+    let attributes = Attributes::new_from_config(&config);
 
     let echo_service = EchoServer::new(MyEcho);
 
@@ -53,7 +54,7 @@ async fn main() {
         .merge(grpc)
         .merge(reflection)
         .layer(from_fn(move |req, next| {
-            trace_request(req, next, conf.clone())
+            trace_request(req, next, attributes.clone())
         }));
 
     Application::new(&config)

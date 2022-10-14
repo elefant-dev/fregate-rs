@@ -1,3 +1,4 @@
+use fregate::middleware::Attributes;
 use fregate::{
     axum::{middleware::from_fn, routing::get, Router},
     bootstrap,
@@ -8,12 +9,12 @@ use fregate::{
 #[tokio::main]
 async fn main() {
     let config = bootstrap::<Empty, _>([]).unwrap();
-    let conf = config.clone();
+    let attributes = Attributes::new_from_config(&config);
 
     let rest = Router::new()
         .route("/", get(handler))
         .layer(from_fn(move |req, next| {
-            trace_request(req, next, conf.clone())
+            trace_request(req, next, attributes.clone())
         }));
 
     Application::new(&config)

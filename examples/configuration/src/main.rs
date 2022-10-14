@@ -3,7 +3,6 @@ use fregate::config::FileFormat;
 use fregate::tokio;
 use fregate::{bootstrap, AppConfig, Application, ConfigSource, Empty};
 use serde::Deserialize;
-use std::sync::Arc;
 
 async fn handler() -> &'static str {
     "Hello, Configuration!"
@@ -29,7 +28,7 @@ async fn main() {
     // There are multiple ways to read AppConfig:
 
     // This will read AppConfig and call init_tracing() with arguments read in AppConfig
-    let _conf: Arc<AppConfig<Empty>> = bootstrap([
+    let _conf: AppConfig<Empty> = bootstrap([
         ConfigSource::File("./examples/configuration/app.yaml"),
         ConfigSource::EnvPrefix("TEST"),
     ])

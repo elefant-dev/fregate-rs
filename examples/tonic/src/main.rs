@@ -5,6 +5,7 @@ use fregate::axum::{
     Router,
 };
 use fregate::hyper::Request;
+use fregate::middleware::Attributes;
 use fregate::tokio;
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
 use fregate::{
@@ -62,7 +63,7 @@ async fn deny_middleware<B>(_req: Request<B>, _next: Next<B>) -> impl IntoRespon
 #[tokio::main]
 async fn main() {
     let config = bootstrap::<Empty, _>([]).unwrap();
-    let conf = config.clone();
+    let attributes = Attributes::new_from_config(&config);
 
     let echo_service = EchoServer::new(MyEcho);
     let hello_service = HelloServer::new(MyHello);
@@ -75,7 +76,7 @@ async fn main() {
         .merge(Router::from_tonic_service(hello_service));
 
     let app_router = rest.merge(grpc).layer(from_fn(move |req, next| {
-        trace_request(req, next, conf.clone())
+        trace_request(req, next, attributes.clone())
     }));
 
     Application::new(&config)

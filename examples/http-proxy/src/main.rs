@@ -4,6 +4,7 @@ use fregate::axum::{
     Router, Server,
 };
 use fregate::hyper::{Client, StatusCode};
+use fregate::middleware::Attributes;
 use fregate::tokio;
 use fregate::{
     bootstrap,
@@ -17,6 +18,7 @@ use std::sync::Arc;
 #[tokio::main]
 async fn main() {
     let config = bootstrap::<Empty, _>([]).unwrap();
+    let attributes = Attributes::new_from_config(&config);
 
     // Start server where to proxy requests
     tokio::spawn(server());
@@ -41,11 +43,10 @@ async fn main() {
             "http://127.0.0.1:3000",
         ));
 
-    let conf = config.clone();
     let app = Router::new()
         .nest("/app", hello.merge(world).merge(might_be_proxied))
         .layer(from_fn(move |req, next| {
-            trace_request(req, next, conf.clone())
+            trace_request(req, next, attributes.clone())
         }));
 
     Application::new(&config).router(app).serve().await.unwrap();
