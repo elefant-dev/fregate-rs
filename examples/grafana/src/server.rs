@@ -1,17 +1,13 @@
 use fregate::axum::Router;
 use fregate::tokio;
-use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
+use fregate::tonic::{self, Request as TonicRequest, Response as TonicResponse, Status};
 use fregate::{
     bootstrap, extensions::RouterTonicExt, middleware::grpc_trace_layer, Application, Empty,
 };
-use proto::{
+use resources::proto::hello::{
     hello_server::{Hello, HelloServer},
     HelloRequest, HelloResponse,
 };
-
-mod proto {
-    tonic::include_proto!("hello");
-}
 
 #[derive(Default)]
 struct MyHello;
