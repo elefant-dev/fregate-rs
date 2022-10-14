@@ -90,8 +90,8 @@ async fn main() {
 /*
     grpcurl -insecure -import-path ./proto -proto hello.proto -d '{"name": "Tonic"}' 0.0.0.0:8000 hello.Hello/SayHello
     grpcurl -insecure -import-path ./proto -proto echo.proto -d '{"message": "Echo"}' 0.0.0.0:8000 echo.Echo/ping
-    curl http://0.0.0.0:8000
-    curl http://0.0.0.0:8000/health
-    curl http://0.0.0.0:8000/ready
-    curl http://0.0.0.0:8000/live
+    curl --insecure https://0.0.0.0:8000
+    curl --insecure https://0.0.0.0:8000/health
+    curl --insecure https://0.0.0.0:8000/ready
+    curl --insecure https://0.0.0.0:8000/live
 */
