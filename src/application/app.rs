@@ -64,10 +64,10 @@ impl<'a, H, T> Application<'a, H, T> {
     where
         H: Health,
     {
-        let app = build_management_router(self.health_indicator).merge_optional(self.router);
+        let router = build_management_router(self.health_indicator).merge_optional(self.router);
         let application_socket = SocketAddr::new(self.config.host, self.config.port);
 
-        run_service(&application_socket, app).await
+        run_service(&application_socket, router).await
     }
 
     /// Set up Router Application will serve to
@@ -104,8 +104,10 @@ async fn shutdown_signal() {
     info!("Termination signal, starting shutdown...");
 }
 
-async fn run_service(socket: &SocketAddr, rest: Router) -> Result<()> {
-    let server = Server::bind(socket).serve(rest.into_make_service());
+async fn run_service(socket: &SocketAddr, router: Router) -> Result<()> {
+    let app = router.into_make_service_with_connect_info::<SocketAddr>();
+    let server = Server::bind(socket).serve(app);
+
     info!(target: "server", "Started: http://{socket}");
 
     Ok(server.with_graceful_shutdown(shutdown_signal()).await?)

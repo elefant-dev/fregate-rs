@@ -130,14 +130,15 @@ where
             let mut visitor = JsonVisitor::default();
             event.record(&mut visitor);
 
-            // serialize event fields
-            let mut event_storage = visitor.storage;
-            let message = event_storage.remove(MESSAGE).unwrap_or_default();
-
             // serialize default fields
             self.default_fields
                 .iter()
                 .try_for_each(|(key, value)| map_serializer.serialize_entry(key, value))?;
+
+            // serialize event fields
+            let mut event_storage = visitor.storage;
+            let message = event_storage.remove(MESSAGE).unwrap_or_default();
+            map_serializer.serialize_entry(MSG, &message)?;
 
             event_storage
                 .iter()
@@ -149,7 +150,6 @@ where
 
             // serialize current event metadata
             let metadata = event.metadata();
-            map_serializer.serialize_entry(MSG, &message)?;
             map_serializer.serialize_entry(TARGET, metadata.target())?;
             map_serializer.serialize_entry(LOG_LEVEL, metadata.level().as_str())?;
 

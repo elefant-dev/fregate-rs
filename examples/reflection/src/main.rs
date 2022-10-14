@@ -1,13 +1,11 @@
 #![allow(clippy::derive_partial_eq_without_eq)]
 
+use fregate::axum::middleware::from_fn;
 use fregate::axum::{routing::get, Router};
 use fregate::tokio;
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
 use fregate::{
-    bootstrap,
-    extensions::RouterTonicExt,
-    middleware::{grpc_trace_layer, http_trace_layer},
-    Application, Empty,
+    bootstrap, extensions::RouterTonicExt, middleware::trace_request, Application, Empty,
 };
 use proto::{
     echo_server::{Echo, EchoServer},
@@ -39,6 +37,7 @@ impl Echo for MyEcho {
 #[tokio::main]
 async fn main() {
     let config = bootstrap::<Empty, _>([]).unwrap();
+    let conf = config.clone();
 
     let echo_service = EchoServer::new(MyEcho);
 
@@ -49,12 +48,15 @@ async fn main() {
 
     let reflection = Router::from_tonic_service(service);
 
-    let rest = Router::new()
-        .route("/", get(|| async { "Hello, World!" }))
-        .layer(http_trace_layer());
+    let rest = Router::new().route("/", get(|| async { "Hello, World!" }));
+    let grpc = Router::from_tonic_service(echo_service);
 
-    let grpc = Router::from_tonic_service(echo_service).layer(grpc_trace_layer());
-    let app_router = rest.merge(grpc).merge(reflection);
+    let app_router = rest
+        .merge(grpc)
+        .merge(reflection)
+        .layer(from_fn(move |req, next| {
+            trace_request(req, next, conf.clone())
+        }));
 
     Application::new(&config)
         .router(app_router)

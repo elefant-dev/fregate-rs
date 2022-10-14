@@ -1,17 +1,20 @@
 use fregate::{
-    axum::{routing::get, Router},
+    axum::{middleware::from_fn, routing::get, Router},
     bootstrap,
-    middleware::http_trace_layer,
+    middleware::trace_request,
     tokio, Application, Empty,
 };
 
 #[tokio::main]
 async fn main() {
     let config = bootstrap::<Empty, _>([]).unwrap();
+    let conf = config.clone();
 
     let rest = Router::new()
         .route("/", get(handler))
-        .layer(http_trace_layer());
+        .layer(from_fn(move |req, next| {
+            trace_request(req, next, conf.clone())
+        }));
 
     Application::new(&config)
         .router(rest)

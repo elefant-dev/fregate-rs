@@ -1,3 +1,4 @@
+use fregate::axum::middleware::from_fn;
 use fregate::axum::{
     routing::{get, post},
     Router, Server,
@@ -6,7 +7,7 @@ use fregate::hyper::{Client, StatusCode};
 use fregate::tokio;
 use fregate::{
     bootstrap,
-    middleware::{http_trace_layer, ProxyLayer},
+    middleware::{trace_request, ProxyLayer},
     Application, Empty,
 };
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -40,9 +41,12 @@ async fn main() {
             "http://127.0.0.1:3000",
         ));
 
+    let conf = config.clone();
     let app = Router::new()
         .nest("/app", hello.merge(world).merge(might_be_proxied))
-        .layer(http_trace_layer());
+        .layer(from_fn(move |req, next| {
+            trace_request(req, next, conf.clone())
+        }));
 
     Application::new(&config).router(app).serve().await.unwrap();
 }
