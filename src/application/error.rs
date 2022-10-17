@@ -23,6 +23,13 @@ pub enum Error {
     /// Error returned on init_metrics()
     #[error("Got SetRecorderError: `{0}`")]
     SetRecorderError(#[from] SetRecorderError),
+    /// Custom Error
+    #[error("Got CustomError: `{0}`")]
+    CustomError(String),
+    /// Error returned by native-tls
+    #[cfg(feature = "tls")]
+    #[error("Got NativeTlsError: `{0}`")]
+    NativeTlsError(#[from] native_tls::Error),
 }
 
 /// fregate Result alias

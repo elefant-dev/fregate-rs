@@ -83,17 +83,19 @@ async fn main() {
 
     Application::new(&config)
         .router(app_router)
-        .serve_tls()
-        .serve()
+        .serve_tls(
+            include_bytes!("../../examples_resources/certs/identity.pfx"),
+            "check",
+        )
         .await
         .unwrap();
 }
 
 /*
-    grpcurl -plaintext -import-path ./proto -proto hello.proto -d '{"name": "Tonic"}' 0.0.0.0:8000 hello.Hello/SayHello
-    grpcurl -plaintext -import-path ./proto -proto echo.proto -d '{"message": "Echo"}' 0.0.0.0:8000 echo.Echo/ping
-    curl http://0.0.0.0:8000
-    curl http://0.0.0.0:8000/health
-    curl http://0.0.0.0:8000/ready
-    curl http://0.0.0.0:8000/live
+    grpcurl -insecure -import-path ./proto -proto hello.proto -d '{"name": "Tonic"}' 0.0.0.0:8000 hello.Hello/SayHello
+    grpcurl -insecure -import-path ./proto -proto echo.proto -d '{"message": "Echo"}' 0.0.0.0:8000 echo.Echo/ping
+    curl --insecure https://0.0.0.0:8000
+    curl --insecure https://0.0.0.0:8000/health
+    curl --insecure https://0.0.0.0:8000/ready
+    curl --insecure https://0.0.0.0:8000/live
 */

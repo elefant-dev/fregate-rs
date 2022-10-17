@@ -18,6 +18,7 @@ pub use application::*;
 
 pub use axum;
 pub use config;
+pub use futures_util;
 pub use hyper;
 pub use thiserror;
 pub use tokio;

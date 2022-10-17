@@ -1,3 +1,4 @@
+use crate::error::Error;
 use crate::{
     build_management_router,
     error::Result,
@@ -6,10 +7,21 @@ use crate::{
     AppConfig,
 };
 use axum::Router;
+use futures_util::StreamExt;
+use hyper::server::accept;
+use hyper::server::conn::AddrIncoming;
 use hyper::Server;
+use std::fmt::Debug;
+use std::future::ready;
 use std::net::SocketAddr;
 use tokio::signal;
 use tracing::info;
+
+#[cfg(feature = "tls")]
+use native_tls::{Identity, TlsAcceptor};
+#[cfg(feature = "tls")]
+use tls_listener::TlsListener;
+use tracing::log::warn;
 
 // TODO(kos): Consider avoiding doing framework and eliminating `Application`.
 //            Better than the alternative.
@@ -63,20 +75,54 @@ impl<'a, H, T> Application<'a, H, T> {
     }
 
     /// Start serving at specified host and port in [AppConfig] accepting both HTTP1 and HTTP2
+    #[cfg(not(feature = "tls"))]
     pub async fn serve(self) -> Result<()>
     where
         H: Health,
     {
         let app = build_management_router(self.health_indicator).merge_optional(self.router);
-        let application_socket = SocketAddr::new(self.config.host, self.config.port);
+        let socket = SocketAddr::new(self.config.host, self.config.port);
 
-        run_service(&application_socket, app).await
+        let server = Server::bind(&socket).serve(app.into_make_service());
+        info!(target: "server", "Started: http://{socket}");
+
+        Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
     }
 
     /// Set up Router Application will serve to
     pub fn router(mut self, router: Router) -> Self {
         self.router = Some(router);
         self
+    }
+
+    #[cfg(feature = "tls")]
+    /// Serve TLS
+    pub async fn serve_tls(self, pfx: &[u8], password: &str) -> Result<()>
+    where
+        H: Health,
+    {
+        let app = build_management_router(self.health_indicator).merge_optional(self.router);
+        let socket = SocketAddr::new(self.config.host, self.config.port);
+
+        let identity = Identity::from_pkcs12(pfx, password).map_err(Error::NativeTlsError)?;
+        let acceptor = TlsAcceptor::builder(identity).build()?;
+        let addr = AddrIncoming::bind(&socket)?;
+
+        let listener =
+            TlsListener::<_, tokio_native_tls::TlsAcceptor>::new_hyper(acceptor.into(), addr)
+                .filter(|conn| {
+                    if let Err(err) = conn {
+                        warn!("TLS connect error: {err}");
+                        ready(false)
+                    } else {
+                        ready(true)
+                    }
+                });
+
+        let server = Server::builder(accept::from_stream(listener)).serve(app.into_make_service());
+
+        info!(target: "server", "Started: https://{socket}");
+        Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
     }
 }
 
@@ -105,11 +151,4 @@ async fn shutdown_signal() {
     }
 
     info!("Termination signal, starting shutdown...");
-}
-
-async fn run_service(socket: &SocketAddr, rest: Router) -> Result<()> {
-    let server = Server::bind(socket).serve(rest.into_make_service());
-    info!(target: "server", "Started: http://{socket}");
-
-    Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
 }
