@@ -128,7 +128,8 @@ async fn shutdown_signal() {
 }
 
 async fn run_service(socket: &SocketAddr, rest: Router) -> Result<()> {
-    let server = Server::bind(socket).serve(rest.into_make_service());
+    let server =
+        Server::bind(socket).serve(rest.into_make_service_with_connect_info::<SocketAddr>());
     info!(target: "server", "Started: http://{socket}");
 
     Ok(server.with_graceful_shutdown(shutdown_signal()).await?)

@@ -1,5 +1,6 @@
 use super::{shutdown_signal, Result};
-use axum::{routing::IntoMakeService, Router};
+use axum::extract::connect_info::IntoMakeServiceWithConnectInfo;
+use axum::Router;
 use futures_util::future::poll_fn;
 use hyper::server::{
     accept::Accept,
@@ -26,7 +27,7 @@ pub(super) async fn run_tls_service(
     let listener = AddrIncoming::from_listener(TcpListener::bind(socket).await?)?;
     let protocol = Arc::new(Http::new());
 
-    let application = rest.into_make_service();
+    let application = rest.into_make_service_with_connect_info();
 
     select! {
         _ = shutdown_signal() => Ok(()),
@@ -38,7 +39,7 @@ async fn tls_loop(
     mut listener: AddrIncoming,
     acceptor: TlsAcceptor,
     protocol: Arc<Http>,
-    mut application: IntoMakeService<Router>,
+    mut application: IntoMakeServiceWithConnectInfo<Router, SocketAddr>,
 ) -> Result<()> {
     loop {
         // Always [`Option::Some`].
