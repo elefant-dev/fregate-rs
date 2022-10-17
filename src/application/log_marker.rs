@@ -10,7 +10,7 @@ pub(crate) const LOG_MARKER_STRUCTURE_NAME: &str =
 /// This is how [`LogMarker`] is serialized to logs if used with tracing_unstable feature and [`crate::log_fmt::EventFormatter`]
 ///```rust
 /// use fregate::{log_marker::LogMarker, logging::init_tracing, tokio, tracing::info};
-/// use valuable::Valuable;
+/// use fregate::valuable::Valuable;
 ///
 /// const STATIC: &str = "STATIC";
 ///
