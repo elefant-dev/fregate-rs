@@ -1,4 +1,4 @@
-#[cfg(feature = "native-tls")]
+#[cfg(any(feature = "native-tls", feature = "native-tls-vendored"))]
 mod native_tls_impl;
 
 use crate::{
@@ -74,7 +74,7 @@ impl<'a, H, T> Application<'a, H, T> {
         run_service(&application_socket, app).await
     }
 
-    #[cfg(feature = "native-tls")]
+    #[cfg(any(feature = "native-tls", feature = "native-tls-vendored"))]
     /// Start serving at specified host and port in [AppConfig] accepting both HTTP1 and HTTP2 by TLS
     pub async fn server_tls(self, pem: &[u8], key: &[u8]) -> Result<()>
     where

@@ -27,7 +27,7 @@ pub enum Error {
     #[error("Got SetRecorderError: `{0}`")]
     SetRecorderError(#[from] SetRecorderError),
 
-    #[cfg(feature = "native-tls")]
+    #[cfg(any(feature = "native-tls", feature = "native-tls-vendored"))]
     /// Various TLS errors
     #[error("Got TLS error: `{0}`")]
     TlsError(#[from] tokio_native_tls::native_tls::Error),
