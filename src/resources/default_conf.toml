@@ -21,10 +21,6 @@ version = "0.1.0"
 
 [private]
 
-[application]
-name = "platform"
-version = "0.1"
-
-[server.tls]
-key_path = "/tls.key"
-cert_path = "/tls.cert"
+#[server.tls]
+#key_path = "/tls.key"
+#cert_path = "/tls.cert"
