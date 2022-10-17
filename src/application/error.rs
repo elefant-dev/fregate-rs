@@ -20,9 +20,17 @@ pub enum Error {
     /// Error returned on Application::serve()
     #[error("Got HyperError: `{0}`")]
     HyperError(#[from] HyperError),
+    /// Various IO errors from tokio / std
+    #[error("Got IoError: `{0}`")]
+    IoError(#[from] std::io::Error),
     /// Error returned on init_metrics()
     #[error("Got SetRecorderError: `{0}`")]
     SetRecorderError(#[from] SetRecorderError),
+
+    #[cfg(feature = "native-tls")]
+    /// Various TLS errors
+    #[error("Got TLS error: `{0}`")]
+    TlsError(#[from] tokio_native_tls::native_tls::Error),
 }
 
 /// fregate Result alias

@@ -1,3 +1,6 @@
+#[cfg(feature = "native-tls")]
+mod native_tls_impl;
+
 use crate::{
     build_management_router,
     error::Result,
@@ -67,16 +70,33 @@ impl<'a, H, T> Application<'a, H, T> {
     where
         H: Health,
     {
-        let app = build_management_router(self.health_indicator).merge_optional(self.router);
-        let application_socket = SocketAddr::new(self.config.host, self.config.port);
-
+        let (app, application_socket) = self.prepare_application();
         run_service(&application_socket, app).await
+    }
+
+    #[cfg(feature = "native-tls")]
+    /// Start serving at specified host and port in [AppConfig] accepting both HTTP1 and HTTP2 by TLS
+    pub async fn server_tls(self, pem: &[u8], key: &[u8]) -> Result<()>
+    where
+        H: Health,
+    {
+        let (app, application_socket) = self.prepare_application();
+        native_tls_impl::run_tls_service(application_socket, app, pem, key).await
     }
 
     /// Set up Router Application will serve to
     pub fn router(mut self, router: Router) -> Self {
         self.router = Some(router);
         self
+    }
+
+    fn prepare_application(self) -> (Router, SocketAddr)
+    where
+        H: Health,
+    {
+        let app = build_management_router(self.health_indicator).merge_optional(self.router);
+        let application_socket = SocketAddr::new(self.config.host, self.config.port);
+        (app, application_socket)
     }
 }
 

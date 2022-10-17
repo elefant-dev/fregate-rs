@@ -4,7 +4,7 @@ use hyper::{Body, Request, Response};
 use sealed::sealed;
 use std::convert::Infallible;
 use tonic::body::BoxBody;
-use tonic::transport::NamedService;
+use tonic::server::NamedService;
 use tower::{Service, ServiceBuilder};
 use tower_http::ServiceBuilderExt;
 
