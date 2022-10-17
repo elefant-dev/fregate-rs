@@ -1,4 +1,3 @@
-use crate::error::Error;
 use crate::{
     build_management_router,
     error::Result,
@@ -7,21 +6,23 @@ use crate::{
     AppConfig,
 };
 use axum::Router;
-use futures_util::StreamExt;
-use hyper::server::accept;
-use hyper::server::conn::AddrIncoming;
 use hyper::Server;
 use std::fmt::Debug;
-use std::future::ready;
 use std::net::SocketAddr;
 use tokio::signal;
 use tracing::info;
 
 #[cfg(feature = "tls")]
-use native_tls::{Identity, TlsAcceptor};
-#[cfg(feature = "tls")]
-use tls_listener::TlsListener;
-use tracing::log::warn;
+use {
+    crate::error::Error,
+    futures_util::StreamExt,
+    hyper::server::accept,
+    hyper::server::conn::AddrIncoming,
+    native_tls::{Identity, TlsAcceptor},
+    std::future::ready,
+    tls_listener::TlsListener,
+    tracing::log::warn,
+};
 
 // TODO(kos): Consider avoiding doing framework and eliminating `Application`.
 //            Better than the alternative.
