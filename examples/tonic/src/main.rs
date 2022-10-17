@@ -83,7 +83,6 @@ async fn main() {
 
     Application::new(&config)
         .router(app_router)
-        .serve_tls()
         .serve()
         .await
         .unwrap();

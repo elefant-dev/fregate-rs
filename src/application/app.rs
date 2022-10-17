@@ -75,7 +75,6 @@ impl<'a, H, T> Application<'a, H, T> {
     }
 
     /// Start serving at specified host and port in [AppConfig] accepting both HTTP1 and HTTP2
-    #[cfg(not(feature = "tls"))]
     pub async fn serve(self) -> Result<()>
     where
         H: Health,
@@ -95,8 +94,8 @@ impl<'a, H, T> Application<'a, H, T> {
         self
     }
 
-    #[cfg(feature = "tls")]
     /// Serve TLS
+    #[cfg(feature = "tls")]
     pub async fn serve_tls(self, pfx: &[u8], password: &str) -> Result<()>
     where
         H: Health,
