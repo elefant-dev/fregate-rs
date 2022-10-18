@@ -23,7 +23,10 @@ pub enum Error {
     /// Error returned on init_metrics()
     #[error("Got SetRecorderError: `{0}`")]
     SetRecorderError(#[from] SetRecorderError),
-    /// Custom Error
+    /// Error returned by serde_json crate
+    #[error("Got SerdeError: `{0}`")]
+    SerdeError(#[from] serde_json::Error),
+    /// Custom fregate Error
     #[error("Got CustomError: `{0}`")]
     CustomError(String),
     /// Error returned by native-tls

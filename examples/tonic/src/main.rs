@@ -5,13 +5,11 @@ use fregate::axum::{
     Router,
 };
 use fregate::hyper::Request;
+use fregate::middleware::Attributes;
 use fregate::tokio;
 use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
 use fregate::{
-    bootstrap,
-    extensions::RouterTonicExt,
-    middleware::{grpc_trace_layer, http_trace_layer},
-    tonic, Application, Empty,
+    bootstrap, extensions::RouterTonicExt, middleware::trace_request, tonic, Application, Empty,
 };
 use resources::proto::{
     echo::{
@@ -65,21 +63,21 @@ async fn deny_middleware<B>(_req: Request<B>, _next: Next<B>) -> impl IntoRespon
 #[tokio::main]
 async fn main() {
     let config = bootstrap::<Empty, _>([]).unwrap();
+    let attributes = Attributes::new_from_config(&config);
 
     let echo_service = EchoServer::new(MyEcho);
     let hello_service = HelloServer::new(MyHello);
 
-    let rest = Router::new()
-        .route("/", get(|| async { "Hello, World!" }))
-        .layer(http_trace_layer());
+    let rest = Router::new().route("/", get(|| async { "Hello, World!" }));
 
     // Echo service will always deny request
     let grpc = Router::from_tonic_service(echo_service)
         .layer(from_fn(deny_middleware))
-        .merge(Router::from_tonic_service(hello_service))
-        .layer(grpc_trace_layer());
+        .merge(Router::from_tonic_service(hello_service));
 
-    let app_router = rest.merge(grpc);
+    let app_router = rest.merge(grpc).layer(from_fn(move |req, next| {
+        trace_request(req, next, attributes.clone())
+    }));
 
     Application::new(&config)
         .router(app_router)

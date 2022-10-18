@@ -1,4 +1,5 @@
-use fregate::middleware::http_trace_layer;
+use fregate::axum::middleware::from_fn;
+use fregate::middleware::{trace_request, Attributes};
 use fregate::tokio;
 use fregate::{
     axum::{routing::get, Router},
@@ -15,7 +16,8 @@ use tracing_subscriber::EnvFilter;
 // Will be changed to TRACE
 #[tokio::main]
 async fn main() {
-    let conf = bootstrap::<Empty, _>([]).unwrap();
+    let config = bootstrap::<Empty, _>([]).unwrap();
+    let attributes = Attributes::new_from_config(&config);
 
     tokio::spawn(async move {
         tokio::time::sleep(Duration::from_secs(10)).await;
@@ -28,9 +30,15 @@ async fn main() {
 
     let rest = Router::new()
         .route("/", get(handler))
-        .layer(http_trace_layer());
+        .layer(from_fn(move |req, next| {
+            trace_request(req, next, attributes.clone())
+        }));
 
-    Application::new(&conf).router(rest).serve().await.unwrap();
+    Application::new(&config)
+        .router(rest)
+        .serve()
+        .await
+        .unwrap();
 }
 
 async fn handler() -> &'static str {

@@ -46,9 +46,6 @@ use {
 /// Application to set up HTTP server with given config [`AppConfig`]
 #[derive(Debug)]
 pub struct Application<'a, H, T> {
-    // TODO(kos): Consider owning the `AppConfig` rather than referring it.
-    //            It would simplify `Application` code and seems natural this
-    //            way.
     config: &'a AppConfig<T>,
     health_indicator: Option<H>,
     router: Option<Router>,
