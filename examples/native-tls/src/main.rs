@@ -1,24 +1,31 @@
-use fregate::axum::{
+use axum::{
     middleware::{from_fn, Next},
     response::IntoResponse,
     routing::get,
     Router,
 };
-use fregate::hyper::Request;
-use fregate::middleware::{trace_request, Attributes};
-use fregate::tokio;
-use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
-use fregate::{bootstrap, extensions::RouterTonicExt, tonic, Application, Empty};
-use resources::proto::{
-    echo::{
-        echo_server::{Echo, EchoServer},
-        EchoRequest, EchoResponse,
-    },
-    hello::{
-        hello_server::{Hello, HelloServer},
-        HelloRequest, HelloResponse,
-    },
+use fregate::{
+    axum, bootstrap,
+    extensions::RouterTonicExt,
+    hyper,
+    middleware::{trace_request, Attributes},
+    tokio, tonic, Application, Empty,
 };
+use hyper::Request;
+use resources::{
+    proto::{
+        echo::{
+            echo_server::{Echo, EchoServer},
+            EchoRequest, EchoResponse,
+        },
+        hello::{
+            hello_server::{Hello, HelloServer},
+            HelloRequest, HelloResponse,
+        },
+    },
+    TLS_CERT, TLS_KEY,
+};
+use tonic::{Request as TonicRequest, Response as TonicResponse, Status};
 
 #[derive(Default)]
 struct MyHello;
@@ -81,10 +88,7 @@ async fn main() {
 
     Application::new(&config)
         .router(app_router)
-        .serve_tls(
-            include_bytes!("../../examples_resources/certs/identity.pfx"),
-            "check",
-        )
+        .serve_tls(TLS_CERT, TLS_KEY)
         .await
         .unwrap();
 }

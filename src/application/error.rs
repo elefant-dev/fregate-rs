@@ -30,9 +30,9 @@ pub enum Error {
     #[error("Got CustomError: `{0}`")]
     CustomError(String),
     /// Error returned by native-tls
-    #[cfg(feature = "tls")]
+    #[cfg(feature = "native-tls")]
     #[error("Got NativeTlsError: `{0}`")]
-    NativeTlsError(#[from] native_tls::Error),
+    NativeTlsError(#[from] tokio_native_tls::native_tls::Error),
 }
 
 /// fregate Result alias

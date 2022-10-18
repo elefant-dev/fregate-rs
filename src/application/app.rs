@@ -5,27 +5,14 @@ use crate::{
     health::{AlwaysReadyAndAlive, Health},
     AppConfig,
 };
+use axum::extract::connect_info::IntoMakeServiceWithConnectInfo;
 use axum::Router;
 use hyper::Server;
 use std::fmt::Debug;
 use std::net::SocketAddr;
 use tokio::signal;
+use tokio_native_tls::native_tls::{Identity, TlsAcceptor};
 use tracing::info;
-
-#[cfg(feature = "tls")]
-use {
-    crate::error::Error,
-    axum::extract::connect_info::Connected,
-    futures_util::StreamExt,
-    hyper::server::accept,
-    hyper::server::conn::AddrIncoming,
-    hyper::server::conn::AddrStream,
-    native_tls::{Identity, TlsAcceptor},
-    std::future::ready,
-    tls_listener::TlsListener,
-    tokio_native_tls::TlsStream,
-    tracing::log::warn,
-};
 
 // TODO(kos): Consider avoiding doing framework and eliminating `Application`.
 //            Better than the alternative.
@@ -80,9 +67,7 @@ impl<'a, H, T> Application<'a, H, T> {
     where
         H: Health,
     {
-        let app = build_management_router(self.health_indicator).merge_optional(self.router);
-        let app = app.into_make_service_with_connect_info::<SocketAddr>();
-        let socket = SocketAddr::new(self.config.host, self.config.port);
+        let (app, socket) = self.prepare_application::<SocketAddr>();
 
         let server = Server::bind(&socket).serve(app);
         info!(target: "server", "Started: http://{socket}");
@@ -97,35 +82,47 @@ impl<'a, H, T> Application<'a, H, T> {
     }
 
     /// Serve TLS
-    #[cfg(feature = "tls")]
-    pub async fn serve_tls(self, pfx: &[u8], password: &str) -> Result<()>
+    #[cfg(feature = "native-tls")]
+    pub async fn serve_tls(self, pem: &[u8], key: &[u8]) -> Result<()>
     where
         H: Health,
     {
-        let app = build_management_router(self.health_indicator).merge_optional(self.router);
-        let app = app.into_make_service_with_connect_info::<RemoteAddr>();
+        use futures_util::StreamExt;
+        use hyper::server::{accept, conn::AddrIncoming};
+        use std::future::ready;
+        use tls_listener::TlsListener;
+        use tracing::warn;
 
-        let socket = SocketAddr::new(self.config.host, self.config.port);
+        let (app, socket) = self.prepare_application::<RemoteAddr>();
 
-        let identity = Identity::from_pkcs12(pfx, password).map_err(Error::NativeTlsError)?;
-        let acceptor = TlsAcceptor::builder(identity).build()?;
+        let acceptor = build_acceptor(pem, key)?;
         let addr = AddrIncoming::bind(&socket)?;
 
-        let listener =
-            TlsListener::<_, tokio_native_tls::TlsAcceptor>::new_hyper(acceptor.into(), addr)
-                .filter(|conn| {
-                    if let Err(err) = conn {
-                        warn!("TLS connect error: {err}");
-                        ready(false)
-                    } else {
-                        ready(true)
-                    }
-                });
+        let listener = TlsListener::new_hyper(acceptor, addr).filter(|conn| {
+            if let Err(err) = conn {
+                warn!("TLS connect error: {err}");
+                ready(false)
+            } else {
+                ready(true)
+            }
+        });
 
         let server = Server::builder(accept::from_stream(listener)).serve(app);
 
         info!(target: "server", "Started: https://{socket}");
         Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
+    }
+
+    fn prepare_application<C>(self) -> (IntoMakeServiceWithConnectInfo<Router, C>, SocketAddr)
+    where
+        H: Health,
+    {
+        let app = build_management_router(self.health_indicator)
+            .merge_optional(self.router)
+            .into_make_service_with_connect_info::<C>();
+        let socket = SocketAddr::new(self.config.host, self.config.port);
+
+        (app, socket)
     }
 }
 
@@ -156,15 +153,28 @@ async fn shutdown_signal() {
     info!("Termination signal, starting shutdown...");
 }
 
-#[cfg(feature = "tls")]
+#[cfg(feature = "native-tls")]
+fn build_acceptor(pem: &[u8], key: &[u8]) -> Result<tokio_native_tls::TlsAcceptor> {
+    let identity = Identity::from_pkcs8(pem, key)?;
+    TlsAcceptor::builder(identity)
+        .build()
+        .map(From::from)
+        .map_err(Into::into)
+}
+
+#[cfg(feature = "native-tls")]
 #[derive(Debug, Clone)]
 /// Wrapper for SocketAddr to implement [`axum::extract::connect_info::Connected`] so
 /// we can run [`axum::routing::Router::into_make_service_with_connect_info`] with [`TlsStream<AddrStream>`]
 pub struct RemoteAddr(pub SocketAddr);
 
-#[cfg(feature = "tls")]
-impl Connected<&TlsStream<AddrStream>> for RemoteAddr {
-    fn connect_info(target: &TlsStream<AddrStream>) -> Self {
+#[cfg(feature = "native-tls")]
+impl
+    axum::extract::connect_info::Connected<
+        &tokio_native_tls::TlsStream<hyper::server::conn::AddrStream>,
+    > for RemoteAddr
+{
+    fn connect_info(target: &tokio_native_tls::TlsStream<hyper::server::conn::AddrStream>) -> Self {
         RemoteAddr(target.get_ref().get_ref().get_ref().remote_addr())
     }
 }
