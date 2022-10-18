@@ -10,11 +10,15 @@ use opentelemetry::trace::SpanContext;
 use opentelemetry::{global::get_text_map_propagator, trace::TraceContextExt, Context};
 use opentelemetry_http::HeaderExtractor;
 use std::borrow::Cow;
-use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::time::Instant;
 use tracing::{info, span, Instrument, Level, Span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
+
+#[cfg(feature = "tls")]
+use crate::RemoteAddr;
+#[cfg(not(feature = "tls"))]
+use std::net::SocketAddr;
 
 const HEADER_GRPC_STATUS: &str = "grpc-status";
 const PROTOCOL_GRPC: &str = "grpc";
@@ -235,6 +239,7 @@ impl From<&SpanContext> for TracingInfo {
     }
 }
 
+#[cfg(not(feature = "tls"))]
 /// Extracts remote Ip and Port from [`Request`]
 pub fn extract_remote_address<B>(request: &Request<B>) -> Address {
     request
@@ -243,6 +248,19 @@ pub fn extract_remote_address<B>(request: &Request<B>) -> Address {
         .map(|ConnectInfo(addr)| Address {
             ip: addr.ip().to_string(),
             port: addr.port().to_string(),
+        })
+        .unwrap_or_default()
+}
+
+#[cfg(feature = "tls")]
+/// Extracts remote Ip and Port from [`Request`]
+pub fn extract_remote_address<B>(request: &Request<B>) -> Address {
+    request
+        .extensions()
+        .get::<ConnectInfo<RemoteAddr>>()
+        .map(|ConnectInfo(addr)| Address {
+            ip: addr.0.ip().to_string(),
+            port: addr.0.port().to_string(),
         })
         .unwrap_or_default()
 }

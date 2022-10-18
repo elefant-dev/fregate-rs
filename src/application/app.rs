@@ -15,12 +15,15 @@ use tracing::info;
 #[cfg(feature = "tls")]
 use {
     crate::error::Error,
+    axum::extract::connect_info::Connected,
     futures_util::StreamExt,
     hyper::server::accept,
     hyper::server::conn::AddrIncoming,
+    hyper::server::conn::AddrStream,
     native_tls::{Identity, TlsAcceptor},
     std::future::ready,
     tls_listener::TlsListener,
+    tokio_native_tls::TlsStream,
     tracing::log::warn,
 };
 
@@ -78,9 +81,10 @@ impl<'a, H, T> Application<'a, H, T> {
         H: Health,
     {
         let app = build_management_router(self.health_indicator).merge_optional(self.router);
+        let app = app.into_make_service_with_connect_info::<SocketAddr>();
         let socket = SocketAddr::new(self.config.host, self.config.port);
 
-        let server = Server::bind(&socket).serve(app.into_make_service());
+        let server = Server::bind(&socket).serve(app);
         info!(target: "server", "Started: http://{socket}");
 
         Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
@@ -99,6 +103,8 @@ impl<'a, H, T> Application<'a, H, T> {
         H: Health,
     {
         let app = build_management_router(self.health_indicator).merge_optional(self.router);
+        let app = app.into_make_service_with_connect_info::<RemoteAddr>();
+
         let socket = SocketAddr::new(self.config.host, self.config.port);
 
         let identity = Identity::from_pkcs12(pfx, password).map_err(Error::NativeTlsError)?;
@@ -116,7 +122,7 @@ impl<'a, H, T> Application<'a, H, T> {
                     }
                 });
 
-        let server = Server::builder(accept::from_stream(listener)).serve(app.into_make_service());
+        let server = Server::builder(accept::from_stream(listener)).serve(app);
 
         info!(target: "server", "Started: https://{socket}");
         Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
@@ -148,4 +154,17 @@ async fn shutdown_signal() {
     }
 
     info!("Termination signal, starting shutdown...");
+}
+
+#[cfg(feature = "tls")]
+#[derive(Debug, Clone)]
+/// Wrapper for SocketAddr to implement [`axum::extract::connect_info::Connected`] so
+/// we can run [`axum::routing::Router::into_make_service_with_connect_info`] with [`TlsStream<AddrStream>`]
+pub struct RemoteAddr(pub SocketAddr);
+
+#[cfg(feature = "tls")]
+impl Connected<&TlsStream<AddrStream>> for RemoteAddr {
+    fn connect_info(target: &TlsStream<AddrStream>) -> Self {
+        RemoteAddr(target.get_ref().get_ref().get_ref().remote_addr())
+    }
 }
