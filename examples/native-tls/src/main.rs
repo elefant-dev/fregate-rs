@@ -12,18 +12,15 @@ use fregate::{
     tokio, tonic, Application, Empty,
 };
 use hyper::Request;
-use resources::{
-    proto::{
-        echo::{
-            echo_server::{Echo, EchoServer},
-            EchoRequest, EchoResponse,
-        },
-        hello::{
-            hello_server::{Hello, HelloServer},
-            HelloRequest, HelloResponse,
-        },
+use resources::proto::{
+    echo::{
+        echo_server::{Echo, EchoServer},
+        EchoRequest, EchoResponse,
     },
-    TLS_CERT, TLS_KEY,
+    hello::{
+        hello_server::{Hello, HelloServer},
+        HelloRequest, HelloResponse,
+    },
 };
 use tonic::{Request as TonicRequest, Response as TonicResponse, Status};
 
@@ -67,6 +64,18 @@ async fn deny_middleware<B>(_req: Request<B>, _next: Next<B>) -> impl IntoRespon
 
 #[tokio::main]
 async fn main() {
+    const TLS_KEY_FULL_PATH: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../examples_resources/certs/tls.key"
+    );
+    const TLS_CERTIFICATE_FULL_PATH: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../examples_resources/certs/tls.cert"
+    );
+
+    std::env::set_var("OTEL_SERVER_TLS_KEY_PATH", TLS_KEY_FULL_PATH);
+    std::env::set_var("OTEL_SERVER_TLS_CERT_PATH", TLS_CERTIFICATE_FULL_PATH);
+
     let config = bootstrap::<Empty, _>([]).unwrap();
     let attributes = Attributes::new_from_config(&config);
 
@@ -86,7 +95,7 @@ async fn main() {
 
     Application::new(&config)
         .router(app_router)
-        .serve_tls(TLS_CERT, TLS_KEY)
+        .serve_tls()
         .await
         .unwrap();
 }

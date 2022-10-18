@@ -23,6 +23,8 @@ const TRACE_LEVEL_PTR: &str = "/trace/level";
 const SERVICE_NAME_PTR: &str = "/service/name";
 const COMPONENT_NAME_PTR: &str = "/component/name";
 const COMPONENT_VERSION_PTR: &str = "/component/version";
+const TLS_KEY_PATH: &str = "/server/tls/key/path";
+const TLS_CERTIFICATE_PATH: &str = "/server/tls/cert/path";
 const TRACES_ENDPOINT_PTR: &str = "/exporter/otlp/traces/endpoint";
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
 const DEFAULT_SEPARATOR: &str = "_";
@@ -51,6 +53,10 @@ pub struct AppConfig<T> {
     pub port: u16,
     /// configuration for logs and traces
     pub logger: LoggerConfig,
+    /// path to TLS key file
+    pub tls_key_path: Box<str>,
+    /// path to TLS certificate file
+    pub tls_cert_path: Box<str>,
     /// field for each application specific configuration
     pub private: T,
 }
@@ -116,12 +122,16 @@ where
         let host = config.pointer_and_deserialize(HOST_PTR)?;
         let port = config.pointer_and_deserialize(PORT_PTR)?;
         let logger = LoggerConfig::deserialize(&config).map_err(Error::custom)?;
+        let tls_key_path = config.pointer_and_deserialize(TLS_KEY_PATH)?;
+        let tls_cert_path = config.pointer_and_deserialize(TLS_CERTIFICATE_PATH)?;
         let private = T::deserialize(config).map_err(Error::custom)?;
 
         Ok(AppConfig::<T> {
             host,
             port,
             logger,
+            tls_key_path,
+            tls_cert_path,
             private,
         })
     }
