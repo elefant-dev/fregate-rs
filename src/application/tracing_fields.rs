@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use valuable::{Fields, NamedField, NamedValues, StructDef, Structable, Valuable, Value, Visit};
 
-pub(crate) const LOG_MARKER_STRUCTURE_NAME: &str =
-    "log_marker:fc848aeb-3723-438e-b3c3-35162b737a98";
+pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
+    "tracing_fields:fc848aeb-3723-438e-b3c3-35162b737a98";
 
 /// Example:
 /// This is how [`TracingFields`] is serialized to logs if used with tracing_unstable feature and [`crate::log_fmt::EventFormatter`]
@@ -86,6 +86,6 @@ impl<'a> Valuable for TracingFields<'a> {
 
 impl<'a> Structable for TracingFields<'a> {
     fn definition(&self) -> StructDef<'_> {
-        StructDef::new_dynamic(LOG_MARKER_STRUCTURE_NAME, Fields::Named(&[]))
+        StructDef::new_dynamic(TRACING_FIELDS_STRUCTURE_NAME, Fields::Named(&[]))
     }
 }

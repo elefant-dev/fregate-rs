@@ -12,7 +12,7 @@ use tracing_subscriber::{
 };
 
 #[cfg(tracing_unstable)]
-use crate::tracing_fields::LOG_MARKER_STRUCTURE_NAME;
+use crate::tracing_fields::TRACING_FIELDS_STRUCTURE_NAME;
 #[cfg(tracing_unstable)]
 use valuable_serde::Serializable;
 
@@ -212,7 +212,7 @@ impl tracing::field::Visit for JsonVisitor {
         if let Some(structurable) = structurable {
             let definition = structurable.definition();
 
-            if definition.is_dynamic() && definition.name() == LOG_MARKER_STRUCTURE_NAME {
+            if definition.is_dynamic() && definition.name() == TRACING_FIELDS_STRUCTURE_NAME {
                 match serde_value.as_object() {
                     Some(value) => {
                         value.into_iter().for_each(|(k, v)| {
