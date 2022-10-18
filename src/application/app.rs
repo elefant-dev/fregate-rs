@@ -83,18 +83,28 @@ impl<'a, H, T> Application<'a, H, T> {
         use crate::error::Error;
         use futures_util::{StreamExt, TryFutureExt};
         use hyper::server::{accept, conn::AddrIncoming};
-        use std::{future::ready, io};
+        use std::{fmt, future::ready};
         use tls_listener::TlsListener;
         use tokio::{fs, try_join};
         use tracing::warn;
 
-        fn cant_load(r#type: &str) -> impl FnOnce(io::Error) -> Error + '_ {
+        fn cant_load<Arg: fmt::Display>(r#type: &str) -> impl FnOnce(Arg) -> Error + '_ {
             move |error| Error::CustomError(format!("Cant load TLS {type}: `{error}`."))
         }
 
+        let tls_cert_path = self
+            .config
+            .tls_cert_path
+            .as_deref()
+            .ok_or_else(|| cant_load("certificate")("No path present."))?;
+        let tls_key_path = self
+            .config
+            .tls_key_path
+            .as_deref()
+            .ok_or_else(|| cant_load("key")("No path present."))?;
         let (tls_cert, tls_key) = try_join!(
-            fs::read(self.config.tls_cert_path.as_ref()).map_err(cant_load("certificate")),
-            fs::read(self.config.tls_key_path.as_ref()).map_err(cant_load("key"))
+            fs::read(tls_cert_path).map_err(cant_load("certificate")),
+            fs::read(tls_key_path).map_err(cant_load("key"))
         )?;
 
         let (app, socket) = self.prepare_application::<RemoteAddr>();
