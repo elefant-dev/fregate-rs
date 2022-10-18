@@ -44,6 +44,6 @@ impl Health for AlwaysReadyAndAlive {
     }
 
     async fn ready(&self) -> HealthResponse {
-        HealthResponse::UNAVAILABLE
+        HealthResponse::OK
     }
 }
