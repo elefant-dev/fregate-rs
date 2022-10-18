@@ -67,8 +67,6 @@ async fn deny_middleware<B>(_req: Request<B>, _next: Next<B>) -> impl IntoRespon
 
 #[tokio::main]
 async fn main() {
-    std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
-
     let config = bootstrap::<Empty, _>([]).unwrap();
     let attributes = Attributes::new_from_config(&config);
 

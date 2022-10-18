@@ -11,7 +11,6 @@ use hyper::Server;
 use std::fmt::Debug;
 use std::net::SocketAddr;
 use tokio::signal;
-use tokio_native_tls::native_tls::{Identity, TlsAcceptor};
 use tracing::info;
 
 // TODO(kos): Consider avoiding doing framework and eliminating `Application`.
@@ -155,6 +154,8 @@ async fn shutdown_signal() {
 
 #[cfg(feature = "native-tls")]
 fn build_acceptor(pem: &[u8], key: &[u8]) -> Result<tokio_native_tls::TlsAcceptor> {
+    use tokio_native_tls::native_tls::{Identity, TlsAcceptor};
+
     let identity = Identity::from_pkcs8(pem, key)?;
     TlsAcceptor::builder(identity)
         .build()
