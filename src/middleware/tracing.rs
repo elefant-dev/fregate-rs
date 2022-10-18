@@ -1,154 +1,310 @@
-use axum::http::header::CONTENT_TYPE;
-use hyper::{header::HeaderMap, header::HeaderValue, Request, Response};
+use crate::AppConfig;
+use axum::extract::{ConnectInfo, MatchedPath};
+use axum::http::HeaderMap;
+use axum::middleware::Next;
+use axum::response::IntoResponse;
+use hyper::header::CONTENT_TYPE;
+use hyper::Request;
 use metrics::{histogram, increment_counter};
-use opentelemetry::{
-    global::get_text_map_propagator,
-    trace::{SpanId, TraceContextExt, TraceId},
-    Context,
-};
+use opentelemetry::trace::SpanContext;
+use opentelemetry::{global::get_text_map_propagator, trace::TraceContextExt, Context};
 use opentelemetry_http::HeaderExtractor;
-use std::time::Duration;
-use tower_http::{
-    classify::{GrpcErrorsAsFailures, ServerErrorsAsFailures, SharedClassifier},
-    trace::{MakeSpan, OnRequest, OnResponse, TraceLayer},
-};
-use tracing::{field::display, info, span, Level, Span};
+use std::borrow::Cow;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use tokio::time::Instant;
+use tracing::{info, span, Instrument, Level, Span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
-/// Returns [`TraceLayer`] with basic functionality for logging incoming HTTP request and outgoing HTTP response. Creates info span on request. Uses [`ServerErrorsAsFailures`] as classifier to log errors.
-#[allow(clippy::type_complexity)]
-pub fn http_trace_layer() -> TraceLayer<
-    SharedClassifier<ServerErrorsAsFailures>,
-    BasicMakeSpan,
-    BasicOnRequest,
-    BasicOnResponse,
-> {
-    TraceLayer::new_for_http()
-        .make_span_with(BasicMakeSpan {})
-        .on_response(BasicOnResponse {})
-        .on_request(BasicOnRequest {})
-}
+const HEADER_GRPC_STATUS: &str = "grpc-status";
+const PROTOCOL_GRPC: &str = "grpc";
+const PROTOCOL_HTTP: &str = "http";
+const REQ_RESP: &str = "reqresp";
 
-/// Returns [`TraceLayer`] with basic functionality for logging incoming HTTP request and outgoing HTTP response. Creates info span on request. Uses [`GrpcErrorsAsFailures`] as classifier to log errors.
-#[allow(clippy::type_complexity)]
-pub fn grpc_trace_layer() -> TraceLayer<
-    SharedClassifier<GrpcErrorsAsFailures>,
-    BasicMakeSpan,
-    BasicOnRequest,
-    BasicOnResponse,
-> {
-    TraceLayer::new_for_grpc()
-        .make_span_with(BasicMakeSpan {})
-        .on_response(BasicOnResponse {})
-        .on_request(BasicOnRequest {})
-}
+#[derive(Default, Debug, Clone)]
+/// Structure which contains needed for [`trace_request`] [`Span`] attributes
+pub struct Attributes(Arc<Inner>);
 
-/// Creates info span on incoming request
-#[derive(Clone, Copy, Debug)]
-pub struct BasicMakeSpan;
+impl Attributes {
+    /// Creates new [`Attributes`] from [`AppConfig`]
+    pub fn new_from_config<T>(config: &AppConfig<T>) -> Self {
+        Self::new(&config.logger.service_name, &config.logger.component_name)
+    }
 
-impl<B> MakeSpan<B> for BasicMakeSpan {
-    fn make_span(&mut self, request: &Request<B>) -> Span {
-        let parent_context = extract_context(request);
-
-        let span = span!(
-            Level::INFO,
-            "request",
-            method = tracing::field::Empty,
-            uri = tracing::field::Empty
-        );
-
-        span.set_parent(parent_context);
-        span
+    /// Creates new [`Attributes`]
+    pub fn new(service_name: &str, component_name: &str) -> Self {
+        Self(Arc::new(Inner {
+            service_name: service_name.to_owned(),
+            component_name: component_name.to_owned(),
+        }))
     }
 }
 
-/// Logs message on request: "Incoming Request: method: \[{method}], uri: {uri}, x-b3-traceid: {trace_id}".
-#[derive(Clone, Copy, Debug)]
-pub struct BasicOnRequest;
+#[derive(Default, Debug, Clone)]
+struct Inner {
+    service_name: String,
+    component_name: String,
+}
 
-impl<B> OnRequest<B> for BasicOnRequest {
-    fn on_request(&mut self, request: &Request<B>, span: &Span) {
-        let (trace_id, span_id) = get_trace_and_span_ids(span);
-        let method = request.method();
-        let uri = request.uri();
-        let protocol = get_protocol_type(request.headers());
-
-        info!("Incoming Request: method: [{method}], uri: {uri}, x-b3-traceid: {trace_id}, x-b3-spanid: {span_id}");
-
-        span.record("method", &display(method));
-        span.record("uri", &display(uri));
-
-        // TODO: remove remove .to_string()
-        let labels = [
-            ("protocol", protocol.to_string()),
-            ("channel", "reqresp".to_string()),
-        ];
-
-        increment_counter!("traffic_count_total", &labels);
-        increment_counter!("traffic_sum_total");
+/// Fn to be used with [`axum::middleware::from_fn`]
+pub async fn trace_request<B>(
+    req: Request<B>,
+    next: Next<B>,
+    attributes: Attributes,
+) -> impl IntoResponse {
+    if is_grpc(req.headers()) {
+        trace_grpc_request(req, next, &attributes)
+            .await
+            .into_response()
+    } else {
+        trace_http_request(req, next, &attributes)
+            .await
+            .into_response()
     }
 }
 
-/// Logs message on response: "Outgoing Response: status code: {status}, latency: {latency}ms, x-b3-traceid: {trace_id}".
-#[derive(Clone, Copy, Debug)]
-pub struct BasicOnResponse;
-impl<B> OnResponse<B> for BasicOnResponse {
-    fn on_response(self, response: &Response<B>, latency: Duration, span: &Span) {
-        let (trace_id, span_id) = get_trace_and_span_ids(span);
-        let status = response.status();
-        let latency_as_millis = latency.as_millis();
-        let latency_as_sec = latency.as_secs_f64();
-        let protocol = get_protocol_type(response.headers());
+async fn trace_http_request<B>(
+    request: Request<B>,
+    next: Next<B>,
+    attributes: &Attributes,
+) -> impl IntoResponse {
+    let span = make_http_span();
+    let parent_context = extract_context(&request);
+    span.set_parent(parent_context);
 
-        info!(
-            "Outgoing Response: status code: {status}, latency: {latency_as_millis}ms, x-b3-traceid: {trace_id}, x-b3-spanid: {span_id}"
-        );
+    // log request out of span
+    let tracing_info = extract_tracing_info(&span);
+    let req_method = request.method().to_string();
+    let remote_address = extract_remote_address(&request);
 
-        // TODO: remove remove .to_string()
-        let labels = [
-            ("protocol", protocol.to_string()),
-            ("channel", "reqresp".to_string()),
-            ("code", status.to_string()),
-        ];
+    span.record("service", &attributes.0.service_name);
+    span.record("component", &attributes.0.component_name);
+    span.record("http.method", &req_method);
+    span.record("net.peer.ip", remote_address.ip);
+    span.record("net.peer.port", remote_address.port);
 
-        histogram!(
-            "processing_duration_seconds_sum_total",
-            latency_as_sec,
-            &labels
-        );
+    let url = if let Some(matched_path) = request.extensions().get::<MatchedPath>() {
+        matched_path.as_str()
+    } else {
+        request.uri().path()
+    }
+    .to_owned();
+
+    info!(
+        method = &req_method,
+        url = &url,
+        traceId = tracing_info.trace_id,
+        spanId = tracing_info.span_id,
+        ">>> [Request] [{req_method}] [{url}]"
+    );
+
+    let labels = [("protocol", PROTOCOL_HTTP), ("channel", REQ_RESP)];
+
+    increment_counter!("traffic_count_total", &labels);
+    increment_counter!("traffic_sum_total");
+
+    let duration = Instant::now();
+
+    let response = next.run(request).instrument(span).await;
+    let elapsed = duration.elapsed();
+
+    let duration = elapsed.as_millis();
+    let duration_in_sec = elapsed.as_secs_f64();
+
+    // log response out of span
+    let status = response.status();
+
+    let labels = [
+        ("protocol", Cow::Borrowed(PROTOCOL_HTTP)),
+        ("channel", Cow::Borrowed(REQ_RESP)),
+        ("code", Cow::Owned(status.to_string())),
+    ];
+
+    histogram!(
+        "processing_duration_seconds_sum_total",
+        duration_in_sec,
+        &labels
+    );
+
+    info!(
+        method = &req_method,
+        url = &url,
+        traceId = tracing_info.trace_id,
+        spanId = tracing_info.span_id,
+        duration = duration,
+        statusCode = status.as_str(),
+        "[Response] <<< [{req_method}] [{url}] [{PROTOCOL_HTTP}] [{status}] in [{duration}ms]"
+    );
+
+    response
+}
+
+async fn trace_grpc_request<B>(
+    request: Request<B>,
+    next: Next<B>,
+    attributes: &Attributes,
+) -> impl IntoResponse {
+    let span = make_grpc_span();
+    let parent_context = extract_context(&request);
+    span.set_parent(parent_context);
+
+    let tracing_info = extract_tracing_info(&span);
+    let req_method = request.method().to_string();
+    let grpc_method = request.uri().path().to_owned();
+    let remote_address = extract_remote_address(&request);
+
+    // log request out of span
+    info!(
+        url = &grpc_method,
+        traceId = tracing_info.trace_id,
+        spanId = tracing_info.span_id,
+        ">>> [Request] [{req_method}] [{grpc_method}]"
+    );
+
+    let labels = [("protocol", PROTOCOL_GRPC), ("channel", REQ_RESP)];
+
+    span.record("service", &attributes.0.service_name);
+    span.record("component", &attributes.0.component_name);
+    span.record("rpc.method", &grpc_method);
+    span.record("net.peer.ip", remote_address.ip);
+    span.record("net.peer.port", remote_address.port);
+
+    increment_counter!("traffic_count_total", &labels);
+    increment_counter!("traffic_sum_total");
+
+    let duration = Instant::now();
+    let response = next.run(request).instrument(span).await;
+    let elapsed = duration.elapsed();
+
+    let duration = elapsed.as_millis();
+    let duration_in_sec = elapsed.as_secs_f64();
+
+    // log response out of span
+    let status = extract_grpc_status(response.headers())
+        .unwrap_or_default()
+        .to_string();
+
+    let labels = [
+        ("protocol", Cow::Borrowed(PROTOCOL_GRPC)),
+        ("channel", Cow::Borrowed(REQ_RESP)),
+        ("code", Cow::Owned(status.clone())),
+    ];
+
+    histogram!(
+        "processing_duration_seconds_sum_total",
+        duration_in_sec,
+        &labels
+    );
+
+    info!(
+        url = &grpc_method,
+        traceId = tracing_info.trace_id,
+        spanId = tracing_info.span_id,
+        duration = duration,
+        statusCode = status,
+        "[Response] <<< [{req_method}] [{grpc_method}] [{PROTOCOL_GRPC}] [{status}] in [{duration}ms]"
+    );
+
+    response
+}
+
+#[derive(Debug, Default, Clone)]
+/// Saves ip and port as [`String`]
+pub struct Address {
+    ip: String,
+    port: String,
+}
+
+#[derive(Debug, Default, Clone)]
+/// Saves trace_id and span_id as [`String`]
+pub struct TracingInfo {
+    trace_id: String,
+    span_id: String,
+}
+
+impl From<&SpanContext> for TracingInfo {
+    fn from(ctx: &SpanContext) -> Self {
+        if ctx.is_valid() {
+            TracingInfo {
+                trace_id: ctx.trace_id().to_string(),
+                span_id: ctx.span_id().to_string(),
+            }
+        } else {
+            Default::default()
+        }
     }
 }
 
-/// Extracts context from request headers
+/// Extracts remote Ip and Port from [`Request`]
+pub fn extract_remote_address<B>(request: &Request<B>) -> Address {
+    request
+        .extensions()
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|ConnectInfo(addr)| Address {
+            ip: addr.ip().to_string(),
+            port: addr.port().to_string(),
+        })
+        .unwrap_or_default()
+}
+
+/// Extracts grpc status from [`HeaderMap`]
+pub fn extract_grpc_status(headers: &HeaderMap) -> Option<u8> {
+    headers
+        .get(HEADER_GRPC_STATUS)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse().ok())
+}
+
+/// Extracts [`Context`] from [`Request`]
 pub fn extract_context<B>(request: &Request<B>) -> Context {
     get_text_map_propagator(|propagator| propagator.extract(&HeaderExtractor(request.headers())))
 }
 
-/// Get TraceId from given [`Span`]
-pub fn get_trace_and_span_ids(span: &Span) -> (TraceId, SpanId) {
+/// Extracts [`TracingInfo`] from [`Span`]
+pub fn extract_tracing_info(span: &Span) -> TracingInfo {
     let context = span.context();
     let span_ref = context.span();
     let span_context = span_ref.span_context();
 
-    // when logging trace_id, firstly set parent context for current span and then take from it trace_id
-    // if context were invalid it will be generated, so we log correct trace_id
-    if span_context.is_valid() {
-        (span_context.trace_id(), span_context.span_id())
-    } else {
-        (TraceId::INVALID, SpanId::INVALID)
-    }
+    span_context.into()
 }
 
-fn get_protocol_type(headers: &HeaderMap<HeaderValue>) -> &str {
-    headers
-        .get(CONTENT_TYPE)
-        .map(|content_type| {
-            if content_type.as_bytes().starts_with(b"application/grpc") {
-                "grpc"
-            } else {
-                "http"
-            }
-        })
-        .unwrap_or("http")
+pub(crate) fn is_grpc(headers: &HeaderMap) -> bool {
+    if let Some(content_type) = headers.get(CONTENT_TYPE) {
+        if content_type.as_bytes().starts_with(b"application/grpc") {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn make_http_span() -> Span {
+    span!(
+        Level::INFO,
+        "http-request",
+        service = tracing::field::Empty,
+        component = tracing::field::Empty,
+        http.method = tracing::field::Empty,
+        http.status_code = tracing::field::Empty,
+        net.peer.ip = tracing::field::Empty,
+        net.peer.port = tracing::field::Empty,
+        trace.level = "INFO"
+    )
+}
+
+fn make_grpc_span() -> Span {
+    span!(
+        Level::INFO,
+        "grpc-request",
+        service = tracing::field::Empty,
+        component = tracing::field::Empty,
+        rpc.system = "grpc",
+        rpc.method = tracing::field::Empty,
+        rpc.grpc.stream.id = tracing::field::Empty,
+        rpc.grpc.status_code = tracing::field::Empty,
+        net.peer.ip = tracing::field::Empty,
+        net.peer.port = tracing::field::Empty,
+        trace.level = "INFO"
+    )
 }

@@ -13,6 +13,8 @@ mod app_config_from_env {
         std::env::set_var("TEST_HOST", "::1");
         std::env::set_var("TEST_PORT", "1234");
         std::env::set_var("TEST_SERVICE_NAME", "TEST");
+        std::env::set_var("TEST_COMPONENT_NAME", "COMPONENT_TEST");
+        std::env::set_var("TEST_COMPONENT_VERSION", "1.0.0");
         std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
         std::env::set_var("TEST_TRACE_LEVEL", "debug");
         std::env::set_var("TEST_LOG_LEVEL", "trace");
@@ -34,6 +36,9 @@ mod app_config_from_env {
             logger.traces_endpoint,
             Some("http://0.0.0.0:4317".to_owned())
         );
+        assert_eq!(logger.service_name, "TEST".to_owned());
+        assert_eq!(logger.component_name, "COMPONENT_TEST".to_owned());
+        assert_eq!(logger.version, "1.0.0".to_owned());
         assert_eq!(logger.service_name, "TEST".to_owned());
         assert_eq!(logger.trace_level, "debug".to_owned());
         assert_eq!(logger.log_level, "trace".to_owned());

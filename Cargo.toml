@@ -1,6 +1,6 @@
 [package]
 name = "fregate"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/elefant-dev/fregate-rs"
@@ -31,11 +31,16 @@ time = "0.3.14"
 tokio = { version = "1.0", features = ["full"] }
 tonic = "0.8.0"
 tower = { version = "0.4", features = ["full"] }
-tower-http = { version = "0.3", features = ["full"] }
-tracing = "0.1"
+tower-http = "0.3"
+tracing = { version = "0.1.37", features = ["valuable"] }
 tracing-subscriber = { version = "0.3.11", features = ["env-filter", "fmt", "std", "json", "time", "tracing-log", "registry"] }
 tracing-opentelemetry = "0.18.0"
 opentelemetry = { version = "0.18.0", features = ["rt-tokio"]}
 opentelemetry-otlp = { version = "0.11.0" }
 opentelemetry-http = "0.7.0"
 opentelemetry-zipkin = "0.16.0"
+valuable = "0.1.0"
+valuable-serde = "0.1.0"
+
+[dev-dependencies]
+valuable-derive = "0.1.0"

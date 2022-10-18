@@ -4,8 +4,8 @@ use ::tracing::info;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
-/// Reads AppConfig and [`init_tracing`].\
-/// Return Error if fails to read [`AppConfig`] or [`init_tracing`].\
+/// Reads AppConfig and [`init_tracing`].
+/// Return Error if fails to read [`AppConfig`] or [`init_tracing`].
 /// Return Error if called twice because of internal call to tracing_subscriber::registry().try_init().
 ///```no_run
 /// use fregate::*;
@@ -13,7 +13,6 @@ use std::fmt::Debug;
 ///
 /// #[tokio::main]
 /// async fn main() {
-///     
 ///    std::env::set_var("TEST_PORT", "3333");
 ///    std::env::set_var("TEST_NUMBER", "1010");
 ///
@@ -39,15 +38,19 @@ where
 
     let LoggerConfig {
         log_level,
+        version,
         trace_level,
         service_name,
+        component_name,
         traces_endpoint,
     } = &config.logger;
 
     init_tracing(
         log_level,
         trace_level,
+        version,
         service_name,
+        component_name,
         traces_endpoint.as_deref(),
     )?;
 
