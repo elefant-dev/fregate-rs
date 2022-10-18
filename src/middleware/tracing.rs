@@ -15,11 +15,6 @@ use tokio::time::Instant;
 use tracing::{info, span, Instrument, Level, Span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
-#[cfg(feature = "tls")]
-use crate::RemoteAddr;
-#[cfg(not(feature = "tls"))]
-use std::net::SocketAddr;
-
 const HEADER_GRPC_STATUS: &str = "grpc-status";
 const PROTOCOL_GRPC: &str = "grpc";
 const PROTOCOL_HTTP: &str = "http";
@@ -239,12 +234,12 @@ impl From<&SpanContext> for TracingInfo {
     }
 }
 
-#[cfg(not(feature = "tls"))]
+#[cfg(not(feature = "native-tls"))]
 /// Extracts remote Ip and Port from [`Request`]
 pub fn extract_remote_address<B>(request: &Request<B>) -> Address {
     request
         .extensions()
-        .get::<ConnectInfo<SocketAddr>>()
+        .get::<ConnectInfo<std::net::SocketAddr>>()
         .map(|ConnectInfo(addr)| Address {
             ip: addr.ip().to_string(),
             port: addr.port().to_string(),
@@ -252,12 +247,12 @@ pub fn extract_remote_address<B>(request: &Request<B>) -> Address {
         .unwrap_or_default()
 }
 
-#[cfg(feature = "tls")]
+#[cfg(feature = "native-tls")]
 /// Extracts remote Ip and Port from [`Request`]
 pub fn extract_remote_address<B>(request: &Request<B>) -> Address {
     request
         .extensions()
-        .get::<ConnectInfo<RemoteAddr>>()
+        .get::<ConnectInfo<crate::RemoteAddr>>()
         .map(|ConnectInfo(addr)| Address {
             ip: addr.0.ip().to_string(),
             port: addr.0.port().to_string(),
