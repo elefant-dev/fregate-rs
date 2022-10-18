@@ -12,7 +12,7 @@ use tracing_subscriber::{
 };
 
 #[cfg(tracing_unstable)]
-use crate::log_marker::LOG_MARKER_STRUCTURE_NAME;
+use crate::tracing_fields::LOG_MARKER_STRUCTURE_NAME;
 #[cfg(tracing_unstable)]
 use valuable_serde::Serializable;
 
@@ -291,7 +291,7 @@ mod test {
     }
 
     #[cfg(tracing_unstable)]
-    use crate::log_marker::LogMarker;
+    use crate::tracing_fields::TracingFields;
 
     #[derive(Clone, Debug)]
     struct MockWriter {
@@ -546,7 +546,7 @@ mod test {
             .with_writer(mock_writer.clone())
             .finish();
 
-        let new_marker = LogMarker::new();
+        let new_marker = TracingFields::new();
 
         with_default(subscriber, || {
             tracing::info!(marker = new_marker.as_value(), "marker_test");
@@ -575,7 +575,7 @@ mod test {
             map: HashMap::from_iter([(0, 1), (2, 3)]),
         };
 
-        let mut marker = LogMarker::with_capacity(4);
+        let mut marker = TracingFields::with_capacity(4);
         marker.insert("number", &test.numnber);
         marker.insert("string", &test.string);
         marker.insert("vector", &test.vector);

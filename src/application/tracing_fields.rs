@@ -7,9 +7,9 @@ pub(crate) const LOG_MARKER_STRUCTURE_NAME: &str =
     "log_marker:fc848aeb-3723-438e-b3c3-35162b737a98";
 
 /// Example:
-/// This is how [`LogMarker`] is serialized to logs if used with tracing_unstable feature and [`crate::log_fmt::EventFormatter`]
+/// This is how [`TracingFields`] is serialized to logs if used with tracing_unstable feature and [`crate::log_fmt::EventFormatter`]
 ///```rust
-/// use fregate::{log_marker::LogMarker, logging::init_tracing, tokio, tracing::info};
+/// use fregate::{tracing_fields::TracingFields, logging::init_tracing, tokio, tracing::info};
 /// use fregate::valuable::Valuable;
 ///
 /// const STATIC: &str = "STATIC";
@@ -18,7 +18,7 @@ pub(crate) const LOG_MARKER_STRUCTURE_NAME: &str =
 /// async fn main() {
 ///     init_tracing("info", "info", "0.0.0", "fregate", "marker", None).unwrap();
 ///
-///     let mut marker = LogMarker::with_capacity(10);
+///     let mut marker = TracingFields::with_capacity(10);
 ///     let local_key = "NON_STATIC".to_owned();
 ///     let local_var = 1000;
 ///
@@ -34,17 +34,17 @@ pub(crate) const LOG_MARKER_STRUCTURE_NAME: &str =
 ///  {"component":"marker","service":"fregate","version":"0.0.0","NON_STATIC":1000,"STATIC":1000,"str":"str","msg":"message","target":"check_fregate","LogLevel":"INFO","time":1665656359172240000,"timestamp":"2022-10-13T10:19:19.172Z"}
 ///```
 #[derive(Debug, Default)]
-pub struct LogMarker<'a> {
+pub struct TracingFields<'a> {
     fields: HashMap<&'a str, Value<'a>>,
 }
 
-impl<'a> LogMarker<'a> {
-    /// Creates empty [`LogMarker`]
+impl<'a> TracingFields<'a> {
+    /// Creates empty [`TracingFields`]
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Creates empty [`LogMarker`] with specified capacity
+    /// Creates empty [`TracingFields`] with specified capacity
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             fields: HashMap::with_capacity(capacity),
@@ -69,7 +69,7 @@ impl<'a> LogMarker<'a> {
     }
 }
 
-impl<'a> Valuable for LogMarker<'a> {
+impl<'a> Valuable for TracingFields<'a> {
     fn as_value(&self) -> Value<'_> {
         Value::Structable(self)
     }
@@ -84,7 +84,7 @@ impl<'a> Valuable for LogMarker<'a> {
     }
 }
 
-impl<'a> Structable for LogMarker<'a> {
+impl<'a> Structable for TracingFields<'a> {
     fn definition(&self) -> StructDef<'_> {
         StructDef::new_dynamic(LOG_MARKER_STRUCTURE_NAME, Fields::Named(&[]))
     }
