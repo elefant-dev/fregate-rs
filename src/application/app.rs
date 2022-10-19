@@ -97,11 +97,13 @@ impl<'a, H, T> Application<'a, H, T> {
             .tls_cert_path
             .as_deref()
             .ok_or_else(|| cant_load("certificate")("No path present."))?;
+
         let tls_key_path = self
             .config
             .tls_key_path
             .as_deref()
             .ok_or_else(|| cant_load("key")("No path present."))?;
+
         let (tls_cert, tls_key) = try_join!(
             fs::read(tls_cert_path).map_err(cant_load("certificate")),
             fs::read(tls_key_path).map_err(cant_load("key"))

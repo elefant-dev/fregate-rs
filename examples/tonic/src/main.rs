@@ -38,8 +38,8 @@ async fn main() {
 }
 
 /*
-    grpcurl -plaintext -import-path ./proto -proto hello.proto -d '{"name": "Tonic"}' 0.0.0.0:8000 hello.Hello/SayHello
-    grpcurl -plaintext -import-path ./proto -proto echo.proto -d '{"message": "Echo"}' 0.0.0.0:8000 echo.Echo/ping
+    grpcurl -plaintext -import-path ./examples/examples_resources/proto -proto hello.proto -d '{"name": "Tonic"}' 0.0.0.0:8000 hello.Hello/SayHello
+    grpcurl -plaintext -import-path ./examples/examples_resources/proto -proto echo.proto -d '{"message": "Echo"}' 0.0.0.0:8000 echo.Echo/ping
     curl http://0.0.0.0:8000
     curl http://0.0.0.0:8000/health
     curl http://0.0.0.0:8000/ready

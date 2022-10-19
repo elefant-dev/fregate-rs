@@ -3,7 +3,9 @@ use fregate::{
     axum, bootstrap,
     extensions::RouterTonicExt,
     middleware::{trace_request, Attributes},
-    tokio, Application, Empty,
+    tokio, Application,
+    ConfigSource::EnvPrefix,
+    Empty,
 };
 use resources::{
     deny_middleware,
@@ -22,10 +24,10 @@ async fn main() {
         "/../examples_resources/certs/tls.cert"
     );
 
-    std::env::set_var("OTEL_SERVER_TLS_KEY_PATH", TLS_KEY_FULL_PATH);
-    std::env::set_var("OTEL_SERVER_TLS_CERT_PATH", TLS_CERTIFICATE_FULL_PATH);
+    std::env::set_var("TEST_SERVER_TLS_KEY_PATH", TLS_KEY_FULL_PATH);
+    std::env::set_var("TEST_SERVER_TLS_CERT_PATH", TLS_CERTIFICATE_FULL_PATH);
 
-    let config = bootstrap::<Empty, _>([]).unwrap();
+    let config = bootstrap::<Empty, _>([EnvPrefix("TEST")]).unwrap();
     let attributes = Attributes::new_from_config(&config);
 
     let echo_service = EchoServer::new(MyEcho);
@@ -50,8 +52,8 @@ async fn main() {
 }
 
 /*
-    grpcurl -insecure -import-path ./proto -proto hello.proto -d '{"name": "Tonic"}' 0.0.0.0:8000 hello.Hello/SayHello
-    grpcurl -insecure -import-path ./proto -proto echo.proto -d '{"message": "Echo"}' 0.0.0.0:8000 echo.Echo/ping
+    grpcurl -insecure -import-path ./examples/examples_resources/proto -proto hello.proto -d '{"name": "Tonic"}' 0.0.0.0:8000 hello.Hello/SayHello
+    grpcurl -insecure -import-path ./examples/examples_resources/proto -proto echo.proto -d '{"message": "Echo"}' 0.0.0.0:8000 echo.Echo/ping
     curl --insecure https://0.0.0.0:8000
     curl --insecure https://0.0.0.0:8000/health
     curl --insecure https://0.0.0.0:8000/ready
