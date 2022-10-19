@@ -1,37 +1,13 @@
 #![allow(clippy::derive_partial_eq_without_eq)]
 
-use fregate::axum::middleware::from_fn;
-use fregate::axum::{routing::get, Router};
-use fregate::middleware::Attributes;
-use fregate::tokio;
-use fregate::tonic::{self, Request as TonicRequest, Response as TonicResponse, Status};
+use axum::{middleware::from_fn, routing::get, Router};
 use fregate::{
-    bootstrap, extensions::RouterTonicExt, middleware::trace_request, Application, Empty,
+    axum, bootstrap,
+    extensions::RouterTonicExt,
+    middleware::{trace_request, Attributes},
+    tokio, Application, Empty,
 };
-use resources::{
-    proto::{
-        echo::echo_server::{Echo, EchoServer},
-        echo::{EchoRequest, EchoResponse},
-    },
-    FILE_DESCRIPTOR_SET,
-};
-
-#[derive(Default)]
-struct MyEcho;
-
-#[tonic::async_trait]
-impl Echo for MyEcho {
-    async fn ping(
-        &self,
-        request: TonicRequest<EchoRequest>,
-    ) -> Result<TonicResponse<EchoResponse>, Status> {
-        let reply = EchoResponse {
-            message: request.into_inner().message,
-        };
-
-        Ok(TonicResponse::new(reply))
-    }
-}
+use resources::{grpc::MyEcho, proto::echo::echo_server::EchoServer, FILE_DESCRIPTOR_SET};
 
 #[tokio::main]
 async fn main() {
