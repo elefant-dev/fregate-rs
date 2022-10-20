@@ -2,6 +2,7 @@ use crate::{
     application::{app::shutdown_signal, tls_config::RemoteAddr},
     error::Result,
 };
+use async_stream::try_stream;
 use axum::Router;
 use futures_util::{stream::Stream, StreamExt, TryStreamExt};
 use hyper::{server::accept, Server};
@@ -39,23 +40,23 @@ async fn bind_tls_stream(
     acceptor: TlsAcceptor,
 ) -> Result<impl Stream<Item = Result<TlsStream<TcpStream>>>> {
     let listener = TcpListener::bind(socket).await?;
-    let stream = TcpListenerStream::new(listener)
-        .into_stream()
-        .then(move |stream| {
-            // TODO: Wrap into Arc?
-            let acceptor = acceptor.clone();
-            async move { Ok(acceptor.accept(stream?).await?) }
-        })
-        .filter(|tls_stream| {
-            let ret = if let Err(error) = tls_stream {
-                error!("Got error on incoming: `{error}`.");
-                false
-            } else {
-                true
-            };
+    let mut stream = TcpListenerStream::new(listener);
 
-            ready(ret)
-        });
+    let ret = try_stream! {
+        while let Some(stream) = stream.try_next().await? {
+            yield acceptor.accept(stream).await?;
+        }
+    }
+    .filter(|tls_stream| {
+        let ret = if let Err(error) = tls_stream {
+            error!("Got error on incoming: `{error}`.");
+            false
+        } else {
+            true
+        };
 
-    Ok(stream)
+        ready(ret)
+    });
+
+    Ok(ret)
 }

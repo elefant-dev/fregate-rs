@@ -13,7 +13,7 @@ keywords = ["http", "grpc", "service"]
 members = ["examples/*"]
 
 [features]
-native-tls = ["futures-util", "tokio/fs", "tokio/net", "tokio-stream", "tokio-native-tls"]
+native-tls = ["async-stream", "futures-util", "tokio/fs", "tokio/net", "tokio-stream", "tokio-native-tls"]
 native-tls-vendored = ["native-tls/vendored"]
 
 [dependencies]
@@ -46,6 +46,7 @@ opentelemetry-zipkin = "0.16.0"
 valuable = "0.1.0"
 valuable-serde = "0.1.0"
 
+async-stream = { version = "0.3.3", optional = true }
 futures-util = { version = "0.3.25", optional = true }
 tokio-stream = { version = "0.1.11", optional = true, features = ["net"] }
 tokio-native-tls = { version = "0.3.0", optional = true }
