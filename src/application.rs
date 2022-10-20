@@ -3,6 +3,8 @@ mod bootstrap;
 mod configuration;
 mod management;
 mod metrics;
+#[cfg(feature = "native-tls")]
+pub(crate) mod tls_config;
 
 pub mod error;
 pub mod health;

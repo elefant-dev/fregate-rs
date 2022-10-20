@@ -1,3 +1,6 @@
+#[cfg(feature = "native-tls")]
+mod tls;
+
 use crate::{
     build_management_router,
     error::Result,
@@ -108,7 +111,7 @@ impl<'a, H, T> Application<'a, H, T> {
 
         let (router, application_socket) = self.prepare_router();
 
-        run_tls_service(&application_socket, router, &tls_cert, &tls_key).await
+        tls::run_service(&application_socket, router, &tls_cert, &tls_key).await
     }
 
     fn prepare_router(self) -> (Router, SocketAddr)
@@ -151,35 +154,6 @@ async fn shutdown_signal() {
 async fn run_service(socket: &SocketAddr, router: Router) -> Result<()> {
     let app = router.into_make_service_with_connect_info::<SocketAddr>();
     let server = Server::bind(socket).serve(app);
-
-    info!(target: "server", "Started: http://{socket}");
-
-    Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
-}
-
-#[cfg(feature = "native-tls")]
-async fn run_tls_service(
-    socket: &SocketAddr,
-    router: Router,
-    pem: &[u8],
-    key: &[u8],
-) -> Result<()> {
-    use hyper::server::accept;
-    use native_tls::Identity;
-    use tokio::net::TcpListener;
-    use tokio_native_tls::TlsAcceptor;
-    use tokio_stream::wrappers::TcpListenerStream;
-    use tonic_native_tls::{native_tls, tokio_native_tls};
-
-    let identity = Identity::from_pkcs8(pem, key)?;
-    let acceptor = TlsAcceptor::from(native_tls::TlsAcceptor::new(identity)?);
-
-    let listener = TcpListener::bind(socket).await?;
-    let stream = TcpListenerStream::new(listener);
-    let incoming = accept::from_stream(tonic_native_tls::incoming(stream, acceptor));
-
-    let app = router.into_make_service_with_connect_info::<SocketAddr>();
-    let server = Server::builder(incoming).serve(app);
 
     info!(target: "server", "Started: http://{socket}");
 

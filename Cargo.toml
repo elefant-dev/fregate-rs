@@ -13,8 +13,8 @@ keywords = ["http", "grpc", "service"]
 members = ["examples/*"]
 
 [features]
-native-tls = ["futures-util", "tokio/fs", "tokio/net", "tokio-stream", "tonic-native-tls"]
-native-tls-vendored = ["native-tls", "tonic-native-tls/vendored"]
+native-tls = ["futures-util", "tokio/fs", "tokio/net", "tokio-stream", "tokio-native-tls"]
+native-tls-vendored = ["native-tls/vendored"]
 
 [dependencies]
 axum = { version = "0.5.7", features = ["headers", "http1", "http2", "json", "matched-path", "original-uri", "ws"] }
@@ -48,8 +48,8 @@ valuable-serde = "0.1.0"
 
 futures-util = { version = "0.3.25", optional = true }
 tokio-stream = { version = "0.1.11", optional = true, features = ["net"] }
-#tonic-native-tls = { version = "0.1.1", optional = true, features = ["axum", "tracing"] }
-tonic-native-tls = { path = "../tonic-native-tls", optional = true, features = ["axum", "tracing"] }
+tokio-native-tls = { version = "0.3.0", optional = true }
+native-tls = { version = "0.2.10", optional = true }
 
 [dev-dependencies]
 valuable-derive = "0.1.0"

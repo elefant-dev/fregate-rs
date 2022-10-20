@@ -36,7 +36,7 @@ pub enum Error {
     /// Error returned by native-tls
     #[cfg(feature = "native-tls")]
     #[error("Got NativeTlsError: `{0}`")]
-    NativeTlsError(#[from] tonic_native_tls::native_tls::Error),
+    NativeTlsError(#[from] tokio_native_tls::native_tls::Error),
 }
 
 /// fregate Result alias
