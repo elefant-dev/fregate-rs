@@ -29,7 +29,7 @@ pub(super) async fn run_service(
     let app = router.into_make_service_with_connect_info::<RemoteAddr>();
     let server = Server::builder(incoming).serve(app);
 
-    info!(target: "server", "Started: http://{socket}");
+    info!(target: "server", "Started: https://{socket}");
 
     Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
 }
