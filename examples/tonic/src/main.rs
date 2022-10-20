@@ -1,64 +1,15 @@
-use fregate::axum::{
-    middleware::{from_fn, Next},
-    response::IntoResponse,
-    routing::get,
-    Router,
-};
-use fregate::hyper::Request;
-use fregate::middleware::Attributes;
-use fregate::tokio;
-use fregate::tonic::{Request as TonicRequest, Response as TonicResponse, Status};
+use axum::{middleware::from_fn, routing::get, Router};
 use fregate::{
-    bootstrap, extensions::RouterTonicExt, middleware::trace_request, tonic, Application, Empty,
+    axum, bootstrap,
+    extensions::RouterTonicExt,
+    middleware::{trace_request, Attributes},
+    tokio, Application, Empty,
 };
-use resources::proto::{
-    echo::{
-        echo_server::{Echo, EchoServer},
-        EchoRequest, EchoResponse,
-    },
-    hello::{
-        hello_server::{Hello, HelloServer},
-        HelloRequest, HelloResponse,
-    },
+use resources::{
+    deny_middleware,
+    grpc::{MyEcho, MyHello},
+    proto::{echo::echo_server::EchoServer, hello::hello_server::HelloServer},
 };
-
-#[derive(Default)]
-struct MyHello;
-
-#[derive(Default)]
-struct MyEcho;
-
-#[tonic::async_trait]
-impl Hello for MyHello {
-    async fn say_hello(
-        &self,
-        request: TonicRequest<HelloRequest>,
-    ) -> Result<TonicResponse<HelloResponse>, Status> {
-        let reply = HelloResponse {
-            message: format!("Hello From Tonic Server {}!", request.into_inner().name),
-        };
-
-        Ok(TonicResponse::new(reply))
-    }
-}
-
-#[tonic::async_trait]
-impl Echo for MyEcho {
-    async fn ping(
-        &self,
-        request: TonicRequest<EchoRequest>,
-    ) -> Result<TonicResponse<EchoResponse>, Status> {
-        let reply = EchoResponse {
-            message: request.into_inner().message,
-        };
-
-        Ok(TonicResponse::new(reply))
-    }
-}
-
-async fn deny_middleware<B>(_req: Request<B>, _next: Next<B>) -> impl IntoResponse {
-    Status::permission_denied("You shall not pass").to_http()
-}
 
 #[tokio::main]
 async fn main() {

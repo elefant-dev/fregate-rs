@@ -1,30 +1,11 @@
-use fregate::axum::middleware::from_fn;
-use fregate::axum::Router;
-use fregate::middleware::{trace_request, Attributes};
-use fregate::tokio;
-use fregate::tonic::{self, Request as TonicRequest, Response as TonicResponse, Status};
-use fregate::{bootstrap, extensions::RouterTonicExt, Application, Empty};
-use resources::proto::hello::{
-    hello_server::{Hello, HelloServer},
-    HelloRequest, HelloResponse,
+use axum::{middleware::from_fn, Router};
+use fregate::{
+    axum, bootstrap,
+    extensions::RouterTonicExt,
+    middleware::{trace_request, Attributes},
+    tokio, Application, Empty,
 };
-
-#[derive(Default)]
-struct MyHello;
-
-#[tonic::async_trait]
-impl Hello for MyHello {
-    async fn say_hello(
-        &self,
-        request: TonicRequest<HelloRequest>,
-    ) -> Result<TonicResponse<HelloResponse>, Status> {
-        let reply = HelloResponse {
-            message: format!("Hello {}!", request.into_inner().name),
-        };
-
-        Ok(TonicResponse::new(reply))
-    }
-}
+use resources::{grpc::MyHello, proto::hello::hello_server::HelloServer};
 
 #[tokio::main]
 async fn main() {

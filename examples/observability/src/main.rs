@@ -1,8 +1,7 @@
-use fregate::middleware::Attributes;
+use axum::{middleware::from_fn, routing::get, Router};
 use fregate::{
-    axum::{middleware::from_fn, routing::get, Router},
-    bootstrap,
-    middleware::trace_request,
+    axum, bootstrap,
+    middleware::{trace_request, Attributes},
     tokio, Application, Empty,
 };
 
