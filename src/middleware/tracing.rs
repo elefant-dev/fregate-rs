@@ -234,7 +234,7 @@ impl From<&SpanContext> for TracingInfo {
     }
 }
 
-#[cfg(not(feature = "native-tls"))]
+#[cfg(not(any(feature = "native-tls", feature = "rustls")))]
 /// Extracts remote Ip and Port from [`Request`]
 pub fn extract_remote_address<B>(request: &Request<B>) -> Address {
     request
@@ -247,12 +247,14 @@ pub fn extract_remote_address<B>(request: &Request<B>) -> Address {
         .unwrap_or_default()
 }
 
-#[cfg(feature = "native-tls")]
+#[cfg(any(feature = "native-tls", feature = "rustls"))]
 /// Extracts remote Ip and Port from [`Request`]
 pub fn extract_remote_address<B>(request: &Request<B>) -> Address {
+    use crate::application::tls_config::tls::RemoteAddr;
+
     request
         .extensions()
-        .get::<ConnectInfo<crate::RemoteAddr>>()
+        .get::<ConnectInfo<RemoteAddr>>()
         .map(|ConnectInfo(addr)| Address {
             ip: addr.0.ip().to_string(),
             port: addr.0.port().to_string(),

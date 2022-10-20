@@ -1,0 +1,19 @@
+[package]
+name = "rustls"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "server"
+path = "src/server.rs"
+
+[[bin]]
+name = "client"
+path = "src/client.rs"
+
+[dependencies]
+fregate = { path = "../..", features = ["rustls"] }
+resources = { path = "../examples_resources" }
+tokio-rustls = { version = "0.23.0", features = ["dangerous_configuration"] }
+hyper-rustls = { version = "0.23.0", features = ["http2"] }
+rustls-pemfile = "1.0.1"

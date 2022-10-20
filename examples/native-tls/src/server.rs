@@ -1,17 +1,11 @@
-use axum::{middleware::from_fn, routing::get, Router};
+use axum::{middleware::from_fn, Router};
 use fregate::{
     axum, bootstrap,
     extensions::RouterTonicExt,
     middleware::{trace_request, Attributes},
-    tokio, Application,
-    ConfigSource::EnvPrefix,
-    Empty,
+    tokio, Application, ConfigSource, Empty,
 };
-use resources::{
-    deny_middleware,
-    grpc::{MyEcho, MyHello},
-    proto::{echo::echo_server::EchoServer, hello::hello_server::HelloServer},
-};
+use resources::{grpc::MyHello, proto::hello::hello_server::HelloServer};
 
 #[tokio::main]
 async fn main() {
@@ -27,25 +21,16 @@ async fn main() {
     std::env::set_var("TEST_SERVER_TLS_KEY_PATH", TLS_KEY_FULL_PATH);
     std::env::set_var("TEST_SERVER_TLS_CERT_PATH", TLS_CERTIFICATE_FULL_PATH);
 
-    let config = bootstrap::<Empty, _>([EnvPrefix("TEST")]).unwrap();
+    let config = bootstrap::<Empty, _>([ConfigSource::EnvPrefix("TEST")]).unwrap();
     let attributes = Attributes::new_from_config(&config);
 
-    let echo_service = EchoServer::new(MyEcho);
     let hello_service = HelloServer::new(MyHello);
-
-    let rest = Router::new().route("/", get(|| async { "Hello, World!" }));
-
-    // Echo service will always deny request
-    let grpc = Router::from_tonic_service(echo_service)
-        .layer(from_fn(deny_middleware))
-        .merge(Router::from_tonic_service(hello_service));
-
-    let app_router = rest.merge(grpc).layer(from_fn(move |req, next| {
+    let grpc = Router::from_tonic_service(hello_service).layer(from_fn(move |req, next| {
         trace_request(req, next, attributes.clone())
     }));
 
     Application::new(&config)
-        .router(app_router)
+        .router(grpc)
         .serve_tls()
         .await
         .unwrap();

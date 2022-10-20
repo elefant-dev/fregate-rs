@@ -13,6 +13,9 @@ use std::net::SocketAddr;
 use tokio::signal;
 use tracing::info;
 
+#[cfg(any(feature = "native-tls", feature = "rustls"))]
+use crate::application::tls_config::tls::{build_acceptor, RemoteAddr};
+
 // TODO(kos): Consider avoiding doing framework and eliminating `Application`.
 //            Better than the alternative.
 
@@ -75,7 +78,7 @@ impl<'a, H, T> Application<'a, H, T> {
     }
 
     /// Serve TLS
-    #[cfg(feature = "native-tls")]
+    #[cfg(any(feature = "native-tls", feature = "rustls"))]
     pub async fn serve_tls(self) -> Result<()>
     where
         H: Health,
@@ -173,32 +176,4 @@ async fn shutdown_signal() {
     }
 
     info!("Termination signal, starting shutdown...");
-}
-
-#[cfg(feature = "native-tls")]
-fn build_acceptor(pem: Vec<u8>, key: Vec<u8>) -> Result<tokio_native_tls::TlsAcceptor> {
-    use tokio_native_tls::native_tls::{Identity, TlsAcceptor};
-
-    let identity = Identity::from_pkcs8(&pem, &key)?;
-    TlsAcceptor::builder(identity)
-        .build()
-        .map(From::from)
-        .map_err(Into::into)
-}
-
-#[cfg(feature = "native-tls")]
-#[derive(Debug, Clone)]
-/// Wrapper for SocketAddr to implement [`axum::extract::connect_info::Connected`] so
-/// we can run [`axum::routing::Router::into_make_service_with_connect_info`] with [`TlsStream<AddrStream>`]
-pub struct RemoteAddr(pub SocketAddr);
-
-#[cfg(feature = "native-tls")]
-impl
-    axum::extract::connect_info::Connected<
-        &tokio_native_tls::TlsStream<hyper::server::conn::AddrStream>,
-    > for RemoteAddr
-{
-    fn connect_info(target: &tokio_native_tls::TlsStream<hyper::server::conn::AddrStream>) -> Self {
-        RemoteAddr(target.get_ref().get_ref().get_ref().remote_addr())
-    }
 }
