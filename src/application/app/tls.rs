@@ -7,7 +7,10 @@ use futures_util::{stream::Stream, StreamExt, TryStreamExt};
 use hyper::{server::accept, Server};
 use std::{future::ready, net::SocketAddr};
 use tokio::net::{TcpListener, TcpStream};
-use tokio_native_tls::{native_tls::Identity, TlsAcceptor, TlsStream};
+use tokio_native_tls::{
+    native_tls::{self, Identity},
+    TlsAcceptor, TlsStream,
+};
 use tokio_stream::wrappers::TcpListenerStream;
 use tracing::{error, info};
 
