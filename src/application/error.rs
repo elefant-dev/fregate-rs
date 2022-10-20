@@ -29,6 +29,14 @@ pub enum Error {
     /// Custom fregate Error
     #[error("Got CustomError: `{0}`")]
     CustomError(String),
+    /// Some std IO Error
+    #[error("Got IoError: `{0}`")]
+    IoError(#[from] std::io::Error),
+
+    /// Error returned by native-tls
+    #[cfg(feature = "native-tls")]
+    #[error("Got NativeTlsError: `{0}`")]
+    NativeTlsError(#[from] tonic_native_tls::native_tls::Error),
 }
 
 /// fregate Result alias

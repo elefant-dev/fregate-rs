@@ -12,6 +12,10 @@ keywords = ["http", "grpc", "service"]
 [workspace]
 members = ["examples/*"]
 
+[features]
+native-tls = ["futures-util", "tokio/fs", "tokio/net", "tokio-stream", "tonic-native-tls"]
+native-tls-vendored = ["native-tls", "tonic-native-tls/vendored"]
+
 [dependencies]
 axum = { version = "0.5.7", features = ["headers", "http1", "http2", "json", "matched-path", "original-uri", "ws"] }
 bytes = "1"
@@ -28,9 +32,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 prost = "0.11.0"
 time = "0.3.14"
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.0", features = ["signal"] }
 tonic = "0.8.0"
-tower = { version = "0.4", features = ["full"] }
+tower = { version = "0.4" }
 tower-http = "0.3"
 tracing = { version = "0.1.37", features = ["valuable"] }
 tracing-subscriber = { version = "0.3.11", features = ["env-filter", "fmt", "std", "json", "time", "tracing-log", "registry"] }
@@ -41,6 +45,10 @@ opentelemetry-http = "0.7.0"
 opentelemetry-zipkin = "0.16.0"
 valuable = "0.1.0"
 valuable-serde = "0.1.0"
+
+futures-util = { version = "0.3.25", optional = true }
+tokio-stream = { version = "0.1.11", optional = true, features = ["net"] }
+tonic-native-tls = { version = "0.1.0", optional = true, features = ["axum"] }
 
 [dev-dependencies]
 valuable-derive = "0.1.0"

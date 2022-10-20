@@ -59,21 +59,65 @@ impl<'a, H, T> Application<'a, H, T> {
         }
     }
 
+    /// Set up Router Application will serve to
+    pub fn router(mut self, router: Router) -> Self {
+        self.router = Some(router);
+        self
+    }
+
     /// Start serving at specified host and port in [AppConfig] accepting both HTTP1 and HTTP2
     pub async fn serve(self) -> Result<()>
     where
         H: Health,
     {
-        let router = build_management_router(self.health_indicator).merge_optional(self.router);
-        let application_socket = SocketAddr::new(self.config.host, self.config.port);
-
+        let (router, application_socket) = self.prepare_router();
         run_service(&application_socket, router).await
     }
 
-    /// Set up Router Application will serve to
-    pub fn router(mut self, router: Router) -> Self {
-        self.router = Some(router);
-        self
+    /// Serve TLS
+    #[cfg(feature = "native-tls")]
+    pub async fn serve_tls(self) -> Result<()>
+    where
+        H: Health,
+    {
+        use crate::error::Error;
+        use futures_util::TryFutureExt;
+        use std::fmt;
+        use tokio::{fs, try_join};
+
+        fn cant_load<Arg: fmt::Display>(r#type: &str) -> impl FnOnce(Arg) -> Error + '_ {
+            move |error| Error::CustomError(format!("Cant load TLS {type}: `{error}`."))
+        }
+
+        let tls_cert_path = self
+            .config
+            .tls_cert_path
+            .as_deref()
+            .ok_or_else(|| cant_load("certificate")("No path present."))?;
+
+        let tls_key_path = self
+            .config
+            .tls_key_path
+            .as_deref()
+            .ok_or_else(|| cant_load("key")("No path present."))?;
+
+        let (tls_cert, tls_key) = try_join!(
+            fs::read(tls_cert_path).map_err(cant_load("certificate")),
+            fs::read(tls_key_path).map_err(cant_load("key"))
+        )?;
+
+        let (router, application_socket) = self.prepare_router();
+
+        run_tls_service(&application_socket, router, &tls_cert, &tls_key).await
+    }
+
+    fn prepare_router(self) -> (Router, SocketAddr)
+    where
+        H: Health,
+    {
+        let router = build_management_router(self.health_indicator).merge_optional(self.router);
+        let application_socket = SocketAddr::new(self.config.host, self.config.port);
+        (router, application_socket)
     }
 }
 
@@ -107,6 +151,35 @@ async fn shutdown_signal() {
 async fn run_service(socket: &SocketAddr, router: Router) -> Result<()> {
     let app = router.into_make_service_with_connect_info::<SocketAddr>();
     let server = Server::bind(socket).serve(app);
+
+    info!(target: "server", "Started: http://{socket}");
+
+    Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
+}
+
+#[cfg(feature = "native-tls")]
+async fn run_tls_service(
+    socket: &SocketAddr,
+    router: Router,
+    pem: &[u8],
+    key: &[u8],
+) -> Result<()> {
+    use hyper::server::accept;
+    use native_tls::Identity;
+    use tokio::net::TcpListener;
+    use tokio_native_tls::TlsAcceptor;
+    use tokio_stream::wrappers::TcpListenerStream;
+    use tonic_native_tls::{native_tls, tokio_native_tls};
+
+    let identity = Identity::from_pkcs8(pem, key)?;
+    let acceptor = TlsAcceptor::from(native_tls::TlsAcceptor::new(identity)?);
+
+    let listener = TcpListener::bind(socket).await?;
+    let stream = TcpListenerStream::new(listener);
+    let incoming = accept::from_stream(tonic_native_tls::incoming(stream, acceptor));
+
+    let app = router.into_make_service_with_connect_info::<SocketAddr>();
+    let server = Server::builder(incoming).serve(app);
 
     info!(target: "server", "Started: http://{socket}");
 
