@@ -33,6 +33,10 @@ pub enum Error {
     #[cfg(feature = "native-tls")]
     #[error("Got NativeTlsError: `{0}`")]
     NativeTlsError(#[from] tokio_native_tls::native_tls::Error),
+    /// Error returned by native-tls
+    #[cfg(feature = "rustls")]
+    #[error("Got RustlsError: `{0}`")]
+    RustlsError(#[from] tokio_rustls::rustls::Error),
 }
 
 /// fregate Result alias

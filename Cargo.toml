@@ -16,6 +16,7 @@ members = ["examples/*"]
 default = []
 # TODO: Add native-tls-vendored
 native-tls = ["tls-listener/native-tls", "tokio-native-tls"]
+rustls = ["tls-listener/rustls", "tokio-rustls", "rustls-pemfile"]
 
 [dependencies]
 axum = { version = "0.5.7", features = ["headers", "http1", "http2", "json", "matched-path", "original-uri", "ws"] }
@@ -51,6 +52,8 @@ valuable-serde = "0.1.0"
 # optional dependencies
 tls-listener = { version = "0.5.1", optional = true, features = ["hyper", "hyper-h2", "hyper-h1"] }
 tokio-native-tls = { version = "0.3.0", optional = true }
+tokio-rustls = { version = "0.23.0", optional = true }
+rustls-pemfile = { version = "1.0.1", optional = true }
 
 [dev-dependencies]
 valuable-derive = "0.1.0"
