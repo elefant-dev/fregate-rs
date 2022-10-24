@@ -58,7 +58,7 @@ pub struct AppConfig<T> {
     /// configuration for logs and traces
     pub logger: LoggerConfig,
     #[cfg(feature = "native-tls")]
-    /// path to TLS key file
+    /// TLS handshake timeout
     pub tls_handshake_timeout: std::time::Duration,
     #[cfg(feature = "native-tls")]
     /// path to TLS key file
