@@ -92,6 +92,8 @@ impl<'a, H, T> Application<'a, H, T> {
             move |error| Error::CustomError(format!("Cant load TLS {type}: `{error}`."))
         }
 
+        let tls_handshake_timeout = self.config.tls_handshake_timeout;
+
         let tls_cert_path = self
             .config
             .tls_cert_path
@@ -111,7 +113,14 @@ impl<'a, H, T> Application<'a, H, T> {
 
         let (router, application_socket) = self.prepare_router();
 
-        tls::run_service(&application_socket, router, &tls_cert, &tls_key).await
+        tls::run_service(
+            &application_socket,
+            router,
+            tls_handshake_timeout,
+            &tls_cert,
+            &tls_key,
+        )
+        .await
     }
 
     fn prepare_router(self) -> (Router, SocketAddr)
