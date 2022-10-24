@@ -2,7 +2,7 @@ use crate::{
     application::{app::shutdown_signal, tls_config::RemoteAddr},
     error::Result,
 };
-use async_stream::try_stream;
+use async_stream::stream;
 use axum::Router;
 use futures_util::{stream::Stream, StreamExt, TryStreamExt};
 use hyper::{server::accept, Server};
@@ -42,9 +42,11 @@ async fn bind_tls_stream(
     let listener = TcpListener::bind(socket).await?;
     let mut stream = TcpListenerStream::new(listener);
 
-    let ret = try_stream! {
-        while let Some(stream) = stream.try_next().await? {
-            yield acceptor.accept(stream).await?;
+    // TODO: https://github.com/tokio-rs/async-stream/issues/81
+    let ret = stream! {
+        while let Some(stream) = stream.try_next().await.transpose() {
+            let acceptor = &acceptor;
+            yield {move || async move { Ok(acceptor.accept(stream?).await?) }}().await;
         }
     }
     .filter(|tls_stream| {
