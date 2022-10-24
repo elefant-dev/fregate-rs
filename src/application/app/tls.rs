@@ -1,13 +1,19 @@
 use crate::{
     application::{app::shutdown_signal, tls_config::RemoteAddr},
-    error::Result,
+    error::{Error, Result},
 };
 use async_stream::stream;
 use axum::Router;
-use futures_util::{stream::Stream, StreamExt, TryStreamExt};
+use futures_util::{
+    stream::{FuturesUnordered, Stream},
+    StreamExt, TryStreamExt,
+};
 use hyper::{server::accept, Server};
-use std::{future::ready, net::SocketAddr};
-use tokio::net::{TcpListener, TcpStream};
+use std::{future::ready, net::SocketAddr, sync::Arc};
+use tokio::{
+    net::{TcpListener, TcpStream},
+    select,
+};
 use tokio_native_tls::{
     native_tls::{self, Identity},
     TlsAcceptor, TlsStream,
@@ -40,13 +46,45 @@ async fn bind_tls_stream(
     acceptor: TlsAcceptor,
 ) -> Result<impl Stream<Item = Result<TlsStream<TcpStream>>>> {
     let listener = TcpListener::bind(socket).await?;
-    let mut stream = TcpListenerStream::new(listener);
+    let mut tcp_stream = TcpListenerStream::new(listener);
 
     // TODO: https://github.com/tokio-rs/async-stream/issues/81
+    let acceptor = Arc::new(acceptor);
     let ret = stream! {
-        while let Some(stream) = stream.try_next().await.transpose() {
-            let acceptor = &acceptor;
-            yield {move || async move { Ok(acceptor.accept(stream?).await?) }}().await;
+        let mut tasks = FuturesUnordered::new();
+
+        loop {
+            if tasks.is_empty() {
+                match tcp_stream.try_next().await {
+                    Ok(None) => break,
+                    Ok(Some(stream)) => {
+                        let acceptor = acceptor.clone();
+                        tasks.push(tokio::task::spawn(async move { Ok::<_, Error>(acceptor.accept(stream).await?) }));
+                    },
+                    Err(error) => yield Err(Error::from(error)),
+                }
+                continue
+            }
+
+            select! {
+                stream = tcp_stream.try_next() => {
+                    match stream {
+                        Ok(None) => break,
+                        Ok(Some(stream)) => {
+                            let acceptor = acceptor.clone();
+                            tasks.push(tokio::task::spawn(async move { Ok::<_, Error>(acceptor.accept(stream).await?) }));
+                        },
+                        Err(error) => yield Err(Error::from(error)),
+                    }
+                }
+                accept = tasks.next() => {
+                    match accept.expect("FuturesUnordered stream can't be closed in ordinary circumstances") {
+                        Ok(Ok(tls_stream)) => yield Ok(tls_stream),
+                        Ok(Err(error)) => yield Err(Error::from(error)),
+                        Err(error) => yield Err(Error::from(error)),
+                    }
+                }
+            }
         }
     }
     .filter(|tls_stream| {

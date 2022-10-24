@@ -33,6 +33,10 @@ pub enum Error {
     #[error("Got IoError: `{0}`")]
     IoError(#[from] std::io::Error),
 
+    /// tokio JoinHandle error
+    #[cfg(feature = "native-tls")]
+    #[error("Got JoinHandleError: `{0}`")]
+    JoinHandleError(#[from] tokio::task::JoinError),
     /// Error returned by native-tls
     #[cfg(feature = "native-tls")]
     #[error("Got NativeTlsError: `{0}`")]
