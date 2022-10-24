@@ -25,6 +25,7 @@ async fn main() {
         "/../examples_resources/certs/tls.cert"
     );
 
+    std::env::set_var("TEST_HOST", "::0");
     std::env::set_var("TEST_SERVER_TLS_KEY_PATH", TLS_KEY_FULL_PATH);
     std::env::set_var("TEST_SERVER_TLS_CERT_PATH", TLS_CERTIFICATE_FULL_PATH);
 
