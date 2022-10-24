@@ -9,17 +9,18 @@ use futures_util::{
     StreamExt, TryStreamExt,
 };
 use hyper::{server::accept, Server};
-use std::{future::ready, net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc};
 use tokio::{
     net::{TcpListener, TcpStream},
     select,
+    task::JoinHandle,
 };
 use tokio_native_tls::{
     native_tls::{self, Identity},
     TlsAcceptor, TlsStream,
 };
 use tokio_stream::wrappers::TcpListenerStream;
-use tracing::{error, info};
+use tracing::{info, warn};
 
 pub(super) async fn run_service(
     socket: &SocketAddr,
@@ -48,55 +49,52 @@ async fn bind_tls_stream(
     let listener = TcpListener::bind(socket).await?;
     let mut tcp_stream = TcpListenerStream::new(listener);
 
-    // TODO: https://github.com/tokio-rs/async-stream/issues/81
     let acceptor = Arc::new(acceptor);
     let ret = stream! {
         let mut tasks = FuturesUnordered::new();
 
         loop {
-            if tasks.is_empty() {
-                match tcp_stream.try_next().await {
-                    Ok(None) => break,
-                    Ok(Some(stream)) => {
-                        let acceptor = acceptor.clone();
-                        tasks.push(tokio::task::spawn(async move { Ok::<_, Error>(acceptor.accept(stream).await?) }));
-                    },
-                    Err(error) => yield Err(Error::from(error)),
-                }
-                continue
-            }
-
-            select! {
-                stream = tcp_stream.try_next() => {
-                    match stream {
-                        Ok(None) => break,
-                        Ok(Some(stream)) => {
-                            let acceptor = acceptor.clone();
-                            tasks.push(tokio::task::spawn(async move { Ok::<_, Error>(acceptor.accept(stream).await?) }));
-                        },
-                        Err(error) => yield Err(Error::from(error)),
-                    }
-                }
-                accept = tasks.next() => {
-                    match accept.expect("FuturesUnordered stream can't be closed in ordinary circumstances") {
-                        Ok(Ok(tls_stream)) => yield Ok(tls_stream),
-                        Ok(Err(error)) => yield Err(Error::from(error)),
-                        Err(error) => yield Err(Error::from(error)),
-                    }
-                }
+            match fetch_tls_handle_commands(&mut tcp_stream, &mut tasks).await {
+                Ok(TlsHandleCommands::TcpStream(tcp_stream)) => {
+                    let acceptor = acceptor.clone();
+                    tasks.push(tokio::task::spawn(async move { Ok::<_, Error>(acceptor.accept(tcp_stream).await?) }));
+                },
+                Ok(TlsHandleCommands::TlsStream(tls_stream)) => yield Ok(tls_stream),
+                Ok(TlsHandleCommands::Break) => break,
+                Err(error) => warn!("Got error on incoming: `{error}`."),
             }
         }
-    }
-    .filter(|tls_stream| {
-        let ret = if let Err(error) = tls_stream {
-            error!("Got error on incoming: `{error}`.");
-            false
-        } else {
-            true
-        };
+    };
 
-        ready(ret)
-    });
+    Ok(ret)
+}
+
+enum TlsHandleCommands {
+    TcpStream(TcpStream),
+    TlsStream(TlsStream<TcpStream>),
+    Break,
+}
+
+async fn fetch_tls_handle_commands(
+    tcp_stream: &mut TcpListenerStream,
+    tasks: &mut FuturesUnordered<JoinHandle<Result<TlsStream<TcpStream>>>>,
+) -> Result<TlsHandleCommands> {
+    let ret = if tasks.is_empty() {
+        match tcp_stream.try_next().await? {
+            None => TlsHandleCommands::Break,
+            Some(tcp_stream) => TlsHandleCommands::TcpStream(tcp_stream),
+        }
+    } else {
+        select! {
+            tcp_stream = tcp_stream.try_next() => {
+                tcp_stream?.map(TlsHandleCommands::TcpStream).unwrap_or(TlsHandleCommands::Break)
+            }
+            tls_stream = tasks.next() => {
+                let tls_stream = tls_stream.expect("FuturesUnordered stream can't be closed in ordinary circumstances")??;
+                TlsHandleCommands::TlsStream(tls_stream)
+            }
+        }
+    };
 
     Ok(ret)
 }
