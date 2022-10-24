@@ -24,6 +24,8 @@ const SERVICE_NAME_PTR: &str = "/service/name";
 const COMPONENT_NAME_PTR: &str = "/component/name";
 const COMPONENT_VERSION_PTR: &str = "/component/version";
 #[cfg(feature = "native-tls")]
+const TLS_HANDSHAKE_TIMEOUT: &str = "/server/tls/handshake_timeout";
+#[cfg(feature = "native-tls")]
 const TLS_KEY_PATH: &str = "/server/tls/key/path";
 #[cfg(feature = "native-tls")]
 const TLS_CERTIFICATE_PATH: &str = "/server/tls/cert/path";
@@ -55,6 +57,9 @@ pub struct AppConfig<T> {
     pub port: u16,
     /// configuration for logs and traces
     pub logger: LoggerConfig,
+    #[cfg(feature = "native-tls")]
+    /// path to TLS key file
+    pub tls_handshake_timeout: std::time::Duration,
     #[cfg(feature = "native-tls")]
     /// path to TLS key file
     pub tls_key_path: Option<Box<str>>,
@@ -127,7 +132,8 @@ where
         let port = config.pointer_and_deserialize(PORT_PTR)?;
         let logger = LoggerConfig::deserialize(&config).map_err(Error::custom)?;
         #[cfg(feature = "native-tls")]
-        let (tls_key_path, tls_cert_path) = (
+        let (tls_handshake_timeout, tls_key_path, tls_cert_path) = (
+            config.pointer_and_deserialize::<u64, D::Error>(TLS_HANDSHAKE_TIMEOUT)?,
             config
                 .pointer_and_deserialize::<_, D::Error>(TLS_KEY_PATH)
                 .ok(),
@@ -141,6 +147,8 @@ where
             host,
             port,
             logger,
+            #[cfg(feature = "native-tls")]
+            tls_handshake_timeout: std::time::Duration::from_millis(tls_handshake_timeout),
             #[cfg(feature = "native-tls")]
             tls_key_path,
             #[cfg(feature = "native-tls")]

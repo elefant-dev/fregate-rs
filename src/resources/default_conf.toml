@@ -21,6 +21,9 @@ version = "0.1.0"
 
 [private]
 
+[server.tls]
+handshake_timeout = 10000 # in milliseconds
+
 #[server.tls]
 #key_path = "/tls.key"
 #cert_path = "/tls.cert"

@@ -9,7 +9,9 @@ use futures_util::{
     StreamExt, TryStreamExt,
 };
 use hyper::{server::accept, Server};
+use std::time::Duration;
 use std::{net::SocketAddr, sync::Arc};
+use tokio::time::timeout;
 use tokio::{
     net::{TcpListener, TcpStream},
     select,
@@ -25,13 +27,14 @@ use tracing::{info, warn};
 pub(super) async fn run_service(
     socket: &SocketAddr,
     router: Router,
+    tls_handshake_timeout: Duration,
     pem: &[u8],
     key: &[u8],
 ) -> Result<()> {
     let identity = Identity::from_pkcs8(pem, key)?;
     let acceptor = TlsAcceptor::from(native_tls::TlsAcceptor::new(identity)?);
 
-    let stream = bind_tls_stream(socket, acceptor).await?;
+    let stream = bind_tls_stream(socket, acceptor, tls_handshake_timeout).await?;
     let incoming = accept::from_stream(stream);
 
     let app = router.into_make_service_with_connect_info::<RemoteAddr>();
@@ -45,6 +48,7 @@ pub(super) async fn run_service(
 async fn bind_tls_stream(
     socket: &SocketAddr,
     acceptor: TlsAcceptor,
+    tls_handshake_timeout: Duration,
 ) -> Result<impl Stream<Item = Result<TlsStream<TcpStream>>>> {
     let listener = TcpListener::bind(socket).await?;
     let mut tcp_stream = TcpListenerStream::new(listener);
@@ -57,7 +61,12 @@ async fn bind_tls_stream(
             match fetch_tls_handle_commands(&mut tcp_stream, &mut tasks).await {
                 Ok(TlsHandleCommands::TcpStream(tcp_stream)) => {
                     let acceptor = acceptor.clone();
-                    tasks.push(tokio::task::spawn(async move { Ok::<_, Error>(acceptor.accept(tcp_stream).await?) }));
+                    tasks.push(tokio::task::spawn(async move {
+                        let ret = timeout(tls_handshake_timeout, acceptor.accept(tcp_stream))
+                            .await
+                            .map_err(|_| Error::TlsHandshakeTimeout)??;
+                        Ok::<_, Error>(ret)
+                    }));
                 },
                 Ok(TlsHandleCommands::TlsStream(tls_stream)) => yield Ok(tls_stream),
                 Ok(TlsHandleCommands::Break) => break,
