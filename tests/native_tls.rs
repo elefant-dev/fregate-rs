@@ -82,10 +82,8 @@ mod native_tls {
 
         let mut http = HttpConnector::new();
         http.enforce_http(false);
-        let certificate = Certificate::from_pem(CERTIFICATE).unwrap();
 
         let tls_connector = TlsConnector::builder()
-            .add_root_certificate(certificate)
             .danger_accept_invalid_hostnames(true)
             .danger_accept_invalid_certs(true)
             .build()
@@ -95,7 +93,7 @@ mod native_tls {
         let https = HttpsConnector::from((http, tls_connector));
         let hyper: Client<HttpsConnector<HttpConnector>, Body> = Client::builder().build(https);
 
-        let fut = hyper.get(Uri::from_str(&format!("https://127.0.0.1:{port}/health")).unwrap());
+        let fut = hyper.get(Uri::from_str(&format!("https://localhost:{port}/health")).unwrap());
         let response = timeout(Duration::from_secs(2), fut).await.unwrap().unwrap();
 
         let status = response.status();
