@@ -1,5 +1,5 @@
-#[cfg(feature = "native-tls")]
-mod tls;
+#[cfg(any(feature = "native-tls", feature = "rustls"))]
+pub(crate) mod tls;
 
 use crate::{
     build_management_router,
@@ -78,7 +78,7 @@ impl<'a, H, T> Application<'a, H, T> {
     }
 
     /// Serve TLS
-    #[cfg(feature = "native-tls")]
+    #[cfg(any(feature = "native-tls", feature = "rustls"))]
     pub async fn serve_tls(self) -> Result<()>
     where
         H: Health,
@@ -117,8 +117,8 @@ impl<'a, H, T> Application<'a, H, T> {
             &application_socket,
             router,
             tls_handshake_timeout,
-            &tls_cert,
-            &tls_key,
+            tls_cert,
+            tls_key,
         )
         .await
     }

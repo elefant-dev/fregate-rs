@@ -1,4 +1,4 @@
-#[cfg(feature = "native-tls")]
+#[cfg(any(feature = "native-tls", feature = "rustls"))]
 mod native_tls {
     use fregate::{AppConfig, Application, Empty};
     use futures_util::{stream, StreamExt};
