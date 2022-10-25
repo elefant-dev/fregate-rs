@@ -2,27 +2,23 @@
 mod native_tls {
     use fregate::{AppConfig, Application, Empty};
     use futures_util::{stream, StreamExt};
-    use hyper::{client::HttpConnector, Body, Client, StatusCode, Uri};
-    use hyper_tls::{
-        native_tls::{Certificate, TlsConnector},
-        HttpsConnector,
+    use hyper::{client::HttpConnector, Client, StatusCode, Uri};
+    use hyper_rustls::{ConfigBuilderExt, HttpsConnector, HttpsConnectorBuilder};
+    use rustls::{
+        client::{ServerCertVerified, ServerCertVerifier},
+        Certificate, ClientConfig, ServerName,
     };
     use std::{
         future::ready,
         net::{IpAddr, Ipv6Addr, SocketAddr},
-        ops::Add,
         str::FromStr,
-        time::Duration,
+        sync::Arc,
+        time::{Duration, SystemTime},
     };
-    use tokio::{net::TcpListener, time::timeout};
+    use tokio::{net::TcpListener, time};
 
     const ROOTLES_PORT: u16 = 1024;
     const MAX_PORT: u16 = u16::MAX;
-
-    const CERTIFICATE: &[u8] = include_bytes!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/examples/examples_resources/certs/tls.cert"
-    ));
 
     const TLS_KEY_FULL_PATH: &str = concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -76,73 +72,64 @@ mod native_tls {
         (port, tls_timeout)
     }
 
+    fn build_client() -> Client<HttpsConnector<HttpConnector>> {
+        struct DummyServerCertVerifier;
+        impl ServerCertVerifier for DummyServerCertVerifier {
+            fn verify_server_cert(
+                &self,
+                _: &Certificate,
+                _: &[Certificate],
+                _: &ServerName,
+                _: &mut dyn Iterator<Item = &[u8]>,
+                _: &[u8],
+                _: SystemTime,
+            ) -> Result<ServerCertVerified, rustls::Error> {
+                Ok(ServerCertVerified::assertion())
+            }
+        }
+
+        let mut tls = ClientConfig::builder()
+            .with_safe_defaults()
+            .with_native_roots()
+            .with_no_client_auth();
+        tls.dangerous()
+            .set_certificate_verifier(Arc::new(DummyServerCertVerifier));
+
+        let https = HttpsConnectorBuilder::new()
+            .with_tls_config(tls)
+            .https_only()
+            .enable_http1()
+            .build();
+
+        Client::builder().http2_only(true).build(https)
+    }
+
     #[tokio::test]
     async fn test_https_request() {
         let (port, _) = start_server().await;
 
-        let mut http = HttpConnector::new();
-        http.enforce_http(false);
+        let hyper = build_client();
 
-        let tls_connector = TlsConnector::builder()
-            .danger_accept_invalid_hostnames(true)
-            .danger_accept_invalid_certs(true)
-            .build()
-            .unwrap()
-            .into();
-
-        let https = HttpsConnector::from((http, tls_connector));
-        let hyper: Client<HttpsConnector<HttpConnector>, Body> = Client::builder().build(https);
-
+        let timeout = Duration::from_secs(2);
         let fut = hyper.get(Uri::from_str(&format!("https://localhost:{port}/health")).unwrap());
-        let response = timeout(Duration::from_secs(2), fut).await.unwrap().unwrap();
+        let response = time::timeout(timeout, fut).await.unwrap().unwrap();
 
         let status = response.status();
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
 
         assert_eq!(StatusCode::OK, status);
-        assert_eq!(&body[..], b"OK");
-    }
-
-    #[tokio::test]
-    async fn test_no_cert_request() {
-        let (port, _) = start_server().await;
-
-        let mut http = HttpConnector::new();
-        http.enforce_http(false);
-
-        let tls_connector = TlsConnector::builder().build().unwrap().into();
-        let https = HttpsConnector::from((http, tls_connector));
-        let hyper: Client<HttpsConnector<HttpConnector>, Body> = Client::builder().build(https);
-
-        let fut = hyper.get(Uri::from_str(&format!("https://127.0.0.1:{port}/health")).unwrap());
-        let response = timeout(Duration::from_secs(2), fut).await.unwrap();
-        assert!(response.is_err())
+        assert_eq!(body.as_ref(), b"OK");
     }
 
     #[tokio::test]
     async fn test_http_request() {
         let (port, tls_timeout) = start_server().await;
 
-        let mut http = HttpConnector::new();
-        http.enforce_http(false);
+        let hyper = build_client();
 
-        let certificate = Certificate::from_pem(CERTIFICATE).unwrap();
-
-        let tls_connector = TlsConnector::builder()
-            .add_root_certificate(certificate)
-            .danger_accept_invalid_hostnames(true)
-            .danger_accept_invalid_certs(true)
-            .build()
-            .unwrap()
-            .into();
-
-        let https = HttpsConnector::from((http, tls_connector));
-        let hyper: Client<HttpsConnector<HttpConnector>, Body> = Client::builder().build(https);
-
-        let fut = hyper.get(Uri::from_str(&format!("http://127.0.0.1:{port}/health")).unwrap());
-        let response = timeout(tls_timeout.add(Duration::from_secs(2)), fut)
-            .await
-            .unwrap();
+        let timeout = tls_timeout + Duration::from_secs(2);
+        let fut = hyper.get(Uri::from_str(&format!("http://localhost:{port}/health")).unwrap());
+        let response = time::timeout(timeout, fut).await.unwrap();
 
         assert!(response.is_err());
     }

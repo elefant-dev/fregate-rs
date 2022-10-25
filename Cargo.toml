@@ -58,4 +58,5 @@ tokio-stream = { version = "0.1.11", optional = true, features = ["net"] }
 
 [dev-dependencies]
 valuable-derive = "0.1.0"
-hyper-tls = "0.5.0"
+rustls = { version = "0.20.7", features = ["tls12", "dangerous_configuration"] }
+hyper-rustls = { version = "0.23.0", default-features = false, features = ["native-tokio", "http1", "tls12"] }
