@@ -1,16 +1,23 @@
 #[cfg(feature = "native-tls")]
 mod native_tls {
     use fregate::{AppConfig, Application, Empty};
-    use hyper::client::HttpConnector;
-    use hyper::{Body, Client, StatusCode, Uri};
-    use hyper_tls::native_tls::Certificate;
-    use hyper_tls::native_tls::TlsConnector;
-    use hyper_tls::HttpsConnector;
-    use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener};
-    use std::ops::Add;
-    use std::str::FromStr;
-    use std::time::Duration;
-    use tokio::time::timeout;
+    use futures_util::{stream, StreamExt};
+    use hyper::{client::HttpConnector, Body, Client, StatusCode, Uri};
+    use hyper_tls::{
+        native_tls::{Certificate, TlsConnector},
+        HttpsConnector,
+    };
+    use std::{
+        future::ready,
+        net::{IpAddr, Ipv6Addr, SocketAddr},
+        ops::Add,
+        str::FromStr,
+        time::Duration,
+    };
+    use tokio::{net::TcpListener, time::timeout};
+
+    const ROOTLES_PORT: u16 = 1024;
+    const MAX_PORT: u16 = u16::MAX;
 
     const CERTIFICATE: &[u8] = include_bytes!(concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -26,20 +33,25 @@ mod native_tls {
         "/examples/examples_resources/certs/tls.cert"
     );
 
-    fn get_free_port() -> u16 {
-        let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-
-        for p in 6000..15000 {
-            if let Some(p) = test_bind_tcp(SocketAddr::new(ip_addr, p)) {
-                return p;
-            }
-        }
-
-        panic!("NO FREE PORTS");
+    async fn get_free_port() -> u16 {
+        stream::iter(ROOTLES_PORT..MAX_PORT)
+            .map(test_bind_tcp)
+            .buffer_unordered(16)
+            .filter_map(ready)
+            .next()
+            .await
+            .expect("NO FREE PORTS")
     }
 
-    fn test_bind_tcp(addr: SocketAddr) -> Option<u16> {
-        Some(TcpListener::bind(addr).ok()?.local_addr().ok()?.port())
+    async fn test_bind_tcp(port: u16) -> Option<u16> {
+        const LOOPBACK: IpAddr = IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1));
+        TcpListener::bind(SocketAddr::new(LOOPBACK, port))
+            .await
+            .ok()?
+            .local_addr()
+            .ok()
+            .as_ref()
+            .map(SocketAddr::port)
     }
 
     async fn start_server() -> (u16, Duration) {
@@ -52,7 +64,7 @@ mod native_tls {
             .build()
             .unwrap();
 
-        let port = get_free_port();
+        let port = get_free_port().await;
         let tls_timeout = config.tls_handshake_timeout;
 
         tokio::task::spawn(async move {
