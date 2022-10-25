@@ -1,5 +1,5 @@
 #[cfg(any(feature = "native-tls", feature = "rustls"))]
-mod native_tls {
+mod tls {
     use fregate::{AppConfig, Application, Empty};
     use futures_util::{stream, StreamExt};
     use hyper::{client::HttpConnector, Client, StatusCode, Uri};
@@ -104,6 +104,7 @@ mod native_tls {
         Client::builder().http2_only(true).build(https)
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_https_request() {
         let (port, _) = start_server().await;
@@ -121,6 +122,7 @@ mod native_tls {
         assert_eq!(body.as_ref(), b"OK");
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_http_request() {
         let (port, tls_timeout) = start_server().await;
