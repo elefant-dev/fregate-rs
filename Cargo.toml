@@ -54,3 +54,4 @@ native-tls = { version = "0.2.10", optional = true }
 
 [dev-dependencies]
 valuable-derive = "0.1.0"
+hyper-tls = "0.5.0"
