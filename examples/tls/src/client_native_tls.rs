@@ -1,9 +1,10 @@
 use fregate::{hyper, tonic};
 use hyper::{client::HttpConnector, Client, Uri};
 use hyper_tls::{native_tls, HttpsConnector};
-use resources::proto::echo::{echo_client::EchoClient, EchoRequest};
-use resources::proto::hello::hello_client::HelloClient;
-use resources::proto::hello::HelloRequest;
+use resources::proto::{
+    echo::{echo_client::EchoClient, EchoRequest},
+    hello::{hello_client::HelloClient, HelloRequest},
+};
 use tonic::Request;
 
 #[tokio::main]
@@ -19,7 +20,7 @@ async fn main() {
 
     let https = HttpsConnector::from((http, tls_connector));
     let hyper = Client::builder().http2_only(true).build(https);
-    let origin: Uri = "https://[::1]:8000".parse().unwrap();
+    let origin: Uri = "https://localhost:8000".parse().unwrap();
     let mut echo_client = EchoClient::with_origin(hyper.clone(), origin.clone());
     let mut hello_client = HelloClient::with_origin(hyper, origin);
 
