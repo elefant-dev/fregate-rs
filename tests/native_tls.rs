@@ -65,7 +65,6 @@ mod native_tls {
     }
 
     #[tokio::test]
-
     async fn test_https_request() {
         let (port, _) = start_server().await;
 
@@ -95,7 +94,6 @@ mod native_tls {
     }
 
     #[tokio::test]
-
     async fn test_no_cert_request() {
         let (port, _) = start_server().await;
 
@@ -112,7 +110,6 @@ mod native_tls {
     }
 
     #[tokio::test]
-
     async fn test_http_request() {
         let (port, tls_timeout) = start_server().await;
 
