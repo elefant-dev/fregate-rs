@@ -39,4 +39,24 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-features
+          args: #--features native-tls
+
+  test-native-tls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: arduino/setup-protoc@v1
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --features native-tls -- --ignored
+
+  test-rustls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: arduino/setup-protoc@v1
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --features rustls -- --ignored

@@ -23,11 +23,11 @@ const TRACE_LEVEL_PTR: &str = "/trace/level";
 const SERVICE_NAME_PTR: &str = "/service/name";
 const COMPONENT_NAME_PTR: &str = "/component/name";
 const COMPONENT_VERSION_PTR: &str = "/component/version";
-#[cfg(feature = "native-tls")]
+#[cfg(any(feature = "native-tls", feature = "rustls"))]
 const TLS_HANDSHAKE_TIMEOUT: &str = "/server/tls/handshake_timeout";
-#[cfg(feature = "native-tls")]
+#[cfg(any(feature = "native-tls", feature = "rustls"))]
 const TLS_KEY_PATH: &str = "/server/tls/key/path";
-#[cfg(feature = "native-tls")]
+#[cfg(any(feature = "native-tls", feature = "rustls"))]
 const TLS_CERTIFICATE_PATH: &str = "/server/tls/cert/path";
 const TRACES_ENDPOINT_PTR: &str = "/exporter/otlp/traces/endpoint";
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
@@ -57,13 +57,13 @@ pub struct AppConfig<T> {
     pub port: u16,
     /// configuration for logs and traces
     pub logger: LoggerConfig,
-    #[cfg(feature = "native-tls")]
+    #[cfg(any(feature = "native-tls", feature = "rustls"))]
     /// TLS handshake timeout
     pub tls_handshake_timeout: std::time::Duration,
-    #[cfg(feature = "native-tls")]
+    #[cfg(any(feature = "native-tls", feature = "rustls"))]
     /// path to TLS key file
     pub tls_key_path: Option<Box<str>>,
-    #[cfg(feature = "native-tls")]
+    #[cfg(any(feature = "native-tls", feature = "rustls"))]
     /// path to TLS certificate file
     pub tls_cert_path: Option<Box<str>>,
     /// field for each application specific configuration
@@ -131,7 +131,7 @@ where
         let host = config.pointer_and_deserialize(HOST_PTR)?;
         let port = config.pointer_and_deserialize(PORT_PTR)?;
         let logger = LoggerConfig::deserialize(&config).map_err(Error::custom)?;
-        #[cfg(feature = "native-tls")]
+        #[cfg(any(feature = "native-tls", feature = "rustls"))]
         let (tls_handshake_timeout, tls_key_path, tls_cert_path) = (
             config.pointer_and_deserialize::<u64, D::Error>(TLS_HANDSHAKE_TIMEOUT)?,
             config
@@ -147,11 +147,11 @@ where
             host,
             port,
             logger,
-            #[cfg(feature = "native-tls")]
+            #[cfg(any(feature = "native-tls", feature = "rustls"))]
             tls_handshake_timeout: std::time::Duration::from_millis(tls_handshake_timeout),
-            #[cfg(feature = "native-tls")]
+            #[cfg(any(feature = "native-tls", feature = "rustls"))]
             tls_key_path,
-            #[cfg(feature = "native-tls")]
+            #[cfg(any(feature = "native-tls", feature = "rustls"))]
             tls_cert_path,
             private,
         })
