@@ -48,13 +48,16 @@ opentelemetry-zipkin = "0.16.0"
 valuable = "0.1.0"
 valuable-serde = "0.1.0"
 
+# common deps for tls
 async-stream = { version = "0.3.3", optional = true }
 futures-util = { version = "0.3.25", optional = true }
-native-tls = { version = "0.2.10", optional = true, features = ["alpn"] }
-rustls-pemfile = { version = "1.0.1", optional = true }
-tokio-native-tls = { version = "0.3.0", optional = true }
-tokio-rustls = { version = "0.23.4", optional = true, default-features = false, features = ["logging"] }
 tokio-stream = { version = "0.1.11", optional = true, features = ["net"] }
+# native-tls deps
+native-tls = { version = "0.2.10", optional = true, features = ["alpn"] }
+tokio-native-tls = { version = "0.3.0", optional = true }
+# rustls deps
+rustls-pemfile = { version = "1.0.1", optional = true }
+tokio-rustls = { version = "0.23.4", optional = true, default-features = false, features = ["logging"] }
 
 [dev-dependencies]
 valuable-derive = "0.1.0"

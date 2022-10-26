@@ -92,17 +92,19 @@ impl<'a, H, T> Application<'a, H, T> {
             move |error| Error::CustomError(format!("Cant load TLS {type}: `{error}`."))
         }
 
-        let tls_handshake_timeout = self.config.tls_handshake_timeout;
+        let tls_handshake_timeout = self.config.tls.handshake_timeout;
 
         let tls_cert_path = self
             .config
-            .tls_cert_path
+            .tls
+            .cert_path
             .as_deref()
             .ok_or_else(|| cant_load("certificate")("No path present."))?;
 
         let tls_key_path = self
             .config
-            .tls_key_path
+            .tls
+            .key_path
             .as_deref()
             .ok_or_else(|| cant_load("key")("No path present."))?;
 
