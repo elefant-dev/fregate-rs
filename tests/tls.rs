@@ -61,7 +61,7 @@ mod tls {
             .unwrap();
 
         let port = get_free_port().await;
-        let tls_timeout = config.tls_handshake_timeout;
+        let tls_timeout = config.tls.handshake_timeout;
 
         tokio::task::spawn(async move {
             config.port = port;

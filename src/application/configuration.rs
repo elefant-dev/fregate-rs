@@ -1,3 +1,6 @@
+#[cfg(any(feature = "native-tls", feature = "rustls"))]
+mod tls;
+
 use crate::{error::Result, extensions::DeserializeExt};
 use config::{builder::DefaultState, ConfigBuilder, Environment, File, FileFormat};
 use serde::{
@@ -23,12 +26,6 @@ const TRACE_LEVEL_PTR: &str = "/trace/level";
 const SERVICE_NAME_PTR: &str = "/service/name";
 const COMPONENT_NAME_PTR: &str = "/component/name";
 const COMPONENT_VERSION_PTR: &str = "/component/version";
-#[cfg(any(feature = "native-tls", feature = "rustls"))]
-const TLS_HANDSHAKE_TIMEOUT: &str = "/server/tls/handshake_timeout";
-#[cfg(any(feature = "native-tls", feature = "rustls"))]
-const TLS_KEY_PATH: &str = "/server/tls/key/path";
-#[cfg(any(feature = "native-tls", feature = "rustls"))]
-const TLS_CERTIFICATE_PATH: &str = "/server/tls/cert/path";
 const TRACES_ENDPOINT_PTR: &str = "/exporter/otlp/traces/endpoint";
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
 const DEFAULT_SEPARATOR: &str = "_";
@@ -58,14 +55,8 @@ pub struct AppConfig<T> {
     /// configuration for logs and traces
     pub logger: LoggerConfig,
     #[cfg(any(feature = "native-tls", feature = "rustls"))]
-    /// TLS handshake timeout
-    pub tls_handshake_timeout: std::time::Duration,
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
-    /// path to TLS key file
-    pub tls_key_path: Option<Box<str>>,
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
-    /// path to TLS certificate file
-    pub tls_cert_path: Option<Box<str>>,
+    /// TLS configuration parameters
+    pub tls: tls::TlsConfigurationVariables,
     /// field for each application specific configuration
     pub private: T,
 }
@@ -132,15 +123,7 @@ where
         let port = config.pointer_and_deserialize(PORT_PTR)?;
         let logger = LoggerConfig::deserialize(&config).map_err(Error::custom)?;
         #[cfg(any(feature = "native-tls", feature = "rustls"))]
-        let (tls_handshake_timeout, tls_key_path, tls_cert_path) = (
-            config.pointer_and_deserialize::<u64, D::Error>(TLS_HANDSHAKE_TIMEOUT)?,
-            config
-                .pointer_and_deserialize::<_, D::Error>(TLS_KEY_PATH)
-                .ok(),
-            config
-                .pointer_and_deserialize::<_, D::Error>(TLS_CERTIFICATE_PATH)
-                .ok(),
-        );
+        let tls = tls::TlsConfigurationVariables::deserialize(&config).map_err(Error::custom)?;
         let private = T::deserialize(config).map_err(Error::custom)?;
 
         Ok(AppConfig::<T> {
@@ -148,11 +131,7 @@ where
             port,
             logger,
             #[cfg(any(feature = "native-tls", feature = "rustls"))]
-            tls_handshake_timeout: std::time::Duration::from_millis(tls_handshake_timeout),
-            #[cfg(any(feature = "native-tls", feature = "rustls"))]
-            tls_key_path,
-            #[cfg(any(feature = "native-tls", feature = "rustls"))]
-            tls_cert_path,
+            tls,
             private,
         })
     }
