@@ -17,8 +17,8 @@ mod app_config_tls {
     async fn tls_paths() {
         let config = AppConfig::default();
 
-        assert!(config.tls_key_path.is_none());
-        assert!(config.tls_cert_path.is_none());
+        assert!(config.tls.key_path.is_none());
+        assert!(config.tls.cert_path.is_none());
         assert!(Application::new(&config).serve_tls().await.is_err());
 
         std::env::set_var("TEST_SERVER_TLS_KEY_PATH", TLS_KEY_FULL_PATH);
@@ -28,8 +28,8 @@ mod app_config_tls {
             .build()
             .unwrap();
 
-        assert!(config.tls_key_path.is_some());
-        assert!(config.tls_cert_path.is_none());
+        assert!(config.tls.key_path.is_some());
+        assert!(config.tls.cert_path.is_none());
         assert!(Application::new(&config).serve_tls().await.is_err());
 
         std::env::set_var("TEST_SERVER_TLS_CERT_PATH", TLS_CERTIFICATE_FULL_PATH);
@@ -39,8 +39,8 @@ mod app_config_tls {
             .build()
             .unwrap();
 
-        assert!(config.tls_key_path.is_some());
-        assert!(config.tls_cert_path.is_some());
+        assert!(config.tls.key_path.is_some());
+        assert!(config.tls.cert_path.is_some());
         assert!(timeout(
             Duration::from_secs(2),
             Application::new(&config).serve_tls(),
