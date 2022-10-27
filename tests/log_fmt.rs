@@ -1,4 +1,3 @@
-#[cfg(test)]
 mod log_fmt_test {
     use serde::Serialize;
     use serde_json::Value;
