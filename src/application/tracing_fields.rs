@@ -38,13 +38,13 @@ pub struct TracingFields<'a> {
     fields: HashMap<&'a str, Field<'a>>,
 }
 
-struct Field<'a>(&'a (dyn Valuable + Send + Sync));
+type Field<'a> = &'a (dyn Valuable + Send + Sync);
 
 impl<'a> Debug for TracingFields<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut f = f.debug_struct("TracingFields");
         for (k, v) in self.fields.iter() {
-            f.field(k, &v.0.as_value() as _);
+            f.field(k, &v.as_value() as _);
         }
         f.finish()
     }
@@ -65,7 +65,7 @@ impl<'a> TracingFields<'a> {
 
     /// Inserts a key-value pair of references into the map. If key is present its value is overwritten.
     pub fn insert<V: Valuable + Send + Sync>(&mut self, key: &'a str, value: &'a V) {
-        self.fields.insert(key, Field(value));
+        self.fields.insert(key, value);
     }
 
     /// Removes key-value pairs from the by given keys.
@@ -90,7 +90,7 @@ impl<'a> Valuable for TracingFields<'a> {
         for (field, value) in self.fields.iter() {
             visit.visit_named_fields(&NamedValues::new(
                 &[NamedField::new(field)],
-                &[value.0.as_value()],
+                &[value.as_value()],
             ));
         }
     }
