@@ -1,6 +1,6 @@
 //! Instrument for logging
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 use valuable::{Fields, NamedField, NamedValues, StructDef, Structable, Valuable, Value, Visit};
 
 pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
@@ -33,9 +33,21 @@ pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
 ///```json
 ///  {"component":"marker","service":"fregate","version":"0.0.0","NON_STATIC":1000,"STATIC":1000,"str":"str","msg":"message","target":"check_fregate","LogLevel":"INFO","time":1665656359172240000,"timestamp":"2022-10-13T10:19:19.172Z"}
 ///```
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct TracingFields<'a> {
-    fields: HashMap<&'a str, Value<'a>>,
+    fields: HashMap<&'a str, Field<'a>>,
+}
+
+type Field<'a> = &'a (dyn Valuable + Send + Sync);
+
+impl<'a> Debug for TracingFields<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut f = f.debug_struct("TracingFields");
+        for (k, v) in self.fields.iter() {
+            f.field(k, &v.as_value() as _);
+        }
+        f.finish()
+    }
 }
 
 impl<'a> TracingFields<'a> {
@@ -52,8 +64,8 @@ impl<'a> TracingFields<'a> {
     }
 
     /// Inserts a key-value pair of references into the map. If key is present its value is overwritten.
-    pub fn insert<V: Valuable>(&mut self, key: &'a str, value: &'a V) {
-        self.fields.insert(key, value.as_value());
+    pub fn insert<V: Valuable + Send + Sync>(&mut self, key: &'a str, value: &'a V) {
+        self.fields.insert(key, value);
     }
 
     /// Removes key-value pairs from the by given keys.
