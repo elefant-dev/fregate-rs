@@ -5,9 +5,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-## [0.3.1]
+## [0.4.3] - 2022-10-28
 ### Changed
-- Remove `grpc-sys` dependency.
+- Make TracingFields to be Send ([#88](https://github.com/elefant-dev/fregate-rs/pull/88))
+
+## [0.4.2] - 2022-10-26
+### Changed
+- Add timeout for tls handshake ([#83](https://github.com/elefant-dev/fregate-rs/pull/83))
+- Tls Handshake in separate task ([#83](https://github.com/elefant-dev/fregate-rs/pull/83))
+- Disable default feature in opentelemetry-zipkin ([#86](https://github.com/elefant-dev/fregate-rs/pull/86))
+
+### Added
+- Native-tls support ([#82](https://github.com/elefant-dev/fregate-rs/pull/82))
+- Rustls support ([#85](https://github.com/elefant-dev/fregate-rs/pull/85))
+
+## [0.4.1] - 2022-10-18
+### Changed
+- Make AlwaysReadyAndAlive return OK to "/ready" request ([#78](https://github.com/elefant-dev/fregate-rs/pull/78))
+
+## [0.4.0]
+### Added
+- Bootstrap fn to read config and initialize tracing ([#58](https://github.com/elefant-dev/fregate-rs/pull/58))
+- Metrics endpoint ([#70](https://github.com/elefant-dev/fregate-rs/pull/70))
+- Custom event formatter for tracing_subscirber::layer() ([#72](https://github.com/elefant-dev/fregate-rs/pull/72))
+- TracingFields structure to flatten fields in logs ([#72](https://github.com/elefant-dev/fregate-rs/pull/72))
+- Docs ([#62](https://github.com/elefant-dev/fregate-rs/pull/62))
+
+### Changed
+- Add Clippy lints ([#59](https://github.com/elefant-dev/fregate-rs/pull/59))
+- Review fixes ([#68](https://github.com/elefant-dev/fregate-rs/pull/68))
+- AppConfig is no longer singleton ([#58](https://github.com/elefant-dev/fregate-rs/pull/58))
+- Tracing layer ([#72](https://github.com/elefant-dev/fregate-rs/pull/72))
+
+## [0.3.1] - 2022-09-15
+### Removed
+-  `grpc-sys` dependency.
 
 ## [0.3.0] - 2022-09-15
 ### Added
