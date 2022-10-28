@@ -7,10 +7,15 @@ use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_zipkin::B3Encoding::MultipleHeader;
 use std::str::FromStr;
 use tracing::Subscriber;
-use tracing_subscriber::filter::Filtered;
 use tracing_subscriber::{
-    filter::EnvFilter, layer::SubscriberExt, registry, registry::LookupSpan, reload,
-    reload::Handle, util::SubscriberInitExt, Layer, Registry,
+    filter::{filter_fn, EnvFilter, Filtered},
+    layer::SubscriberExt,
+    registry,
+    registry::LookupSpan,
+    reload,
+    reload::Handle,
+    util::SubscriberInitExt,
+    Layer, Registry,
 };
 
 static HANDLE_LOG_LAYER: OnceCell<HandleLogLayer> = OnceCell::new();
@@ -93,8 +98,14 @@ pub fn init_tracing(
 
     let trace_layer = if let Some(traces_endpoint) = traces_endpoint {
         let trace_layer = get_trace_layer(component_name, traces_endpoint)?;
-        let filtered_trace_layer =
-            trace_layer.with_filter(EnvFilter::from_str(trace_level).unwrap_or_default());
+
+        let span_filter = filter_fn(|metadata| metadata.is_span());
+        let level_filter = EnvFilter::from_str(trace_level).unwrap_or_default();
+
+        let filtered_trace_layer = trace_layer
+            .with_filter(span_filter)
+            .with_filter(level_filter);
+
         Some(filtered_trace_layer)
     } else {
         None
