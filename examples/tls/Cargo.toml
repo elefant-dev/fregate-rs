@@ -20,7 +20,7 @@ path = "src/client_rustls.rs"
 required-features = ["hyper-rustls", "rustls"]
 
 [dependencies]
-fregate = { path = "../..", features = ["native-tls"] }
+fregate = { path = "../..", features = ["use_native_tls"] }
 #fregate = { path = "../..", features = ["rustls"] }
 #fregate = { path = "../..", features = ["rustls-tls12"] }
 resources = { path = "../examples_resources" }

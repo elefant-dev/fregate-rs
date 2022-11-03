@@ -3,7 +3,7 @@ mod bootstrap;
 mod configuration;
 mod management;
 mod metrics;
-#[cfg(any(feature = "native-tls", feature = "rustls"))]
+#[cfg(feature = "tls")]
 pub(crate) mod tls_config;
 
 pub mod error;

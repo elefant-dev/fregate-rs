@@ -1,4 +1,4 @@
-#[cfg(any(feature = "native-tls", feature = "rustls"))]
+#[cfg(feature = "tls")]
 pub(crate) mod tls;
 
 use crate::{
@@ -78,7 +78,7 @@ impl<'a, H, T> Application<'a, H, T> {
     }
 
     /// Serve TLS
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    #[cfg(feature = "tls")]
     pub async fn serve_tls(self) -> Result<()>
     where
         H: Health,

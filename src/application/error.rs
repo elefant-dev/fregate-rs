@@ -34,19 +34,19 @@ pub enum Error {
     IoError(#[from] std::io::Error),
 
     /// tokio JoinHandle error
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    #[cfg(feature = "tls")]
     #[error("Got JoinHandleError: `{0}`")]
     JoinHandleError(#[from] tokio::task::JoinError),
     /// TLS HandshakeTimeout
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    #[cfg(feature = "tls")]
     #[error("Got TlsHandshakeTimeout")]
     TlsHandshakeTimeout,
     /// Error returned by native-tls
-    #[cfg(feature = "native-tls")]
+    #[cfg(feature = "use_native_tls")]
     #[error("Got NativeTlsError: `{0}`")]
     NativeTlsError(#[from] tokio_native_tls::native_tls::Error),
     /// Error returned by rustls
-    #[cfg(feature = "rustls")]
+    #[cfg(feature = "use_rustls")]
     #[error("Got RustlsError: `{0}`")]
     RustlsError(#[from] tokio_rustls::rustls::Error),
 }
