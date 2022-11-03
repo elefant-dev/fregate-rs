@@ -13,7 +13,9 @@ keywords = ["http", "grpc", "service"]
 members = ["examples/*"]
 
 [features]
-native-tls = [
+tls = []
+use_native_tls = [
+    "tls",
     "reqwest/native-tls",
     "tokio-native-tls",
     "async-stream",
@@ -22,11 +24,13 @@ native-tls = [
     "tokio/net",
     "tokio-stream"
 ]
-native-tls-vendored = [
+use_native_tls_vendored = [
+    "use_native_tls",
     "reqwest/native-tls-vendored",
     "native-tls/vendored"
 ]
-rustls = [
+use_rustls = [
+    "tls",
     "opentelemetry-zipkin/reqwest-rustls",
     "tokio-rustls",
     "rustls-pemfile",
@@ -36,8 +40,9 @@ rustls = [
     "tokio/net",
     "tokio-stream"
 ]
-rustls-tls12 = [
-    "rustls",
+use_rustls_tls12 = [
+    "tls",
+    "use_rustls",
     "tokio-rustls/tls12"
 ]
 

@@ -1,4 +1,4 @@
-#[cfg(any(feature = "native-tls", feature = "rustls"))]
+#[cfg(feature = "tls")]
 mod app_config_tls {
     use fregate::{AppConfig, Application, Empty};
     use std::time::Duration;
