@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.4.4] - 2022-11-03
+### Added
+- `TracingFields::insert_as_string()` for types which do not impl `Valuable` trait ([#95](https://github.com/elefant-dev/fregate-rs/pull/95))
+
+### Changed
+- Rename tls flags with "use_" prefix. ([#93](https://github.com/elefant-dev/fregate-rs/pull/93))
+
 ## [0.4.3] - 2022-10-28
 ### Changed
 - Make TracingFields to be Send ([#88](https://github.com/elefant-dev/fregate-rs/pull/88))
