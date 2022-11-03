@@ -1,4 +1,4 @@
-#[cfg(any(feature = "native-tls", feature = "rustls"))]
+#[cfg(feature = "tls")]
 mod tls;
 
 use crate::{error::Result, extensions::DeserializeExt};
@@ -54,7 +54,7 @@ pub struct AppConfig<T> {
     pub port: u16,
     /// configuration for logs and traces
     pub logger: LoggerConfig,
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    #[cfg(feature = "tls")]
     /// TLS configuration parameters
     pub tls: tls::TlsConfigurationVariables,
     /// field for each application specific configuration
@@ -122,7 +122,7 @@ where
         let host = config.pointer_and_deserialize(HOST_PTR)?;
         let port = config.pointer_and_deserialize(PORT_PTR)?;
         let logger = LoggerConfig::deserialize(&config).map_err(Error::custom)?;
-        #[cfg(any(feature = "native-tls", feature = "rustls"))]
+        #[cfg(feature = "tls")]
         let tls = tls::TlsConfigurationVariables::deserialize(&config).map_err(Error::custom)?;
         let private = T::deserialize(config).map_err(Error::custom)?;
 
@@ -130,7 +130,7 @@ where
             host,
             port,
             logger,
-            #[cfg(any(feature = "native-tls", feature = "rustls"))]
+            #[cfg(feature = "tls")]
             tls,
             private,
         })

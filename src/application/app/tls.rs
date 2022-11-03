@@ -1,5 +1,11 @@
-#[cfg(all(feature = "native-tls", feature = "rustls"))]
+#[cfg(all(feature = "use_native_tls", feature = "use_rustls"))]
 compile_error!("native-tls and rustls cannot be used together");
+
+#[cfg(not(all(
+    feature = "tls",
+    any(feature = "use_native_tls", feature = "use_rustls")
+)))]
+compile_error!("can't use tls flags directly");
 
 use crate::{
     application::{app::shutdown_signal, tls_config::RemoteAddr},
@@ -109,7 +115,7 @@ async fn fetch_tls_handle_commands(
     Ok(ret)
 }
 
-#[cfg(feature = "native-tls")]
+#[cfg(feature = "use_native_tls")]
 mod reexport {
     use crate::error::Result;
     use tokio_native_tls::native_tls::{self, Identity};
@@ -128,7 +134,7 @@ mod reexport {
     }
 }
 
-#[cfg(feature = "rustls")]
+#[cfg(feature = "use_rustls")]
 mod reexport {
     use crate::error::{Error, Result};
     use rustls_pemfile::{certs, pkcs8_private_keys};

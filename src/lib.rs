@@ -18,7 +18,7 @@ pub use application::*;
 
 pub use axum;
 pub use config;
-#[cfg(any(feature = "native-tls", feature = "rustls"))]
+#[cfg(feature = "tls")]
 pub use futures_util;
 pub use hyper;
 pub use thiserror;
