@@ -1,3 +1,4 @@
+use crate::AppConfig;
 use metrics::{
     absolute_counter, describe_counter, describe_gauge, describe_histogram, gauge, histogram,
     register_counter, register_gauge, register_histogram,
@@ -5,10 +6,11 @@ use metrics::{
 use tokio::runtime::Handle;
 use tokio_metrics::{RuntimeMetrics, RuntimeMonitor};
 
-pub(crate) fn init_tokio_metrics_task() {
+pub(crate) fn init_tokio_metrics_task<T>(config: &AppConfig<T>) {
     let handle = Handle::current();
     let runtime_monitor = RuntimeMonitor::new(&handle);
 
+    let metrics_update_interval = config.metrics_update_interval;
     tokio::task::spawn(async move {
         for RuntimeMetrics {
             workers_count,
@@ -85,7 +87,7 @@ pub(crate) fn init_tokio_metrics_task() {
                 min_local_queue_depth.try_into().unwrap_or(u64::MAX)
             );
             histogram!("elapsed", elapsed);
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            tokio::time::sleep(metrics_update_interval).await;
         }
     });
 }

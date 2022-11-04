@@ -54,7 +54,7 @@ where
         traces_endpoint.as_deref(),
     )?;
 
-    init_metrics()?;
+    init_metrics(&config)?;
 
     info!("Configuration: `{config:?}`.");
 

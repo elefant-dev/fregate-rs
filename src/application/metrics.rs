@@ -2,6 +2,7 @@
 mod tokio_metrics;
 
 use crate::error::Result;
+use crate::AppConfig;
 use metrics::{describe_counter, describe_histogram, register_counter, register_histogram, Unit};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle, PrometheusRecorder};
 use once_cell::sync::Lazy;
@@ -15,11 +16,12 @@ pub fn get_metrics() -> String {
 }
 
 /// Initialise PrometheusRecorder
-pub fn init_metrics() -> Result<()> {
+#[allow(unused_param)]
+pub fn init_metrics<T>(config: &AppConfig<T>) -> Result<()> {
     register_metrics();
     metrics::set_recorder(&*RECORDER)?;
     #[cfg(feature = "tokio-metrics")]
-    tokio_metrics::init_tokio_metrics_task();
+    tokio_metrics::init_tokio_metrics_task(config);
 
     Ok(())
 }
