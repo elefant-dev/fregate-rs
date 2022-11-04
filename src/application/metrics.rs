@@ -16,7 +16,7 @@ pub fn get_metrics() -> String {
 }
 
 /// Initialise PrometheusRecorder
-#[allow(unused_param)]
+#[allow(unused)]
 pub fn init_metrics<T>(config: &AppConfig<T>) -> Result<()> {
     register_metrics();
     metrics::set_recorder(&*RECORDER)?;
