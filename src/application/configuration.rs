@@ -21,6 +21,7 @@ use std::{fmt::Debug, net::IpAddr};
 //             After refactoring less than 50 lines will stay.
 const HOST_PTR: &str = "/host";
 const PORT_PTR: &str = "/port";
+const SERVER_METRICS_UPDATE_INTERVAL: &str = "/server/metrics/update_interval";
 const LOG_LEVEL_PTR: &str = "/log/level";
 const TRACE_LEVEL_PTR: &str = "/trace/level";
 const SERVICE_NAME_PTR: &str = "/service/name";
@@ -57,6 +58,9 @@ pub struct AppConfig<T> {
     #[cfg(feature = "tls")]
     /// TLS configuration parameters
     pub tls: tls::TlsConfigurationVariables,
+    /// Tokio metrics update interval
+    #[cfg(feature = "tokio-metrics")]
+    pub metrics_update_interval: std::time::Duration,
     /// field for each application specific configuration
     pub private: T,
 }
@@ -124,6 +128,9 @@ where
         let logger = LoggerConfig::deserialize(&config).map_err(Error::custom)?;
         #[cfg(feature = "tls")]
         let tls = tls::TlsConfigurationVariables::deserialize(&config).map_err(Error::custom)?;
+        #[cfg(feature = "tokio-metrics")]
+        let metrics_update_interval =
+            config.pointer_and_deserialize::<u64, D::Error>(SERVER_METRICS_UPDATE_INTERVAL)?;
         let private = T::deserialize(config).map_err(Error::custom)?;
 
         Ok(AppConfig::<T> {
@@ -132,6 +139,8 @@ where
             logger,
             #[cfg(feature = "tls")]
             tls,
+            #[cfg(feature = "tokio-metrics")]
+            metrics_update_interval: std::time::Duration::from_millis(metrics_update_interval),
             private,
         })
     }
