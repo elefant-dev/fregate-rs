@@ -21,6 +21,7 @@ use std::{fmt::Debug, net::IpAddr};
 //             After refactoring less than 50 lines will stay.
 const HOST_PTR: &str = "/host";
 const PORT_PTR: &str = "/port";
+#[cfg(feature = "tokio-metrics")]
 const SERVER_METRICS_UPDATE_INTERVAL: &str = "/server/metrics/update_interval";
 const LOG_LEVEL_PTR: &str = "/log/level";
 const TRACE_LEVEL_PTR: &str = "/trace/level";
