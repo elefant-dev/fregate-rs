@@ -54,7 +54,11 @@ where
         traces_endpoint.as_deref(),
     )?;
 
+    #[cfg(feature = "tokio-metrics")]
     init_metrics(&config)?;
+
+    #[cfg(not(feature = "tokio-metrics"))]
+    init_metrics()?;
 
     info!("Configuration: `{config:?}`.");
 
