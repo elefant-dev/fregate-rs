@@ -21,6 +21,8 @@ use std::{fmt::Debug, net::IpAddr};
 //             After refactoring less than 50 lines will stay.
 const HOST_PTR: &str = "/host";
 const PORT_PTR: &str = "/port";
+#[cfg(feature = "tokio-metrics")]
+const SERVER_METRICS_UPDATE_INTERVAL: &str = "/server/metrics/update_interval";
 const LOG_LEVEL_PTR: &str = "/log/level";
 const TRACE_LEVEL_PTR: &str = "/trace/level";
 const SERVICE_NAME_PTR: &str = "/service/name";
@@ -74,6 +76,9 @@ pub struct LoggerConfig {
     pub component_name: String,
     /// component version
     pub version: String,
+    /// Tokio metrics update interval
+    #[cfg(feature = "tokio-metrics")]
+    pub metrics_update_interval: std::time::Duration,
     /// endpoint where to export traces
     pub traces_endpoint: Option<String>,
 }
@@ -91,12 +96,14 @@ impl<'de> Deserialize<'de> for LoggerConfig {
         let component_name = config.pointer_and_deserialize(COMPONENT_NAME_PTR)?;
         let version = config.pointer_and_deserialize(COMPONENT_VERSION_PTR)?;
         let traces_endpoint_ptr = config.pointer_mut(TRACES_ENDPOINT_PTR);
-
         let traces_endpoint = if let Some(ptr) = traces_endpoint_ptr {
             Some(from_value::<String>(ptr.take()).map_err(Error::custom)?)
         } else {
             None
         };
+        #[cfg(feature = "tokio-metrics")]
+        let metrics_update_interval =
+            config.pointer_and_deserialize::<u64, D::Error>(SERVER_METRICS_UPDATE_INTERVAL)?;
 
         Ok(LoggerConfig {
             log_level,
@@ -105,6 +112,8 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             service_name,
             component_name,
             traces_endpoint,
+            #[cfg(feature = "tokio-metrics")]
+            metrics_update_interval: std::time::Duration::from_millis(metrics_update_interval),
         })
     }
 }

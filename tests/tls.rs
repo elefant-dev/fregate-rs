@@ -1,7 +1,6 @@
 #[cfg(feature = "tls")]
 mod tls {
     use fregate::{AppConfig, Application, Empty};
-    use futures_util::{stream, StreamExt};
     use hyper::{client::HttpConnector, Client, StatusCode, Uri};
     use hyper_rustls::{ConfigBuilderExt, HttpsConnector, HttpsConnectorBuilder};
     use rustls::{
@@ -9,13 +8,12 @@ mod tls {
         Certificate, ClientConfig, ServerName,
     };
     use std::{
-        future::ready,
-        net::{IpAddr, Ipv6Addr, SocketAddr},
+        net::{IpAddr, Ipv6Addr, SocketAddr, TcpListener},
         str::FromStr,
         sync::Arc,
         time::{Duration, SystemTime},
     };
-    use tokio::{net::TcpListener, time};
+    use tokio::time;
 
     const ROOTLES_PORT: u16 = 1024;
     const MAX_PORT: u16 = u16::MAX;
@@ -29,25 +27,25 @@ mod tls {
         "/examples/examples_resources/certs/tls.cert"
     );
 
-    async fn get_free_port() -> u16 {
-        stream::iter(ROOTLES_PORT..MAX_PORT)
-            .map(test_bind_tcp)
-            .buffer_unordered(16)
-            .filter_map(ready)
-            .next()
-            .await
-            .expect("NO FREE PORTS")
+    fn get_free_port() -> u16 {
+        for port in ROOTLES_PORT..MAX_PORT {
+            if let Some(p) = test_bind_tcp(port) {
+                return p;
+            }
+        }
+
+        panic!("NO FREE PORTS");
     }
 
-    async fn test_bind_tcp(port: u16) -> Option<u16> {
+    fn test_bind_tcp(port: u16) -> Option<u16> {
         const LOOPBACK: IpAddr = IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1));
-        TcpListener::bind(SocketAddr::new(LOOPBACK, port))
-            .await
-            .ok()?
-            .local_addr()
-            .ok()
-            .as_ref()
-            .map(SocketAddr::port)
+        Some(
+            TcpListener::bind(SocketAddr::new(LOOPBACK, port))
+                .ok()?
+                .local_addr()
+                .ok()?
+                .port(),
+        )
     }
 
     async fn start_server() -> (u16, Duration) {
@@ -60,7 +58,7 @@ mod tls {
             .build()
             .unwrap();
 
-        let port = get_free_port().await;
+        let port = get_free_port();
         let tls_timeout = config.tls.handshake_timeout;
 
         tokio::task::spawn(async move {
