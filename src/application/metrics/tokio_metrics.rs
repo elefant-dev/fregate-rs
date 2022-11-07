@@ -1,16 +1,35 @@
-use crate::AppConfig;
+//! Initialization of key [`metrics`](https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMetrics.html) of tokio tasks.
+
 use metrics::{
     absolute_counter, describe_counter, describe_gauge, describe_histogram, gauge, histogram,
     register_counter, register_gauge, register_histogram,
 };
+use std::time::Duration;
 use tokio::runtime::Handle;
 use tokio_metrics::{RuntimeMetrics, RuntimeMonitor};
 
-pub(crate) fn init_tokio_metrics_task<T>(config: &AppConfig<T>) {
+/// Initialise key [`metrics`](https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMetrics.html) of tokio tasks.\
+/// Example:
+/// ```no_run
+/// use fregate::tokio_metrics::init_tokio_metrics_task;
+/// use fregate::{init_metrics, AppConfig, Application};
+/// use std::time::Duration;
+///
+/// #[tokio::main]
+/// async fn main() {
+///     init_metrics().expect("Failed to initialise PrometheusRecorder");
+///     init_tokio_metrics_task(Duration::from_millis(500));
+///
+///     Application::new(&AppConfig::default())
+///         .serve()
+///         .await
+///         .unwrap()
+/// }
+/// ```
+pub fn init_tokio_metrics_task(metrics_update_interval: Duration) {
     let handle = Handle::current();
     let runtime_monitor = RuntimeMonitor::new(&handle);
 
-    let metrics_update_interval = config.metrics_update_interval;
     tokio::task::spawn(async move {
         for RuntimeMetrics {
             workers_count,

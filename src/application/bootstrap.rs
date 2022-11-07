@@ -43,6 +43,7 @@ where
         service_name,
         component_name,
         traces_endpoint,
+        ..
     } = &config.logger;
 
     init_tracing(
@@ -54,7 +55,10 @@ where
         traces_endpoint.as_deref(),
     )?;
 
-    init_metrics(&config)?;
+    init_metrics()?;
+
+    #[cfg(feature = "tokio-metrics")]
+    tokio_metrics::init_tokio_metrics_task(config.logger.metrics_update_interval);
 
     info!("Configuration: `{config:?}`.");
 

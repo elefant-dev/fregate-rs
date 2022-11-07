@@ -59,9 +59,6 @@ pub struct AppConfig<T> {
     #[cfg(feature = "tls")]
     /// TLS configuration parameters
     pub tls: tls::TlsConfigurationVariables,
-    /// Tokio metrics update interval
-    #[cfg(feature = "tokio-metrics")]
-    pub metrics_update_interval: std::time::Duration,
     /// field for each application specific configuration
     pub private: T,
 }
@@ -79,6 +76,9 @@ pub struct LoggerConfig {
     pub component_name: String,
     /// component version
     pub version: String,
+    /// Tokio metrics update interval
+    #[cfg(feature = "tokio-metrics")]
+    pub metrics_update_interval: std::time::Duration,
     /// endpoint where to export traces
     pub traces_endpoint: Option<String>,
 }
@@ -96,12 +96,14 @@ impl<'de> Deserialize<'de> for LoggerConfig {
         let component_name = config.pointer_and_deserialize(COMPONENT_NAME_PTR)?;
         let version = config.pointer_and_deserialize(COMPONENT_VERSION_PTR)?;
         let traces_endpoint_ptr = config.pointer_mut(TRACES_ENDPOINT_PTR);
-
         let traces_endpoint = if let Some(ptr) = traces_endpoint_ptr {
             Some(from_value::<String>(ptr.take()).map_err(Error::custom)?)
         } else {
             None
         };
+        #[cfg(feature = "tokio-metrics")]
+        let metrics_update_interval =
+            config.pointer_and_deserialize::<u64, D::Error>(SERVER_METRICS_UPDATE_INTERVAL)?;
 
         Ok(LoggerConfig {
             log_level,
@@ -110,6 +112,8 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             service_name,
             component_name,
             traces_endpoint,
+            #[cfg(feature = "tokio-metrics")]
+            metrics_update_interval: std::time::Duration::from_millis(metrics_update_interval),
         })
     }
 }
@@ -129,9 +133,6 @@ where
         let logger = LoggerConfig::deserialize(&config).map_err(Error::custom)?;
         #[cfg(feature = "tls")]
         let tls = tls::TlsConfigurationVariables::deserialize(&config).map_err(Error::custom)?;
-        #[cfg(feature = "tokio-metrics")]
-        let metrics_update_interval =
-            config.pointer_and_deserialize::<u64, D::Error>(SERVER_METRICS_UPDATE_INTERVAL)?;
         let private = T::deserialize(config).map_err(Error::custom)?;
 
         Ok(AppConfig::<T> {
@@ -140,8 +141,6 @@ where
             logger,
             #[cfg(feature = "tls")]
             tls,
-            #[cfg(feature = "tokio-metrics")]
-            metrics_update_interval: std::time::Duration::from_millis(metrics_update_interval),
             private,
         })
     }
