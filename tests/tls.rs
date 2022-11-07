@@ -1,6 +1,6 @@
 #[cfg(feature = "tls")]
 mod tls {
-    use fregate::{AppConfig, Application, Empty};
+    use fregate::{error::Error, AppConfig, Application, Empty};
     use hyper::{client::HttpConnector, Client, StatusCode, Uri};
     use hyper_rustls::{ConfigBuilderExt, HttpsConnector, HttpsConnectorBuilder};
     use rustls::{
@@ -8,14 +8,14 @@ mod tls {
         Certificate, ClientConfig, ServerName,
     };
     use std::{
-        net::{IpAddr, Ipv6Addr, SocketAddr, TcpListener},
+        io::ErrorKind,
         str::FromStr,
         sync::Arc,
         time::{Duration, SystemTime},
     };
-    use tokio::time;
+    use tokio::{sync::Mutex, time::timeout};
 
-    const ROOTLES_PORT: u16 = 1024;
+    const ROOTLES_PORT: u16 = 1025;
     const MAX_PORT: u16 = u16::MAX;
 
     const TLS_KEY_FULL_PATH: &str = concat!(
@@ -27,47 +27,60 @@ mod tls {
         "/examples/examples_resources/certs/tls.cert"
     );
 
-    fn get_free_port() -> u16 {
-        for port in ROOTLES_PORT..MAX_PORT {
-            if let Some(p) = test_bind_tcp(port) {
-                return p;
-            }
-        }
-
-        panic!("NO FREE PORTS");
-    }
-
-    fn test_bind_tcp(port: u16) -> Option<u16> {
-        const LOOPBACK: IpAddr = IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1));
-        Some(
-            TcpListener::bind(SocketAddr::new(LOOPBACK, port))
-                .ok()?
-                .local_addr()
-                .ok()?
-                .port(),
-        )
-    }
-
     async fn start_server() -> (u16, Duration) {
         std::env::set_var("TEST_SERVER_TLS_KEY_PATH", TLS_KEY_FULL_PATH);
         std::env::set_var("TEST_SERVER_TLS_CERT_PATH", TLS_CERTIFICATE_FULL_PATH);
 
-        let mut config = AppConfig::<Empty>::builder()
-            .add_env_prefixed("TEST")
-            .add_default()
-            .build()
-            .unwrap();
+        let config = Arc::new(Mutex::new(
+            AppConfig::<Empty>::builder()
+                .add_env_prefixed("TEST")
+                .add_default()
+                .build()
+                .unwrap(),
+        ));
 
-        let port = get_free_port();
-        let tls_timeout = config.tls.handshake_timeout;
+        let mut free_port = None;
+        let tls_timeout = config.lock().await.tls.handshake_timeout;
 
-        tokio::task::spawn(async move {
-            config.port = port;
-            Application::new(&config).serve_tls().await.unwrap();
-        });
+        for port in ROOTLES_PORT..MAX_PORT {
+            config.lock().await.port = port;
+
+            let config = config.clone();
+            let application_handle = timeout(
+                Duration::from_secs(1),
+                tokio::task::spawn(async move {
+                    let mut config = config.lock_owned().await;
+                    config.port = port;
+                    Application::new(&config).serve_tls().await
+                }),
+            )
+            .await;
+
+            match application_handle {
+                Err(_elapsed) => {
+                    free_port = Some(port);
+                    break;
+                }
+                Ok(Err(err)) => {
+                    panic!("Unexpected error: `{err}`.");
+                }
+                Ok(Ok(Err(Error::IoError(err)))) => {
+                    if err.kind() == ErrorKind::AddrInUse {
+                        continue;
+                    } else {
+                        panic!("Unexpected error: `{err}`.");
+                    }
+                }
+                Ok(Ok(Err(err))) => {
+                    panic!("Unexpected error: `{err}`.");
+                }
+                Ok(Ok(Ok(()))) => unreachable!("impossible"),
+            }
+        }
+
         tokio::time::sleep(Duration::from_millis(200)).await;
 
-        (port, tls_timeout)
+        (free_port.expect("No free ports are available"), tls_timeout)
     }
 
     fn build_client() -> Client<HttpsConnector<HttpConnector>> {
@@ -111,7 +124,7 @@ mod tls {
 
         let timeout = Duration::from_secs(2);
         let fut = hyper.get(Uri::from_str(&format!("https://localhost:{port}/health")).unwrap());
-        let response = time::timeout(timeout, fut).await.unwrap().unwrap();
+        let response = tokio::time::timeout(timeout, fut).await.unwrap().unwrap();
 
         let status = response.status();
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
@@ -129,7 +142,7 @@ mod tls {
 
         let timeout = tls_timeout + Duration::from_secs(2);
         let fut = hyper.get(Uri::from_str(&format!("http://localhost:{port}/health")).unwrap());
-        let response = time::timeout(timeout, fut).await.unwrap();
+        let response = tokio::time::timeout(timeout, fut).await.unwrap();
 
         assert!(response.is_err());
     }
