@@ -1,6 +1,6 @@
 [package]
 name = "fregate"
-version = "0.4.4"
+version = "0.4.5"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/elefant-dev/fregate-rs"
@@ -76,6 +76,8 @@ opentelemetry-http = "0.7.0"
 opentelemetry-zipkin = { version = "0.16.0", default-features = false, features = ["reqwest-client"] }
 valuable = "0.1.0"
 valuable-serde = "0.1.0"
+
+tokio-metrics = { version = "0.1.0", optional = true }
 
 # common deps for tls
 async-stream = { version = "0.3.3", optional = true }

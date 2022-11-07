@@ -1,3 +1,9 @@
 [build]
-rustflags = ["--cfg", "tracing_unstable"]
-rustdocflags = ["--cfg", "tracing_unstable"]
+rustflags = [
+    "--cfg=tracing_unstable",
+    "--cfg=tokio_unstable",
+]
+rustdocflags = [
+    "--cfg=tracing_unstable",
+    "--cfg=tokio_unstable",
+]

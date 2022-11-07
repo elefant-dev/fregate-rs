@@ -1,3 +1,6 @@
+#[cfg(feature = "tokio-metrics")]
+pub mod tokio_metrics;
+
 use crate::error::Result;
 use metrics::{describe_counter, describe_histogram, register_counter, register_histogram, Unit};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle, PrometheusRecorder};
@@ -14,7 +17,9 @@ pub fn get_metrics() -> String {
 /// Initialise PrometheusRecorder
 pub fn init_metrics() -> Result<()> {
     register_metrics();
-    Ok(metrics::set_recorder(&*RECORDER)?)
+    metrics::set_recorder(&*RECORDER)?;
+
+    Ok(())
 }
 
 fn register_metrics() {
@@ -34,4 +39,7 @@ fn register_metrics() {
         "Response Times"
     );
     register_histogram!("processing_duration_seconds_sum_total");
+
+    #[cfg(feature = "tokio-metrics")]
+    tokio_metrics::register_metrics();
 }

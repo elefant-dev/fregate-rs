@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.4.5] - 2022-11-07
+### Added
+-  Optional tokio metrics([#98](https://github.com/elefant-dev/fregate-rs/pull/98))
+
 ## [0.4.4] - 2022-11-03
 ### Added
 - `TracingFields::insert_as_string()` for types which do not impl `Valuable` trait ([#95](https://github.com/elefant-dev/fregate-rs/pull/95))
