@@ -95,12 +95,12 @@ impl<'de> Deserialize<'de> for LoggerConfig {
         let service_name = config.pointer_and_deserialize(SERVICE_NAME_PTR)?;
         let component_name = config.pointer_and_deserialize(COMPONENT_NAME_PTR)?;
         let version = config.pointer_and_deserialize(COMPONENT_VERSION_PTR)?;
-        let traces_endpoint_ptr = config.pointer_mut(TRACES_ENDPOINT_PTR);
-        let traces_endpoint = if let Some(ptr) = traces_endpoint_ptr {
-            Some(from_value::<String>(ptr.take()).map_err(Error::custom)?)
-        } else {
-            None
-        };
+        let traces_endpoint = config
+            .pointer_mut(TRACES_ENDPOINT_PTR)
+            .map(Value::take)
+            .map(from_value::<String>)
+            .transpose()
+            .map_err(Error::custom)?;
         #[cfg(feature = "tokio-metrics")]
         let metrics_update_interval =
             config.pointer_and_deserialize::<u64, D::Error>(SERVER_METRICS_UPDATE_INTERVAL)?;

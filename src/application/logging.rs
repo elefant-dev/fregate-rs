@@ -91,14 +91,13 @@ pub fn init_tracing(
 
     let (log_layer, reload_layer) = reload::Layer::new(filtered_log_layer);
 
-    let trace_layer = if let Some(traces_endpoint) = traces_endpoint {
-        let trace_layer = get_trace_layer(component_name, traces_endpoint)?;
-        let filtered_trace_layer =
-            trace_layer.with_filter(EnvFilter::from_str(trace_level).unwrap_or_default());
-        Some(filtered_trace_layer)
-    } else {
-        None
-    };
+    let trace_layer = traces_endpoint
+        .map(|traces_endpoint| {
+            let filtered_trace_layer = get_trace_layer(component_name, traces_endpoint)?
+                .with_filter(EnvFilter::from_str(trace_level).unwrap_or_default());
+            Result::Ok(filtered_trace_layer)
+        })
+        .transpose()?;
 
     registry().with(log_layer).with(trace_layer).try_init()?;
 

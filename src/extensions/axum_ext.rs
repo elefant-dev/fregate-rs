@@ -35,16 +35,16 @@ pub trait RouterOptionalExt {
 
 #[sealed]
 impl RouterOptionalExt for Router {
-    fn merge_optional(self, mut other: Option<Router>) -> Self {
-        if let Some(other) = other.take() {
+    fn merge_optional(self, other: Option<Router>) -> Self {
+        if let Some(other) = other {
             self.merge(other)
         } else {
             self
         }
     }
 
-    fn nest_optional(self, path: &str, mut other: Option<Router>) -> Self {
-        if let Some(other) = other.take() {
+    fn nest_optional(self, path: &str, other: Option<Router>) -> Self {
+        if let Some(other) = other {
             self.nest(path, other)
         } else {
             self
