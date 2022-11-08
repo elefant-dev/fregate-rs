@@ -9,7 +9,6 @@ use metrics::{histogram, increment_counter};
 use opentelemetry::trace::SpanContext;
 use opentelemetry::{global::get_text_map_propagator, trace::TraceContextExt, Context};
 use opentelemetry_http::HeaderExtractor;
-use std::borrow::Cow;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::time::Instant;
@@ -83,12 +82,12 @@ async fn trace_http_request<B>(
     span.record("net.peer.ip", remote_address.ip);
     span.record("net.peer.port", remote_address.port);
 
-    let url = if let Some(matched_path) = request.extensions().get::<MatchedPath>() {
-        matched_path.as_str()
-    } else {
-        request.uri().path()
-    }
-    .to_owned();
+    let url = request
+        .extensions()
+        .get::<MatchedPath>()
+        .map(MatchedPath::as_str)
+        .unwrap_or_else(|| request.uri().path())
+        .to_owned();
 
     info!(
         method = &req_method,
@@ -98,9 +97,11 @@ async fn trace_http_request<B>(
         ">>> [Request] [{req_method}] [{url}]"
     );
 
-    let labels = [("protocol", PROTOCOL_HTTP), ("channel", REQ_RESP)];
-
-    increment_counter!("traffic_count_total", &labels);
+    increment_counter!(
+        "traffic_count_total",
+        "protocol" => PROTOCOL_HTTP,
+        "channel" => REQ_RESP,
+    );
     increment_counter!("traffic_sum_total");
 
     let duration = Instant::now();
@@ -114,16 +115,12 @@ async fn trace_http_request<B>(
     // log response out of span
     let status = response.status();
 
-    let labels = [
-        ("protocol", Cow::Borrowed(PROTOCOL_HTTP)),
-        ("channel", Cow::Borrowed(REQ_RESP)),
-        ("code", Cow::Owned(status.to_string())),
-    ];
-
     histogram!(
         "processing_duration_seconds_sum_total",
         duration_in_sec,
-        &labels
+        "protocol" => PROTOCOL_HTTP,
+        "channel" => REQ_RESP,
+        "code" => status.to_string(),
     );
 
     info!(
@@ -161,15 +158,17 @@ async fn trace_grpc_request<B>(
         ">>> [Request] [{req_method}] [{grpc_method}]"
     );
 
-    let labels = [("protocol", PROTOCOL_GRPC), ("channel", REQ_RESP)];
-
     span.record("service", &attributes.0.service_name);
     span.record("component", &attributes.0.component_name);
     span.record("rpc.method", &grpc_method);
     span.record("net.peer.ip", remote_address.ip);
     span.record("net.peer.port", remote_address.port);
 
-    increment_counter!("traffic_count_total", &labels);
+    increment_counter!(
+        "traffic_count_total",
+        "protocol" => PROTOCOL_GRPC,
+        "channel" => REQ_RESP,
+    );
     increment_counter!("traffic_sum_total");
 
     let duration = Instant::now();
@@ -180,20 +179,13 @@ async fn trace_grpc_request<B>(
     let duration_in_sec = elapsed.as_secs_f64();
 
     // log response out of span
-    let status = extract_grpc_status(response.headers())
-        .unwrap_or_default()
-        .to_string();
-
-    let labels = [
-        ("protocol", Cow::Borrowed(PROTOCOL_GRPC)),
-        ("channel", Cow::Borrowed(REQ_RESP)),
-        ("code", Cow::Owned(status.clone())),
-    ];
-
+    let status = extract_grpc_status(response.headers()).unwrap_or_default();
     histogram!(
         "processing_duration_seconds_sum_total",
         duration_in_sec,
-        &labels
+        "protocol" => PROTOCOL_GRPC,
+        "channel" => REQ_RESP,
+        "code" => status.to_string()
     );
 
     info!(
@@ -270,13 +262,10 @@ pub fn extract_tracing_info(span: &Span) -> TracingInfo {
 }
 
 pub(crate) fn is_grpc(headers: &HeaderMap) -> bool {
-    if let Some(content_type) = headers.get(CONTENT_TYPE) {
-        if content_type.as_bytes().starts_with(b"application/grpc") {
-            return true;
-        }
-    }
-
-    false
+    headers
+        .get(CONTENT_TYPE)
+        .map(|content_type| content_type.as_bytes().starts_with(b"application/grpc"))
+        .unwrap_or(false)
 }
 
 fn make_http_span() -> Span {
