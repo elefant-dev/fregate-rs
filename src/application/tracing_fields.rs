@@ -30,13 +30,14 @@ pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
 ///    marker.insert(STATIC_KEY, &local_value);
 ///    marker.insert(&local_key, &STATIC_VALUE);
 ///    marker.insert_as_string("address", &socket);
+///    marker.insert_as_debug("address_debug", &socket);
 ///
 ///    info!(marker = marker.as_value(), "message");
-///}
+/// }
 /// ```
 /// Output:
 ///```json
-/// {"component":"marker","service":"fregate","version":"0.0.0","msg":"message","LOCAL_KEY":"STATIC_VALUE","STATIC_KEY":"LOCAL_VALUE","address":"127.0.0.1:8080","target":"playground","LogLevel":"INFO","time":1667465187319249000,"timestamp":"2022-11-03T08:46:27.319Z"}
+/// {"component":"marker","service":"fregate","version":"0.0.0","msg":"message","LOCAL_KEY":"STATIC_VALUE","STATIC_KEY":"LOCAL_VALUE","address":"127.0.0.1:8080","address_debug":"127.0.0.1:8080","target":"playground","LogLevel":"INFO","time":1667979625296991000,"timestamp":"2022-11-09T07:40:25.297Z"}
 ///```
 #[derive(Default)]
 pub struct TracingFields<'a> {
@@ -83,10 +84,16 @@ impl<'a> TracingFields<'a> {
         self.fields.insert(key, Field::ValuableRef(value));
     }
 
-    /// Converts value to [`String`] prior to insertion key-value pair. If key is present its value is overwritten.
+    /// Converts value to [`String`] using [`Display`] implementation prior to insertion key-value pair. If key is present its value is overwritten.
     /// This will cause additional allocation.
-    pub fn insert_as_string<V: Display + Sync>(&mut self, key: &'a str, value: &'a V) {
+    pub fn insert_as_string<V: Display + Sync>(&mut self, key: &'a str, value: &V) {
         self.fields.insert(key, Field::String(value.to_string()));
+    }
+
+    /// Converts value to [`String`] using [`Debug`] implementation prior to insertion key-value pair. If key is present its value is overwritten.
+    /// This will cause additional allocation.
+    pub fn insert_as_debug<V: Debug + Sync>(&mut self, key: &'a str, value: &V) {
+        self.fields.insert(key, Field::String(format!("{value:?}")));
     }
 
     /// Removes key-value pairs from the by given keys.
