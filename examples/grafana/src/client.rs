@@ -18,8 +18,10 @@ pub struct MetadataMap<'a>(pub &'a mut tonic::metadata::MetadataMap);
 impl<'a> Injector for MetadataMap<'a> {
     /// Set a key and value in the MetadataMap.  Does nothing if the key or value are not valid inputs
     fn set(&mut self, key: &str, value: String) {
-        if let Ok(Ok(val)) = MetadataKey::from_bytes(key.as_bytes()).map(MetadataValue::try_from) {
-            self.0.insert(key, val);
+        if let Ok(key) = MetadataKey::from_bytes(key.as_bytes()) {
+            if let Ok(val) = MetadataValue::try_from(value) {
+                self.0.insert(key, val);
+            }
         }
     }
 }
