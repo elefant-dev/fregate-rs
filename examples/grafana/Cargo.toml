@@ -12,7 +12,7 @@ name = "client"
 path = "src/client.rs"
 
 [dependencies]
-fregate = { path = "../.." }
+fregate = { path = "../..", features = ["reqwest"] }
 resources = { path = "../examples_resources" }
 opentelemetry = { version = "0.18.0", features = ["rt-tokio", "trace"]}
 tracing-opentelemetry = "0.18.0"
