@@ -1,6 +1,6 @@
 use crate::AppConfig;
 use axum::extract::{ConnectInfo, MatchedPath};
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, HeaderValue};
 use axum::middleware::Next;
 use axum::response::IntoResponse;
 use hyper::header::CONTENT_TYPE;
@@ -10,6 +10,7 @@ use opentelemetry::trace::SpanContext;
 use opentelemetry::{global::get_text_map_propagator, trace::TraceContextExt, Context};
 use opentelemetry_http::HeaderExtractor;
 use std::net::SocketAddr;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::time::Instant;
 use tracing::{info, span, Instrument, Level, Span};
@@ -179,7 +180,9 @@ async fn trace_grpc_request<B>(
     let duration_in_sec = elapsed.as_secs_f64();
 
     // log response out of span
-    let status = extract_grpc_status(response.headers()).unwrap_or_default();
+    let status: i32 = extract_grpc_status_code(response.headers())
+        .unwrap_or(tonic::Code::Unknown)
+        .into();
     histogram!(
         "processing_duration_seconds_sum_total",
         duration_in_sec,
@@ -240,11 +243,14 @@ pub fn extract_remote_address<B>(request: &Request<B>) -> Address {
 }
 
 /// Extracts grpc status from [`HeaderMap`]
-pub fn extract_grpc_status(headers: &HeaderMap) -> Option<u8> {
+pub fn extract_grpc_status_code(headers: &HeaderMap) -> Option<tonic::Code> {
     headers
         .get(HEADER_GRPC_STATUS)
-        .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.parse().ok())
+        .map(HeaderValue::to_str)
+        .and_then(Result::ok)
+        .map(i32::from_str)
+        .and_then(Result::ok)
+        .map(tonic::Code::from)
 }
 
 /// Extracts [`Context`] from [`Request`]
