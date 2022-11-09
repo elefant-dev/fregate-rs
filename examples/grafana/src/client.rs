@@ -1,38 +1,26 @@
+use fregate::extensions::{ReqwestExt, TonicReqExt};
+use fregate::hyper::StatusCode;
 use fregate::logging::init_tracing;
 use fregate::{tokio, tonic, tracing};
 use opentelemetry::global::shutdown_tracer_provider;
-use opentelemetry::propagation::Injector;
+use reqwest::Url;
 use resources::proto::hello::{hello_client::HelloClient, HelloRequest, HelloResponse};
 use tonic::transport::Channel;
-use tonic::{
-    metadata::{MetadataKey, MetadataValue},
-    Request, Response, Status,
-};
-use tracing::{info, Span};
-use tracing_opentelemetry::OpenTelemetrySpanExt;
+use tonic::{Request, Response, Status};
+use tracing::info;
 
-// This code is taken from:
-// https://github.com/open-telemetry/opentelemetry-rust/blob/main/examples/grpc/src/client.rs
-pub struct MetadataMap<'a>(pub &'a mut tonic::metadata::MetadataMap);
+#[tracing::instrument(name = "check")]
+async fn get_check_status() -> StatusCode {
+    let http_client = reqwest::Client::new();
 
-impl<'a> Injector for MetadataMap<'a> {
-    /// Set a key and value in the MetadataMap.  Does nothing if the key or value are not valid inputs
-    fn set(&mut self, key: &str, value: String) {
-        if let Ok(key) = MetadataKey::from_bytes(key.as_bytes()) {
-            if let Ok(val) = MetadataValue::try_from(value) {
-                self.0.insert(key, val);
-            }
-        }
-    }
-}
+    let response = http_client
+        .get(Url::parse("http://0.0.0.0:8000/check").unwrap())
+        .inject_from_current_span()
+        .send()
+        .await
+        .unwrap();
 
-pub fn inject_context<T>(request: &mut Request<T>) {
-    opentelemetry::global::get_text_map_propagator(|propagator| {
-        propagator.inject_context(
-            &Span::current().context(),
-            &mut MetadataMap(request.metadata_mut()),
-        )
-    });
+    response.status()
 }
 
 #[tracing::instrument(name = "request")]
@@ -40,13 +28,16 @@ async fn send_hello(
     client: &mut HelloClient<Channel>,
     mut request: Request<HelloRequest>,
 ) -> Result<Response<HelloResponse>, Status> {
-    inject_context(&mut request);
+    if get_check_status().await == StatusCode::OK {
+        request.inject_from_current_span();
 
-    info!("Outgoing Request: {:?}", request);
-    let response = client.say_hello(request).await;
-    info!("Incoming Response: {:?}", response);
-
-    response
+        info!("Outgoing Request: {:?}", request);
+        let response = client.say_hello(request).await;
+        info!("Incoming Response: {:?}", response);
+        response
+    } else {
+        Err(Status::cancelled("Service is unhealthy"))
+    }
 }
 
 #[tokio::main]
