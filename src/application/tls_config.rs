@@ -7,7 +7,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 /// we can run [`axum::routing::Router::into_make_service_with_connect_info`] with [`TlsStream<AddrStream>`]
 pub struct RemoteAddr(pub SocketAddr);
 
-#[cfg(feature = "native-tls")]
+#[cfg(feature = "use_native_tls")]
 impl Connected<&TlsStream> for RemoteAddr {
     fn connect_info(target: &TlsStream) -> Self {
         Self(
@@ -21,7 +21,7 @@ impl Connected<&TlsStream> for RemoteAddr {
     }
 }
 
-#[cfg(feature = "rustls")]
+#[cfg(feature = "use_rustls")]
 impl Connected<&TlsStream> for RemoteAddr {
     fn connect_info(target: &TlsStream) -> Self {
         Self(

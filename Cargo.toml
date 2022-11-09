@@ -1,6 +1,6 @@
 [package]
 name = "fregate"
-version = "0.4.3"
+version = "0.4.5"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/elefant-dev/fregate-rs"
@@ -13,7 +13,9 @@ keywords = ["http", "grpc", "service"]
 members = ["examples/*"]
 
 [features]
-native-tls = [
+tls = []
+use_native_tls = [
+    "tls",
     "reqwest/native-tls",
     "tokio-native-tls",
     "async-stream",
@@ -22,11 +24,13 @@ native-tls = [
     "tokio/net",
     "tokio-stream"
 ]
-native-tls-vendored = [
+use_native_tls_vendored = [
+    "use_native_tls",
     "reqwest/native-tls-vendored",
     "native-tls/vendored"
 ]
-rustls = [
+use_rustls = [
+    "tls",
     "opentelemetry-zipkin/reqwest-rustls",
     "tokio-rustls",
     "rustls-pemfile",
@@ -36,8 +40,9 @@ rustls = [
     "tokio/net",
     "tokio-stream"
 ]
-rustls-tls12 = [
-    "rustls",
+use_rustls_tls12 = [
+    "tls",
+    "use_rustls",
     "tokio-rustls/tls12"
 ]
 
@@ -71,6 +76,8 @@ opentelemetry-http = "0.7.0"
 opentelemetry-zipkin = { version = "0.16.0", default-features = false, features = ["reqwest-client"] }
 valuable = "0.1.0"
 valuable-serde = "0.1.0"
+
+tokio-metrics = { version = "0.1.0", optional = true }
 
 # common deps for tls
 async-stream = { version = "0.3.3", optional = true }

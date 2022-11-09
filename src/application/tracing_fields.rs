@@ -1,6 +1,6 @@
 //! Instrument for logging
 use std::collections::HashMap;
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use valuable::{Fields, NamedField, NamedValues, StructDef, Structable, Valuable, Value, Visit};
 
 pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
@@ -9,42 +9,58 @@ pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
 /// Example:
 /// This is how [`TracingFields`] is serialized to logs if used with tracing_unstable feature and [`crate::log_fmt::EventFormatter`]
 ///```rust
-/// use fregate::{tracing_fields::TracingFields, logging::init_tracing, tokio, tracing::info};
 /// use fregate::valuable::Valuable;
+/// use fregate::{logging::init_tracing, tokio, tracing::info, tracing_fields::TracingFields};
+/// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 ///
-/// const STATIC: &str = "STATIC";
+/// const STATIC_KEY: &str = "STATIC_KEY";
+/// const STATIC_VALUE: &str = "STATIC_VALUE";
 ///
 /// #[tokio::main]
 /// async fn main() {
-///     init_tracing("info", "info", "0.0.0", "fregate", "marker", None).unwrap();
+///    init_tracing("info", "info", "0.0.0", "fregate", "marker", None).unwrap();
 ///
-///     let mut marker = TracingFields::with_capacity(10);
-///     let local_key = "NON_STATIC".to_owned();
-///     let local_var = 1000;
+///    let mut marker = TracingFields::with_capacity(10);
 ///
-///     marker.insert(STATIC, &local_var);
-///     marker.insert(local_key.as_str(), &local_var);
-///     marker.insert("str", &"str");
+///    let local_key = "LOCAL_KEY".to_owned();
+///    let local_value = "LOCAL_VALUE".to_owned();
 ///
-///     info!(marker = marker.as_value(), "message");
+///    let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
+///
+///    marker.insert(STATIC_KEY, &local_value);
+///    marker.insert(&local_key, &STATIC_VALUE);
+///    marker.insert_as_string("address", &socket);
+///    marker.insert_as_debug("address_debug", &socket);
+///
+///    info!(marker = marker.as_value(), "message");
 /// }
 /// ```
 /// Output:
 ///```json
-///  {"component":"marker","service":"fregate","version":"0.0.0","NON_STATIC":1000,"STATIC":1000,"str":"str","msg":"message","target":"check_fregate","LogLevel":"INFO","time":1665656359172240000,"timestamp":"2022-10-13T10:19:19.172Z"}
+/// {"component":"marker","service":"fregate","version":"0.0.0","msg":"message","LOCAL_KEY":"STATIC_VALUE","STATIC_KEY":"LOCAL_VALUE","address":"127.0.0.1:8080","address_debug":"127.0.0.1:8080","target":"playground","LogLevel":"INFO","time":1667979625296991000,"timestamp":"2022-11-09T07:40:25.297Z"}
 ///```
 #[derive(Default)]
 pub struct TracingFields<'a> {
     fields: HashMap<&'a str, Field<'a>>,
 }
 
-type Field<'a> = &'a (dyn Valuable + Send + Sync);
+enum Field<'a> {
+    String(String),
+    ValuableRef(ValuableRef<'a>),
+}
+
+type ValuableRef<'a> = &'a (dyn Valuable + Send + Sync);
 
 impl<'a> Debug for TracingFields<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut f = f.debug_struct("TracingFields");
         for (k, v) in self.fields.iter() {
-            f.field(k, &v.as_value() as _);
+            let value = match v {
+                Field::String(s) => s.as_value(),
+                Field::ValuableRef(r) => r.as_value(),
+            };
+
+            f.field(k, &value as _);
         }
         f.finish()
     }
@@ -65,7 +81,19 @@ impl<'a> TracingFields<'a> {
 
     /// Inserts a key-value pair of references into the map. If key is present its value is overwritten.
     pub fn insert<V: Valuable + Send + Sync>(&mut self, key: &'a str, value: &'a V) {
-        self.fields.insert(key, value);
+        self.fields.insert(key, Field::ValuableRef(value));
+    }
+
+    /// Converts value to [`String`] using [`Display`] implementation prior to insertion key-value pair. If key is present its value is overwritten.
+    /// This will cause additional allocation.
+    pub fn insert_as_string<V: Display + Sync>(&mut self, key: &'a str, value: &V) {
+        self.fields.insert(key, Field::String(value.to_string()));
+    }
+
+    /// Converts value to [`String`] using [`Debug`] implementation prior to insertion key-value pair. If key is present its value is overwritten.
+    /// This will cause additional allocation.
+    pub fn insert_as_debug<V: Debug + Sync>(&mut self, key: &'a str, value: &V) {
+        self.fields.insert(key, Field::String(format!("{value:?}")));
     }
 
     /// Removes key-value pairs from the by given keys.
@@ -88,10 +116,12 @@ impl<'a> Valuable for TracingFields<'a> {
 
     fn visit(&self, visit: &mut dyn Visit) {
         for (field, value) in self.fields.iter() {
-            visit.visit_named_fields(&NamedValues::new(
-                &[NamedField::new(field)],
-                &[value.as_value()],
-            ));
+            let value_ref = match value {
+                Field::String(s) => s.as_value(),
+                Field::ValuableRef(r) => r.as_value(),
+            };
+
+            visit.visit_named_fields(&NamedValues::new(&[NamedField::new(field)], &[value_ref]));
         }
     }
 }
