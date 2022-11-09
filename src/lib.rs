@@ -12,6 +12,7 @@ mod application;
 
 pub mod extensions;
 pub mod middleware;
+pub mod sugar;
 
 #[doc(inline)]
 pub use application::*;
