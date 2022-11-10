@@ -1,4 +1,6 @@
 use axum::{middleware::from_fn, Router};
+use fregate::axum::routing::get;
+use fregate::hyper::StatusCode;
 use fregate::{
     axum, bootstrap,
     extensions::RouterTonicExt,
@@ -16,12 +18,16 @@ async fn main() {
     let attributes = Attributes::new_from_config(&config);
 
     let hello_service = HelloServer::new(MyHello);
-    let grpc = Router::from_tonic_service(hello_service).layer(from_fn(move |req, next| {
+
+    let rest = Router::new().route("/check", get(|| async { StatusCode::OK }));
+    let grpc = Router::from_tonic_service(hello_service);
+
+    let router = grpc.merge(rest).layer(from_fn(move |req, next| {
         trace_request(req, next, attributes.clone())
     }));
 
     Application::new(&config)
-        .router(grpc)
+        .router(router)
         .serve()
         .await
         .unwrap();
