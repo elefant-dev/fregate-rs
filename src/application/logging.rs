@@ -6,7 +6,7 @@ use opentelemetry::{global, sdk, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_zipkin::B3Encoding::MultipleHeader;
 use std::str::FromStr;
-use tracing::Subscriber;
+use tracing::{info, Subscriber};
 use tracing_subscriber::{
     filter::{filter_fn, EnvFilter, Filtered},
     layer::SubscriberExt,
@@ -96,14 +96,16 @@ pub fn init_tracing(
 
     let (log_layer, reload_layer) = reload::Layer::new(filtered_log_layer);
 
-    let trace_layer = traces_endpoint
-        .map(|traces_endpoint| {
-            let filtered_trace_layer = get_trace_layer(component_name, traces_endpoint)?
-                .with_filter(filter_fn(|metadata| metadata.is_span()))
-                .with_filter(EnvFilter::from_str(trace_level).unwrap_or_default());
-            Result::Ok(filtered_trace_layer)
-        })
-        .transpose()?;
+    let trace_layer = if let Some(traces_endpoint) = traces_endpoint {
+        info!("Will export to Grafana on `{traces_endpoint}`.");
+        let filtered_trace_layer = get_trace_layer(component_name, traces_endpoint)?
+            .with_filter(filter_fn(|metadata| metadata.is_span()))
+            .with_filter(EnvFilter::from_str(trace_level).unwrap_or_default());
+        Some(filtered_trace_layer)
+    } else {
+        info!("Will not export to Grafana.");
+        None
+    };
 
     registry().with(log_layer).with(trace_layer).try_init()?;
 
