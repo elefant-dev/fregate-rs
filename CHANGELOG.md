@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.4.6] - 2022-11-10
+### Added
+-  `Context` Injections for reqwest and tonic([#111](https://github.com/elefant-dev/fregate-rs/pull/111))
+- `TracingFields::insert_as_debug()` for types which impl only `Debug` trait ([#107](https://github.com/elefant-dev/fregate-rs/pull/107))
+- Some sugar functions to work with `tonic::Code` ([#110](https://github.com/elefant-dev/fregate-rs/pull/110))
+
+### Changed
+- Forbid export of events in traces to grafana([#90](https://github.com/elefant-dev/fregate-rs/pull/90))
+- Changed return type for `extract_grpc_status_code` fn to be `tonic::Code`([#109](https://github.com/elefant-dev/fregate-rs/pull/109))
+
 ## [0.4.5] - 2022-11-07
 ### Added
 -  Optional tokio metrics([#98](https://github.com/elefant-dev/fregate-rs/pull/98))
