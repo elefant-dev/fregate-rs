@@ -97,13 +97,13 @@ pub fn init_tracing(
     let (log_layer, reload_layer) = reload::Layer::new(filtered_log_layer);
 
     let trace_layer = if let Some(traces_endpoint) = traces_endpoint {
-        info!("Will export to Grafana on `{traces_endpoint}`.");
+        info!("Got OTLP exporter url: `{traces_endpoint}`.");
         let filtered_trace_layer = get_trace_layer(component_name, traces_endpoint)?
             .with_filter(filter_fn(|metadata| metadata.is_span()))
             .with_filter(EnvFilter::from_str(trace_level).unwrap_or_default());
         Some(filtered_trace_layer)
     } else {
-        info!("Will not export to Grafana.");
+        info!("OTLP exporter url is not set up: Traces export is disabled");
         None
     };
 
