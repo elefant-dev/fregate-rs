@@ -69,7 +69,7 @@ mod management_test {
 
     #[tokio::test]
     async fn health_test() {
-        let router = build_management_router(Some(CustomHealth));
+        let router = build_management_router(Some(CustomHealth), None);
         let request = Request::builder()
             .uri("http://0.0.0.0/health")
             .method("GET")
@@ -86,7 +86,7 @@ mod management_test {
 
     #[tokio::test]
     async fn live_test() {
-        let router = build_management_router(Some(CustomHealth));
+        let router = build_management_router(Some(CustomHealth), None);
         let request = Request::builder()
             .uri("http://0.0.0.0/live")
             .method("GET")
@@ -103,7 +103,7 @@ mod management_test {
 
     #[tokio::test]
     async fn ready_test() {
-        let router = build_management_router(Some(CustomHealth));
+        let router = build_management_router(Some(CustomHealth), None);
         let request = Request::builder()
             .uri("http://0.0.0.0/ready")
             .method("GET")
