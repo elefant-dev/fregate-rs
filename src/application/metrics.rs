@@ -10,7 +10,11 @@ static RECORDER: Lazy<PrometheusRecorder> = Lazy::new(|| PrometheusBuilder::new(
 static HANDLE: Lazy<PrometheusHandle> = Lazy::new(|| RECORDER.handle());
 
 /// Return rendered metrics
-pub fn get_metrics() -> String {
+pub fn get_metrics(callback: Option<&(dyn Fn() + Send + Sync + 'static)>) -> String {
+    if let Some(callback) = callback {
+        callback();
+    }
+
     HANDLE.render()
 }
 

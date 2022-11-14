@@ -1,0 +1,8 @@
+[package]
+name = "metrics-callback"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+fregate = { path = "../.." }
+metrics = "0.20.1"
