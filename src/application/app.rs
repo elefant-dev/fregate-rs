@@ -10,7 +10,9 @@ use crate::{
 };
 use axum::Router;
 use hyper::Server;
+use std::fmt::{Debug, Formatter};
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tokio::signal;
 use tracing::info;
 
@@ -34,11 +36,35 @@ use tracing::info;
 //            But removing the `Application` is a better option.
 
 /// Application to set up HTTP server with given config [`AppConfig`]
-#[derive(Debug)]
 pub struct Application<'a, H, T> {
     config: &'a AppConfig<T>,
     health_indicator: Option<H>,
     router: Option<Router>,
+    metrics_callback: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
+}
+
+impl<'a, H: Debug, T: Debug> Debug for Application<'a, H, T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            config,
+            health_indicator,
+            router,
+            metrics_callback,
+        } = self;
+        f.debug_struct("Application")
+            .field("config", config)
+            .field("health_indicator", health_indicator)
+            .field("router", router)
+            .field(
+                "metrics_callback",
+                if metrics_callback.is_some() {
+                    &"Some"
+                } else {
+                    &"None"
+                },
+            )
+            .finish()
+    }
 }
 
 impl<'a, T> Application<'a, AlwaysReadyAndAlive, T> {
@@ -48,6 +74,7 @@ impl<'a, T> Application<'a, AlwaysReadyAndAlive, T> {
             config,
             health_indicator: Some(AlwaysReadyAndAlive {}),
             router: None,
+            metrics_callback: None,
         }
     }
 }
@@ -55,17 +82,35 @@ impl<'a, T> Application<'a, AlwaysReadyAndAlive, T> {
 impl<'a, H, T> Application<'a, H, T> {
     /// Set up new health indicator
     pub fn health_indicator<Hh: Health>(self, health: Hh) -> Application<'a, Hh, T> {
+        let Self {
+            config,
+            health_indicator: _,
+            router,
+            metrics_callback,
+        } = self;
+
         Application::<'a, Hh, T> {
-            config: self.config,
+            config,
             health_indicator: Some(health),
-            router: self.router,
+            router,
+            metrics_callback,
         }
     }
 
     /// Set up Router Application will serve to
-    pub fn router(mut self, router: Router) -> Self {
-        self.router = Some(router);
-        self
+    pub fn router(self, router: Router) -> Self {
+        Self {
+            router: Some(router),
+            ..self
+        }
+    }
+
+    /// Set up callback which will be called before metrics will render.
+    pub fn metrics_callback(self, metrics_callback: impl Fn() + Send + Sync + 'static) -> Self {
+        Self {
+            metrics_callback: Some(Arc::new(metrics_callback)),
+            ..self
+        }
     }
 
     /// Start serving at specified host and port in [AppConfig] accepting both HTTP1 and HTTP2
@@ -129,7 +174,8 @@ impl<'a, H, T> Application<'a, H, T> {
     where
         H: Health,
     {
-        let router = build_management_router(self.health_indicator).merge_optional(self.router);
+        let router = build_management_router(self.health_indicator, self.metrics_callback)
+            .merge_optional(self.router);
         let application_socket = SocketAddr::new(self.config.host, self.config.port);
         (router, application_socket)
     }

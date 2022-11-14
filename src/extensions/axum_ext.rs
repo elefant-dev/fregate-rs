@@ -5,7 +5,7 @@ use axum::{http, Router};
 use sealed::sealed;
 
 /// Converts &str into Response and add Headers: Content-Type: "application/yaml" and "cache-control": "24 hours"
-pub(crate) fn yaml(content: &'static str) -> Response<BoxBody> {
+pub(crate) async fn yaml(content: &'static str) -> Response<BoxBody> {
     (
         [
             (

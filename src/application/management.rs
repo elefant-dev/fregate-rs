@@ -3,6 +3,7 @@ use crate::{
     health::Health,
 };
 use axum::{routing::get, Extension, Router};
+use std::sync::Arc;
 
 const OPENAPI_PATH: &str = "/openapi";
 const HEALTH_PATH: &str = "/health";
@@ -13,11 +14,14 @@ const METRICS_PATH: &str = "/metrics";
 // TODO consider: https://github.com/pyrossh/rust-embed/blob/master/examples/axum.rs#L64
 const OPENAPI: &str = include_str!("../resources/openapi.yaml");
 
-pub(crate) fn build_management_router<H: Health>(health_indicator: Option<H>) -> Router {
+pub(crate) fn build_management_router<H: Health>(
+    health_indicator: Option<H>,
+    callback: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
+) -> Router {
     Router::new()
-        .route(OPENAPI_PATH, get(|| async { yaml(OPENAPI) }))
+        .route(OPENAPI_PATH, get(|| yaml(OPENAPI)))
         .merge_optional(build_health_router(health_indicator))
-        .merge(build_metrics_router())
+        .merge(build_metrics_router(callback))
 }
 
 fn build_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router> {
@@ -35,10 +39,10 @@ fn build_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router>
     )
 }
 
-fn build_metrics_router() -> Router {
+fn build_metrics_router(callback: Option<Arc<dyn Fn() + Send + Sync + 'static>>) -> Router {
     Router::new().route(
         METRICS_PATH,
-        get(move || std::future::ready(crate::get_metrics())),
+        get(move || std::future::ready(crate::get_metrics(callback.as_deref()))),
     )
 }
 
@@ -65,7 +69,7 @@ mod management_test {
 
     #[tokio::test]
     async fn health_test() {
-        let router = build_management_router(Some(CustomHealth));
+        let router = build_management_router(Some(CustomHealth), None);
         let request = Request::builder()
             .uri("http://0.0.0.0/health")
             .method("GET")
@@ -82,7 +86,7 @@ mod management_test {
 
     #[tokio::test]
     async fn live_test() {
-        let router = build_management_router(Some(CustomHealth));
+        let router = build_management_router(Some(CustomHealth), None);
         let request = Request::builder()
             .uri("http://0.0.0.0/live")
             .method("GET")
@@ -99,7 +103,7 @@ mod management_test {
 
     #[tokio::test]
     async fn ready_test() {
-        let router = build_management_router(Some(CustomHealth));
+        let router = build_management_router(Some(CustomHealth), None);
         let request = Request::builder()
             .uri("http://0.0.0.0/ready")
             .method("GET")
