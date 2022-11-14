@@ -6,7 +6,7 @@ use opentelemetry::{global, sdk, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_zipkin::B3Encoding::MultipleHeader;
 use std::str::FromStr;
-use tracing::{info, Subscriber};
+use tracing::{error, info, Subscriber};
 use tracing_subscriber::{
     filter::{filter_fn, EnvFilter, Filtered},
     layer::SubscriberExt,
@@ -98,6 +98,7 @@ pub fn init_tracing(
 
     let trace_layer = if let Some(traces_endpoint) = traces_endpoint {
         info!("Got OTLP exporter url: `{traces_endpoint}`.");
+        tokio::task::spawn(check_grafana_availability(traces_endpoint.into()));
         let filtered_trace_layer = get_trace_layer(component_name, traces_endpoint)?
             .with_filter(filter_fn(|metadata| metadata.is_span()))
             .with_filter(EnvFilter::from_str(trace_level).unwrap_or_default());
@@ -113,4 +114,24 @@ pub fn init_tracing(
 
     set_panic_hook();
     Ok(())
+}
+
+async fn check_grafana_availability(endpoint: Box<str>) {
+    match reqwest::Client::builder().http2_prior_knowledge().build() {
+        Ok(client) => match client.get(endpoint.as_ref()).send().await {
+            Ok(_response) => {
+                error!("{endpoint} isn't grafana server, it's ordinary http!");
+            }
+            Err(err) => {
+                if err.is_request() {
+                    info!("{endpoint} is available and seems that it is Grafana server");
+                } else {
+                    error!("{endpoint} is available and seems that it isn't Grafana server");
+                }
+            }
+        },
+        Err(err) => {
+            error!("Can't build reqwest::Client: `{err}`")
+        }
+    }
 }
