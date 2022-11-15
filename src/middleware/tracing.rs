@@ -23,7 +23,7 @@ const REQ_RESP: &str = "reqresp";
 
 #[derive(Default, Debug, Clone)]
 /// Structure which contains needed for [`trace_request`] [`Span`] attributes
-pub struct Attributes(Arc<Inner>);
+pub(crate) struct Attributes(Arc<Inner>);
 
 impl Attributes {
     /// Creates new [`Attributes`] from [`AppConfig`]
@@ -47,7 +47,7 @@ struct Inner {
 }
 
 /// Fn to be used with [`axum::middleware::from_fn`]
-pub async fn trace_request<B>(
+pub(crate) async fn trace_request<B>(
     req: Request<B>,
     next: Next<B>,
     attributes: Attributes,

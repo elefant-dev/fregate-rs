@@ -1,6 +1,7 @@
 #[cfg(feature = "tls")]
 pub(crate) mod tls;
 
+use crate::middleware::{trace_request, Attributes};
 use crate::{
     build_management_router,
     error::Result,
@@ -8,6 +9,7 @@ use crate::{
     health::{AlwaysReadyAndAlive, Health},
     AppConfig,
 };
+use axum::middleware::from_fn;
 use axum::Router;
 use hyper::Server;
 use std::fmt::{Debug, Formatter};
@@ -174,8 +176,15 @@ impl<'a, H, T> Application<'a, H, T> {
     where
         H: Health,
     {
+        let attributes = Attributes::new_from_config(self.config);
+        let router = self.router.map(|r| {
+            r.layer(from_fn(move |req, next| {
+                trace_request(req, next, attributes.clone())
+            }))
+        });
+
         let router = build_management_router(self.health_indicator, self.metrics_callback)
-            .merge_optional(self.router);
+            .merge_optional(router);
         let application_socket = SocketAddr::new(self.config.host, self.config.port);
         (router, application_socket)
     }

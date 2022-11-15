@@ -1,11 +1,11 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EchoRequest {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub message: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EchoResponse {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub message: ::prost::alloc::string::String,
 }
 /// Generated client implementations.
