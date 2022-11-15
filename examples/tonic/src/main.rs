@@ -1,10 +1,5 @@
 use axum::{middleware::from_fn, routing::get, Router};
-use fregate::{
-    axum, bootstrap,
-    extensions::RouterTonicExt,
-    middleware::{trace_request, Attributes},
-    tokio, Application, Empty,
-};
+use fregate::{axum, bootstrap, extensions::RouterTonicExt, tokio, Application, Empty};
 use resources::{
     deny_middleware,
     grpc::{MyEcho, MyHello},
@@ -14,7 +9,6 @@ use resources::{
 #[tokio::main]
 async fn main() {
     let config = bootstrap::<Empty, _>([]).unwrap();
-    let attributes = Attributes::new_from_config(&config);
 
     let echo_service = EchoServer::new(MyEcho);
     let hello_service = HelloServer::new(MyHello);
@@ -26,9 +20,7 @@ async fn main() {
         .layer(from_fn(deny_middleware))
         .merge(Router::from_tonic_service(hello_service));
 
-    let app_router = rest.merge(grpc).layer(from_fn(move |req, next| {
-        trace_request(req, next, attributes.clone())
-    }));
+    let app_router = rest.merge(grpc);
 
     Application::new(&config)
         .router(app_router)
