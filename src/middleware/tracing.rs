@@ -188,7 +188,7 @@ async fn trace_grpc_request<B>(
         "code" => status.to_string()
     );
 
-    span.record("rpc.grpc.status_code", &status);
+    span.record("rpc.grpc.status_code", status);
 
     info!(
         url = &grpc_method,
