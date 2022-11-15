@@ -7,6 +7,7 @@ use std::{collections::BTreeMap, fmt, num::NonZeroU8};
 use time::format_description::well_known::iso8601::{Config, Iso8601, TimePrecision};
 use tracing::{field::Field, Event, Subscriber};
 use tracing_opentelemetry::OtelData;
+use tracing_subscriber::registry::{Extensions, SpanRef};
 use tracing_subscriber::{
     fmt::{format, FmtContext, FormatEvent, FormatFields},
     registry::LookupSpan,
@@ -156,26 +157,26 @@ where
                 .try_for_each(|(key, value)| map_serializer.serialize_entry(key, value))?;
 
             // If event under span print traceId and spanId
-            if let Some(span) = ctx.lookup_current() {
-                if let Some(otel_data) = span.extensions().get::<OtelData>() {
-                    let trace_id = if otel_data.parent_cx.has_active_span() {
+            if let Some((span_id, trace_id)) = ctx
+                .lookup_current()
+                .as_ref()
+                .map(SpanRef::extensions)
+                .as_ref()
+                .and_then(Extensions::get::<OtelData>)
+                .and_then(|otel_data| {
+                    if otel_data.parent_cx.has_active_span() {
                         Some(otel_data.parent_cx.span().span_context().trace_id())
                     } else {
                         otel_data.builder.trace_id
                     }
-                    .map(|val| val.to_string());
-
-                    if let Some(trace_id) = trace_id {
-                        let span_id = otel_data
-                            .builder
-                            .span_id
-                            .unwrap_or(SpanId::INVALID)
-                            .to_string();
-
-                        map_serializer.serialize_entry(TRACE_ID, &trace_id)?;
-                        map_serializer.serialize_entry(SPAN_ID, &span_id)?;
-                    }
-                }
+                    .map(|trace_id| {
+                        let span_id = otel_data.builder.span_id.unwrap_or(SpanId::INVALID);
+                        (span_id, trace_id)
+                    })
+                })
+            {
+                map_serializer.serialize_entry(TRACE_ID, &trace_id.to_string())?;
+                map_serializer.serialize_entry(SPAN_ID, &span_id.to_string())?;
             }
 
             // serialize current event metadata
