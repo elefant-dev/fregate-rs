@@ -6,8 +6,7 @@ use axum::response::IntoResponse;
 use hyper::header::CONTENT_TYPE;
 use hyper::Request;
 use metrics::{histogram, increment_counter};
-use opentelemetry::trace::SpanContext;
-use opentelemetry::{global::get_text_map_propagator, trace::TraceContextExt, Context};
+use opentelemetry::{global::get_text_map_propagator, Context};
 use opentelemetry_http::HeaderExtractor;
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -53,11 +52,21 @@ pub(crate) async fn trace_request<B>(
     attributes: Attributes,
 ) -> impl IntoResponse {
     if is_grpc(req.headers()) {
+        let grpc_span = make_grpc_span();
+        let parent_context = extract_context(&req);
+        grpc_span.set_parent(parent_context);
+
         trace_grpc_request(req, next, &attributes)
+            .instrument(grpc_span)
             .await
             .into_response()
     } else {
+        let http_span = make_http_span();
+        let parent_context = extract_context(&req);
+        http_span.set_parent(parent_context);
+
         trace_http_request(req, next, &attributes)
+            .instrument(http_span)
             .await
             .into_response()
     }
@@ -68,12 +77,8 @@ async fn trace_http_request<B>(
     next: Next<B>,
     attributes: &Attributes,
 ) -> impl IntoResponse {
-    let span = make_http_span();
-    let parent_context = extract_context(&request);
-    span.set_parent(parent_context);
+    let span = Span::current();
 
-    // log request out of span
-    let tracing_info = extract_tracing_info(&span);
     let req_method = request.method().to_string();
     let remote_address = extract_remote_address(&request);
 
@@ -93,8 +98,6 @@ async fn trace_http_request<B>(
     info!(
         method = &req_method,
         url = &url,
-        traceId = tracing_info.trace_id,
-        spanId = tracing_info.span_id,
         ">>> [Request] [{req_method}] [{url}]"
     );
 
@@ -107,7 +110,7 @@ async fn trace_http_request<B>(
 
     let duration = Instant::now();
 
-    let response = next.run(request).instrument(span).await;
+    let response = next.run(request).await;
     let elapsed = duration.elapsed();
 
     let duration = elapsed.as_millis();
@@ -124,11 +127,11 @@ async fn trace_http_request<B>(
         "code" => status.to_string(),
     );
 
+    span.record("http.status_code", status.as_str());
+
     info!(
         method = &req_method,
         url = &url,
-        traceId = tracing_info.trace_id,
-        spanId = tracing_info.span_id,
         duration = duration,
         statusCode = status.as_str(),
         "[Response] <<< [{req_method}] [{url}] [{PROTOCOL_HTTP}] [{status}] in [{duration}ms]"
@@ -142,20 +145,14 @@ async fn trace_grpc_request<B>(
     next: Next<B>,
     attributes: &Attributes,
 ) -> impl IntoResponse {
-    let span = make_grpc_span();
-    let parent_context = extract_context(&request);
-    span.set_parent(parent_context);
+    let span = Span::current();
 
-    let tracing_info = extract_tracing_info(&span);
     let req_method = request.method().to_string();
     let grpc_method = request.uri().path().to_owned();
     let remote_address = extract_remote_address(&request);
 
-    // log request out of span
     info!(
         url = &grpc_method,
-        traceId = tracing_info.trace_id,
-        spanId = tracing_info.span_id,
         ">>> [Request] [{req_method}] [{grpc_method}]"
     );
 
@@ -173,16 +170,16 @@ async fn trace_grpc_request<B>(
     increment_counter!("traffic_sum_total");
 
     let duration = Instant::now();
-    let response = next.run(request).instrument(span).await;
+    let response = next.run(request).await;
     let elapsed = duration.elapsed();
 
     let duration = elapsed.as_millis();
     let duration_in_sec = elapsed.as_secs_f64();
 
-    // log response out of span
     let status: i32 = extract_grpc_status_code(response.headers())
         .unwrap_or(tonic::Code::Unknown)
         .into();
+
     histogram!(
         "processing_duration_seconds_sum_total",
         duration_in_sec,
@@ -191,10 +188,10 @@ async fn trace_grpc_request<B>(
         "code" => status.to_string()
     );
 
+    span.record("rpc.grpc.status_code", status);
+
     info!(
         url = &grpc_method,
-        traceId = tracing_info.trace_id,
-        spanId = tracing_info.span_id,
         duration = duration,
         statusCode = status,
         "[Response] <<< [{req_method}] [{grpc_method}] [{PROTOCOL_GRPC}] [{status}] in [{duration}ms]"
@@ -208,26 +205,6 @@ async fn trace_grpc_request<B>(
 pub struct Address {
     ip: String,
     port: String,
-}
-
-#[derive(Debug, Default, Clone)]
-/// Saves trace_id and span_id as [`String`]
-pub struct TracingInfo {
-    trace_id: String,
-    span_id: String,
-}
-
-impl From<&SpanContext> for TracingInfo {
-    fn from(ctx: &SpanContext) -> Self {
-        if ctx.is_valid() {
-            TracingInfo {
-                trace_id: ctx.trace_id().to_string(),
-                span_id: ctx.span_id().to_string(),
-            }
-        } else {
-            Default::default()
-        }
-    }
 }
 
 /// Extracts remote Ip and Port from [`Request`]
@@ -256,15 +233,6 @@ pub fn extract_grpc_status_code(headers: &HeaderMap) -> Option<tonic::Code> {
 /// Extracts [`Context`] from [`Request`]
 pub fn extract_context<B>(request: &Request<B>) -> Context {
     get_text_map_propagator(|propagator| propagator.extract(&HeaderExtractor(request.headers())))
-}
-
-/// Extracts [`TracingInfo`] from [`Span`]
-pub fn extract_tracing_info(span: &Span) -> TracingInfo {
-    let context = span.context();
-    let span_ref = context.span();
-    let span_context = span_ref.span_context();
-
-    span_context.into()
 }
 
 pub(crate) fn is_grpc(headers: &HeaderMap) -> bool {

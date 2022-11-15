@@ -1,10 +1,13 @@
 //! Fregate [`FormatEvent`] trait implementation
 use crate::error::Result;
+use opentelemetry::trace::{SpanId, TraceContextExt};
 use serde::{ser::SerializeMap, Serialize, Serializer};
 use serde_json::Value;
 use std::{collections::BTreeMap, fmt, num::NonZeroU8};
 use time::format_description::well_known::iso8601::{Config, Iso8601, TimePrecision};
 use tracing::{field::Field, Event, Subscriber};
+use tracing_opentelemetry::OtelData;
+use tracing_subscriber::registry::{Extensions, SpanRef};
 use tracing_subscriber::{
     fmt::{format, FmtContext, FormatEvent, FormatFields},
     registry::LookupSpan,
@@ -25,9 +28,12 @@ pub(crate) const MESSAGE: &str = "message";
 pub(crate) const LOG_LEVEL: &str = "LogLevel";
 pub(crate) const TIME: &str = "time";
 pub(crate) const TIMESTAMP: &str = "timestamp";
+pub(crate) const TRACE_ID: &str = "traceId";
+pub(crate) const SPAN_ID: &str = "spanId";
 
-const DEFAULT_FIELDS: [&str; 9] = [
-    VERSION, SERVICE, COMPONENT, TARGET, MSG, LOG_LEVEL, TIME, TIMESTAMP, MESSAGE,
+const DEFAULT_FIELDS: [&str; 11] = [
+    VERSION, SERVICE, COMPONENT, TARGET, MSG, LOG_LEVEL, TIME, TIMESTAMP, MESSAGE, TRACE_ID,
+    SPAN_ID,
 ];
 
 /// Returns [`tracing_subscriber::Layer`] with custom event formatter [`EventFormatter`]
@@ -89,6 +95,8 @@ impl EventFormatter {
     /// pub(crate) const LOG_LEVEL: &str = "LogLevel";
     /// pub(crate) const TIME: &str = "time";
     /// pub(crate) const TIMESTAMP: &str = "timestamp";
+    /// pub(crate) const TRACE_ID: &str = "traceId";
+    /// pub(crate) const SPAN_ID: &str = "spanId";
     /// ```
     pub fn add_field_to_events<V: Serialize>(&mut self, key: &str, value: V) -> Result<()> {
         if DEFAULT_FIELDS.contains(&key) {
@@ -118,7 +126,7 @@ where
 {
     fn format_event(
         &self,
-        _ctx: &FmtContext<'_, S, N>,
+        ctx: &FmtContext<'_, S, N>,
         mut writer: format::Writer<'_>,
         event: &Event<'_>,
     ) -> fmt::Result {
@@ -147,6 +155,29 @@ where
                         && !self.default_fields.contains_key(key.as_str())
                 })
                 .try_for_each(|(key, value)| map_serializer.serialize_entry(key, value))?;
+
+            // If event under span print traceId and spanId
+            if let Some((span_id, trace_id)) = ctx
+                .lookup_current()
+                .as_ref()
+                .map(SpanRef::extensions)
+                .as_ref()
+                .and_then(Extensions::get::<OtelData>)
+                .and_then(|otel_data| {
+                    if otel_data.parent_cx.has_active_span() {
+                        Some(otel_data.parent_cx.span().span_context().trace_id())
+                    } else {
+                        otel_data.builder.trace_id
+                    }
+                    .map(|trace_id| {
+                        let span_id = otel_data.builder.span_id.unwrap_or(SpanId::INVALID);
+                        (span_id, trace_id)
+                    })
+                })
+            {
+                map_serializer.serialize_entry(TRACE_ID, &trace_id.to_string())?;
+                map_serializer.serialize_entry(SPAN_ID, &span_id.to_string())?;
+            }
 
             // serialize current event metadata
             let metadata = event.metadata();
