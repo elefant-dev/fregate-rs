@@ -9,7 +9,7 @@ use tonic::transport::Channel;
 use tonic::{Request, Response, Status};
 use tracing::info;
 
-#[tracing::instrument(name = "check")]
+#[tracing::instrument(name = "get_check_status")]
 async fn get_check_status() -> StatusCode {
     let http_client = reqwest::Client::new();
 
@@ -23,7 +23,7 @@ async fn get_check_status() -> StatusCode {
     response.status()
 }
 
-#[tracing::instrument(name = "request")]
+#[tracing::instrument(name = "send_hello")]
 async fn send_hello(
     client: &mut HelloClient<Channel>,
     mut request: Request<HelloRequest>,
