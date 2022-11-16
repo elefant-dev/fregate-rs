@@ -5,9 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.4.7] - 2022-11-16
+### Added
+- Add metrics callback([#118](https://github.com/elefant-dev/fregate-rs/pull/118))
+- Print in log traceId and spanId if event is in span([#119](https://github.com/elefant-dev/fregate-rs/pull/119))
+
+### Changed
+- trace_request middleware moved to Application([#122](https://github.com/elefant-dev/fregate-rs/pull/122))
+
 ## [0.4.6] - 2022-11-10
 ### Added
--  `Context` Injections for reqwest and tonic([#111](https://github.com/elefant-dev/fregate-rs/pull/111))
+- `Context` Injections for reqwest and tonic([#111](https://github.com/elefant-dev/fregate-rs/pull/111))
 - `TracingFields::insert_as_debug()` for types which impl only `Debug` trait ([#107](https://github.com/elefant-dev/fregate-rs/pull/107))
 - Some sugar functions to work with `tonic::Code` ([#110](https://github.com/elefant-dev/fregate-rs/pull/110))
 
