@@ -6,9 +6,10 @@ use opentelemetry::{global, sdk, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_zipkin::B3Encoding::MultipleHeader;
 use std::str::FromStr;
-use tracing::{info, Subscriber};
+use tracing::Subscriber;
+use tracing_subscriber::layer::Layered;
 use tracing_subscriber::{
-    filter::{filter_fn, EnvFilter, Filtered},
+    filter::{filter_fn, EnvFilter},
     layer::SubscriberExt,
     registry,
     registry::LookupSpan,
@@ -19,16 +20,27 @@ use tracing_subscriber::{
 };
 
 static HANDLE_LOG_LAYER: OnceCell<HandleLogLayer> = OnceCell::new();
+static HANDLE_TRACE_LAYER: OnceCell<HandleTraceLayer> = OnceCell::new();
 
-/// Alias for [`Handle<Filtered<Box<dyn Layer<Registry> + Send + Sync>, EnvFilter, Registry>, Registry>`]
+/// Alias for [`Handle<EnvFilter, Layered<Option<Box<dyn Layer<Registry> + Send + Sync>>, Registry>>`]
 pub type HandleLogLayer =
-    Handle<Filtered<Box<dyn Layer<Registry> + Send + Sync>, EnvFilter, Registry>, Registry>;
+    Handle<EnvFilter, Layered<Option<Box<dyn Layer<Registry> + Send + Sync>>, Registry>>;
+
+/// Alias for [`Handle<EnvFilter, Registry>`]
+pub type HandleTraceLayer = Handle<EnvFilter, Registry>;
 
 /// Return Some(&'static HandleLogLayer) if Handler is set up, otherwise return None
 /// Initialised through [`init_tracing`] fn call
 /// Used to change log level filter
-pub fn get_handle_log_layer() -> Option<&'static HandleLogLayer> {
+pub fn get_log_filter() -> Option<&'static HandleLogLayer> {
     HANDLE_LOG_LAYER.get()
+}
+
+/// Return [`Some(&'static Handle<EnvFilter, Registry>)`] if Handler is set up, otherwise return None
+/// Initialised through [`init_tracing`] fn call
+/// Used to change trace level filter
+pub fn get_trace_filter() -> Option<&'static HandleTraceLayer> {
+    HANDLE_TRACE_LAYER.get()
 }
 
 /// Configures [`tracing_opentelemetry::OpenTelemetryLayer`] and returns [`Layer`]
@@ -90,27 +102,31 @@ pub fn init_tracing(
     formatter.add_default_field_to_events(SERVICE, service_name)?;
     formatter.add_default_field_to_events(COMPONENT, component_name)?;
 
-    let log_layer = fregate_layer(formatter).boxed();
-    let filtered_log_layer =
-        log_layer.with_filter(EnvFilter::from_str(log_level).unwrap_or_default());
-
-    let (log_layer, reload_layer) = reload::Layer::new(filtered_log_layer);
+    let log_layer = fregate_layer(formatter);
+    let log_filter = EnvFilter::from_str(log_level).unwrap_or_default();
+    let (log_filter, reload_log_filter) = reload::Layer::new(log_filter);
+    let log_layer = log_layer.with_filter(log_filter);
 
     let trace_layer = if let Some(traces_endpoint) = traces_endpoint {
-        info!("Got OTLP exporter url: `{traces_endpoint}`.");
-        let filtered_trace_layer = get_trace_layer(component_name, traces_endpoint)?
+        let trace_filter = EnvFilter::from_str(trace_level).unwrap_or_default();
+        let (filter, reload_trace_filter) = reload::Layer::new(trace_filter);
+
+        let trace_layer = get_trace_layer(component_name, traces_endpoint)?.boxed();
+        let trace_layer = trace_layer
+            .with_filter(filter)
             .with_filter(filter_fn(|metadata| metadata.is_span()))
-            .with_filter(EnvFilter::from_str(trace_level).unwrap_or_default());
-        Some(filtered_trace_layer)
+            .boxed();
+
+        let _ = HANDLE_TRACE_LAYER.get_or_init(|| reload_trace_filter);
+        Some(trace_layer)
     } else {
-        info!("OTLP exporter url is not set up: Traces export is disabled");
         None
     };
 
-    registry().with(log_layer).with(trace_layer).try_init()?;
-
-    let _ = HANDLE_LOG_LAYER.get_or_init(|| reload_layer);
+    registry().with(trace_layer).with(log_layer).try_init()?;
+    let _ = HANDLE_LOG_LAYER.get_or_init(|| reload_log_filter);
 
     set_panic_hook();
+
     Ok(())
 }
