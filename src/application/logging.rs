@@ -111,7 +111,7 @@ pub fn init_tracing(
         let trace_filter = EnvFilter::from_str(trace_level).unwrap_or_default();
         let (filter, reload_trace_filter) = reload::Layer::new(trace_filter);
 
-        let trace_layer = get_trace_layer(component_name, traces_endpoint)?.boxed();
+        let trace_layer = get_trace_layer(component_name, traces_endpoint)?;
         let trace_layer = trace_layer
             .with_filter(filter)
             .with_filter(filter_fn(|metadata| metadata.is_span()))
