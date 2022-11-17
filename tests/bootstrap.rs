@@ -1,5 +1,5 @@
 mod bootstrap_fn_test {
-    use fregate::logging::get_handle_log_layer;
+    use fregate::logging::get_log_filter;
     use fregate::{bootstrap, Empty};
     use std::net::{IpAddr, Ipv4Addr};
 
@@ -19,6 +19,6 @@ mod bootstrap_fn_test {
         assert_eq!(logger.trace_level, "info".to_owned());
         assert_eq!(logger.log_level, "info".to_owned());
 
-        assert!(get_handle_log_layer().is_some());
+        assert!(get_log_filter().is_some());
     }
 }
