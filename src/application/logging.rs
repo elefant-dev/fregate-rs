@@ -2,6 +2,7 @@
 use crate::error::Result;
 use crate::log_fmt::{fregate_layer, EventFormatter, COMPONENT, SERVICE, VERSION};
 use once_cell::sync::OnceCell;
+use opentelemetry::global::set_error_handler;
 use opentelemetry::{global, sdk, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_zipkin::B3Encoding::MultipleHeader;
@@ -126,6 +127,9 @@ pub fn init_tracing(
     registry().with(trace_layer).with(log_layer).try_init()?;
     let _ = HANDLE_LOG_LAYER.get_or_init(|| reload_log_filter);
 
+    set_error_handler(|err| {
+        tracing::error!("{err}");
+    })?;
     set_panic_hook();
 
     Ok(())

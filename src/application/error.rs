@@ -32,7 +32,9 @@ pub enum Error {
     /// Some std IO Error
     #[error("Got IoError: `{0}`")]
     IoError(#[from] std::io::Error),
-
+    /// Variant for [`opentelemetry::global::Error`]
+    #[error("Got OpentelemetryError: `{0}`")]
+    OpentelemetryError(#[from] opentelemetry::global::Error),
     /// tokio JoinHandle error
     #[cfg(feature = "tls")]
     #[error("Got JoinHandleError: `{0}`")]
