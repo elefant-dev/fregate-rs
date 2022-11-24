@@ -31,7 +31,6 @@ use_native_tls_vendored = [
 ]
 use_rustls = [
     "tls",
-    "opentelemetry-zipkin/reqwest-rustls",
     "tokio-rustls",
     "rustls-pemfile",
     "async-stream",
@@ -64,7 +63,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 prost = "0.11.0"
 time = "0.3.14"
-tokio = { version = "1.0", features = ["signal"] }
+tokio = { version = "1.0", features = ["signal", "rt-multi-thread"] }
 tonic = "0.8.0"
 tower = { version = "0.4" }
 tower-http = "0.3"
@@ -74,7 +73,6 @@ tracing-opentelemetry = "0.18.0"
 opentelemetry = { version = "0.18.0", features = ["rt-tokio"]}
 opentelemetry-otlp = { version = "0.11.0" }
 opentelemetry-http = "0.7.0"
-opentelemetry-zipkin = { version = "0.16.0", default-features = false, features = ["reqwest-client"] }
 valuable = "0.1.0"
 valuable-serde = "0.1.0"
 
