@@ -3,9 +3,9 @@ use crate::error::Result;
 use crate::log_fmt::{fregate_layer, EventFormatter, COMPONENT, SERVICE, VERSION};
 use once_cell::sync::OnceCell;
 use opentelemetry::global::set_error_handler;
+use opentelemetry::sdk::propagation::TraceContextPropagator;
 use opentelemetry::{global, sdk, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_zipkin::B3Encoding::MultipleHeader;
 use std::str::FromStr;
 use tracing::Subscriber;
 use tracing_subscriber::layer::Layered;
@@ -49,9 +49,7 @@ pub fn get_trace_layer<S>(component_name: &str, traces_endpoint: &str) -> Result
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    global::set_text_map_propagator(opentelemetry_zipkin::Propagator::with_encoding(
-        MultipleHeader,
-    ));
+    global::set_text_map_propagator(TraceContextPropagator::new());
 
     let tracer = opentelemetry_otlp::new_pipeline()
         .tracing()

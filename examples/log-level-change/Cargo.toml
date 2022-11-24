@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 fregate = { path = "../.." }
 tracing-subscriber = "0.3.15"
+tokio = { version = "1.22.0", features = ["rt-multi-thread"] }

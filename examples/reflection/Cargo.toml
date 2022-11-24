@@ -7,3 +7,4 @@ edition = "2021"
 fregate = { path = "../.." }
 resources = { path = "../examples_resources" }
 tonic-reflection = "0.5.0"
+tokio = { version = "1.22.0", features = ["rt-multi-thread"] }

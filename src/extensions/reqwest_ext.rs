@@ -21,7 +21,7 @@ impl ReqwestExt for reqwest::RequestBuilder {
     }
 
     fn inject_from_span(self, span: &Span) -> Self {
-        let mut headers = reqwest::header::HeaderMap::with_capacity(3);
+        let mut headers = reqwest::header::HeaderMap::with_capacity(2);
 
         get_text_map_propagator(|propagator| {
             propagator.inject_context(&span.context(), &mut HeaderInjector(&mut headers))

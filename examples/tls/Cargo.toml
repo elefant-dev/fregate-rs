@@ -25,7 +25,7 @@ fregate = { path = "../..", features = ["use_native_tls"] }
 #fregate = { path = "../..", features = ["use_rustls_tls12"] }
 resources = { path = "../examples_resources" }
 
-tokio = { version = "1.0", features = ["net"] }
+tokio = { version = "1.0", features = ["net", "rt-multi-thread"] }
 hyper-tls = { version = "0.5.0", optional = true }
 hyper-rustls = { version = "0.23.0", optional = true }
 rustls = { version = "0.20.7", optional = true, features = ["tls12", "dangerous_configuration"] }
