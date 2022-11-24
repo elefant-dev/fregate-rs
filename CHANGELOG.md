@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.5.0] - 2022-11-24
+### Added
+- Make trace filter level reloadable([#126](https://github.com/elefant-dev/fregate-rs/pull/126))
+- Add HashBuilder struct with sugar for easier hash calculation.([#127](https://github.com/elefant-dev/fregate-rs/pull/127))
+
+### Changed
+- Print exporter error through tracing([#129](https://github.com/elefant-dev/fregate-rs/pull/129))
+- Use w3c context propagation instead of Zipkin([#131](https://github.com/elefant-dev/fregate-rs/pull/131))
+
 ## [0.4.7] - 2022-11-16
 ### Added
 - Add metrics callback([#118](https://github.com/elefant-dev/fregate-rs/pull/118))
