@@ -10,6 +10,9 @@ use tonic::{
 
 pub const FILE_DESCRIPTOR_SET: &[u8] = include_bytes!("./proto/description.bin");
 
-pub async fn deny_middleware<Req, Next>(_req: Req, _next: Next) -> http::Response<BoxBody> {
+pub async fn deny_middleware<B, Next>(
+    _req: hyper::Request<B>,
+    _next: Next,
+) -> http::Response<BoxBody> {
     Status::permission_denied("You shall not pass").to_http()
 }
