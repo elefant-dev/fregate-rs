@@ -41,6 +41,7 @@ impl RouterTonicExt for Router {
             .map_err(|err: Infallible| match err {})
             .map_response_body(boxed)
             .service(service);
-        Router::new().route(&format!("/{}/*rest", S::NAME), svc)
+
+        Router::new().route_service(&format!("/{}/*rest", S::NAME), svc)
     }
 }

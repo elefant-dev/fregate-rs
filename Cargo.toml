@@ -47,7 +47,7 @@ use_rustls_tls12 = [
 
 [dependencies]
 ahash = { version = "0.8.2", optional = true }
-axum = { version = "0.5.7", features = ["headers", "http1", "http2", "json", "matched-path", "original-uri", "ws"] }
+axum = { version = "0.6.1", features = ["headers", "http1", "http2", "json", "matched-path", "original-uri", "ws"] }
 bytes = "1"
 config = "0.13.1"
 reqwest = { version = "0.11", default-features = false, optional = true }
