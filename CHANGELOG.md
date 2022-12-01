@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.5.0] - 2022-12-01
+### Changed
+- Update axum to 0.6([#133](https://github.com/elefant-dev/fregate-rs/pull/133))
+
 ## [0.5.0] - 2022-11-24
 ### Added
 - Make trace filter level reloadable([#126](https://github.com/elefant-dev/fregate-rs/pull/126))
