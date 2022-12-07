@@ -20,8 +20,8 @@ pub fn get_metrics(callback: Option<&(dyn Fn() + Send + Sync + 'static)>) -> Str
 
 /// Initialise PrometheusRecorder
 pub fn init_metrics() -> Result<()> {
-    register_metrics();
     metrics::set_recorder(&*RECORDER)?;
+    register_metrics();
 
     Ok(())
 }
