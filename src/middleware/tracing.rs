@@ -72,6 +72,7 @@ pub async fn trace_request<B>(
     }
 }
 
+/// Fn to be used with [`axum::middleware::from_fn`] to trace http request
 pub async fn trace_http_request<B>(
     request: Request<B>,
     next: Next<B>,
@@ -140,6 +141,7 @@ pub async fn trace_http_request<B>(
     response
 }
 
+/// Fn to be used with [`axum::middleware::from_fn`] to trace grpc request
 pub async fn trace_grpc_request<B>(
     request: Request<B>,
     next: Next<B>,
@@ -201,9 +203,11 @@ pub async fn trace_grpc_request<B>(
 }
 
 #[derive(Debug, Default, Clone)]
-/// Saves ip and port as [`String`]
+/// Saves ip and port to [`String`]
 pub struct Address {
+    /// Ip
     pub ip: String,
+    /// Port
     pub port: String,
 }
 
@@ -235,6 +239,7 @@ pub fn extract_context<B>(request: &Request<B>) -> Context {
     get_text_map_propagator(|propagator| propagator.extract(&HeaderExtractor(request.headers())))
 }
 
+/// Return [`true`] if incoming Request is grpc by checking if [`CONTENT_TYPE`] header value starts with "application/grpc"
 pub fn is_grpc(headers: &HeaderMap) -> bool {
     headers
         .get(CONTENT_TYPE)
@@ -242,6 +247,7 @@ pub fn is_grpc(headers: &HeaderMap) -> bool {
         .unwrap_or(false)
 }
 
+/// Creates HTTP [`Span`] with predefined empty attributes.
 pub fn make_http_span() -> Span {
     span!(
         Level::INFO,
@@ -256,6 +262,7 @@ pub fn make_http_span() -> Span {
     )
 }
 
+/// Creates GRPC [`Span`] with predefined empty attributes.
 pub fn make_grpc_span() -> Span {
     span!(
         Level::INFO,

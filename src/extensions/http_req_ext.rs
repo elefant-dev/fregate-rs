@@ -23,7 +23,7 @@ impl<B> HttpReqExt for http::Request<B> {
 
     fn inject_from_span(&mut self, span: &Span) {
         get_text_map_propagator(|propagator| {
-            propagator.inject_context(&span.context(), &mut HeaderInjector(self.metadata_mut()))
+            propagator.inject_context(&span.context(), &mut HeaderInjector(self.headers_mut()))
         });
     }
 }
