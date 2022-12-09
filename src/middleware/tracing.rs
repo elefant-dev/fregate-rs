@@ -22,7 +22,7 @@ const REQ_RESP: &str = "reqresp";
 
 #[derive(Default, Debug, Clone)]
 /// Structure which contains needed for [`trace_request`] [`Span`] attributes
-pub(crate) struct Attributes(Arc<Inner>);
+pub struct Attributes(Arc<Inner>);
 
 impl Attributes {
     /// Creates new [`Attributes`] from [`AppConfig`]
@@ -46,7 +46,7 @@ struct Inner {
 }
 
 /// Fn to be used with [`axum::middleware::from_fn`]
-pub(crate) async fn trace_request<B>(
+pub async fn trace_request<B>(
     req: Request<B>,
     next: Next<B>,
     attributes: Attributes,
@@ -72,7 +72,7 @@ pub(crate) async fn trace_request<B>(
     }
 }
 
-async fn trace_http_request<B>(
+pub async fn trace_http_request<B>(
     request: Request<B>,
     next: Next<B>,
     attributes: &Attributes,
@@ -140,7 +140,7 @@ async fn trace_http_request<B>(
     response
 }
 
-async fn trace_grpc_request<B>(
+pub async fn trace_grpc_request<B>(
     request: Request<B>,
     next: Next<B>,
     attributes: &Attributes,
@@ -203,8 +203,8 @@ async fn trace_grpc_request<B>(
 #[derive(Debug, Default, Clone)]
 /// Saves ip and port as [`String`]
 pub struct Address {
-    ip: String,
-    port: String,
+    pub ip: String,
+    pub port: String,
 }
 
 /// Extracts remote Ip and Port from [`Request`]
@@ -235,14 +235,14 @@ pub fn extract_context<B>(request: &Request<B>) -> Context {
     get_text_map_propagator(|propagator| propagator.extract(&HeaderExtractor(request.headers())))
 }
 
-pub(crate) fn is_grpc(headers: &HeaderMap) -> bool {
+pub fn is_grpc(headers: &HeaderMap) -> bool {
     headers
         .get(CONTENT_TYPE)
         .map(|content_type| content_type.as_bytes().starts_with(b"application/grpc"))
         .unwrap_or(false)
 }
 
-fn make_http_span() -> Span {
+pub fn make_http_span() -> Span {
     span!(
         Level::INFO,
         "http-request",
@@ -256,7 +256,7 @@ fn make_http_span() -> Span {
     )
 }
 
-fn make_grpc_span() -> Span {
+pub fn make_grpc_span() -> Span {
     span!(
         Level::INFO,
         "grpc-request",
