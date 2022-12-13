@@ -5,7 +5,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-## [0.5.0] - 2022-12-01
+## [0.6.2] - 2022-12-13
+### Added
+- http::Request extension to inject span into headers([#138](https://github.com/elefant-dev/fregate-rs/pull/138))
+
+### Changed
+- Change access to public for tracing layer([#138](https://github.com/elefant-dev/fregate-rs/pull/138))
+
+### Removed
+- Metrics tracking in tracing layer([#140](https://github.com/elefant-dev/fregate-rs/pull/140))
+
+## [0.6.1] - 2022-12-07
+### Changed
+- Fix metrics initialization([#136](https://github.com/elefant-dev/fregate-rs/pull/136))
+
+## [0.6.0] - 2022-12-01
 ### Changed
 - Update axum to 0.6([#133](https://github.com/elefant-dev/fregate-rs/pull/133))
 
