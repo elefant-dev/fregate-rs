@@ -5,7 +5,6 @@ use axum::middleware::Next;
 use axum::response::IntoResponse;
 use hyper::header::CONTENT_TYPE;
 use hyper::Request;
-use metrics::{histogram, increment_counter};
 use opentelemetry::{global::get_text_map_propagator, Context};
 use opentelemetry_http::HeaderExtractor;
 use std::net::SocketAddr;
@@ -18,7 +17,6 @@ use tracing_opentelemetry::OpenTelemetrySpanExt;
 const HEADER_GRPC_STATUS: &str = "grpc-status";
 const PROTOCOL_GRPC: &str = "grpc";
 const PROTOCOL_HTTP: &str = "http";
-const REQ_RESP: &str = "reqresp";
 
 #[derive(Default, Debug, Clone)]
 /// Structure which contains needed for [`trace_request`] [`Span`] attributes
@@ -102,32 +100,12 @@ pub async fn trace_http_request<B>(
         ">>> [Request] [{req_method}] [{url}]"
     );
 
-    increment_counter!(
-        "traffic_count_total",
-        "protocol" => PROTOCOL_HTTP,
-        "channel" => REQ_RESP,
-    );
-    increment_counter!("traffic_sum_total");
-
     let duration = Instant::now();
-
     let response = next.run(request).await;
     let elapsed = duration.elapsed();
 
     let duration = elapsed.as_millis();
-    let duration_in_sec = elapsed.as_secs_f64();
-
-    // log response out of span
     let status = response.status();
-
-    histogram!(
-        "processing_duration_seconds_sum_total",
-        duration_in_sec,
-        "protocol" => PROTOCOL_HTTP,
-        "channel" => REQ_RESP,
-        "code" => status.to_string(),
-    );
-
     span.record("http.status_code", status.as_str());
 
     info!(
@@ -164,31 +142,15 @@ pub async fn trace_grpc_request<B>(
     span.record("net.peer.ip", remote_address.ip);
     span.record("net.peer.port", remote_address.port);
 
-    increment_counter!(
-        "traffic_count_total",
-        "protocol" => PROTOCOL_GRPC,
-        "channel" => REQ_RESP,
-    );
-    increment_counter!("traffic_sum_total");
-
     let duration = Instant::now();
     let response = next.run(request).await;
     let elapsed = duration.elapsed();
 
     let duration = elapsed.as_millis();
-    let duration_in_sec = elapsed.as_secs_f64();
 
     let status: i32 = extract_grpc_status_code(response.headers())
         .unwrap_or(tonic::Code::Unknown)
         .into();
-
-    histogram!(
-        "processing_duration_seconds_sum_total",
-        duration_in_sec,
-        "protocol" => PROTOCOL_GRPC,
-        "channel" => REQ_RESP,
-        "code" => status.to_string()
-    );
 
     span.record("rpc.grpc.status_code", status);
 

@@ -55,8 +55,8 @@ pub fn init_tokio_metrics_task(metrics_update_interval: Duration) {
             total_busy_duration,
             max_busy_duration,
             min_busy_duration,
-            injection_queue_depth,   // inc / dec
-            total_local_queue_depth, // inc / dec
+            injection_queue_depth,
+            total_local_queue_depth,
             max_local_queue_depth,
             min_local_queue_depth,
             elapsed,
@@ -86,9 +86,9 @@ pub fn init_tokio_metrics_task(metrics_update_interval: Duration) {
             absolute_counter!("total_polls_count", total_polls_count);
             absolute_counter!("max_polls_count", max_polls_count);
             absolute_counter!("min_polls_count", min_polls_count);
-            histogram!("total_busy_duration", total_busy_duration);
-            histogram!("max_busy_duration", max_busy_duration);
-            histogram!("min_busy_duration", min_busy_duration);
+            absolute_counter!("total_busy_duration", total_busy_duration);
+            absolute_counter!("max_busy_duration", max_busy_duration);
+            absolute_counter!("min_busy_duration", min_busy_duration);
             gauge!(
                 "injection_queue_depth",
                 usize_to_f64_saturated(injection_queue_depth)
@@ -97,15 +97,15 @@ pub fn init_tokio_metrics_task(metrics_update_interval: Duration) {
                 "total_local_queue_depth",
                 usize_to_f64_saturated(total_local_queue_depth)
             );
-            absolute_counter!(
+            gauge!(
                 "max_local_queue_depth",
-                max_local_queue_depth.try_into().unwrap_or(u64::MAX)
+                usize_to_f64_saturated(max_local_queue_depth)
             );
-            absolute_counter!(
+            gauge!(
                 "min_local_queue_depth",
-                min_local_queue_depth.try_into().unwrap_or(u64::MAX)
+                usize_to_f64_saturated(min_local_queue_depth)
             );
-            histogram!("elapsed", elapsed);
+            absolute_counter!("elapsed", elapsed);
             tokio::time::sleep(metrics_update_interval).await;
         }
     });
@@ -139,8 +139,10 @@ pub(crate) fn register_metrics() {
         ("total_polls_count", "The number of tasks that have been polled across all worker threads."),
         ("max_polls_count", "The maximum number of tasks that have been polled in any worker thread."),
         ("min_polls_count", "The minimum number of tasks that have been polled in any worker thread."),
-        ("max_local_queue_depth", "The maximum number of tasks currently scheduled any worker's local queue."),
-        ("min_local_queue_depth", "The minimum number of tasks currently scheduled any worker's local queue."),
+        ("total_busy_duration", "The amount of time (in seconds) worker threads were busy."),
+        ("max_busy_duration", "The maximum amount of time (in seconds) a worker thread was busy."),
+        ("min_busy_duration", "The minimum amount of time (in seconds) a worker thread was busy."),
+        ("elapsed", "Total amount of time (in seconds) elapsed since observing runtime metrics."),
     ] {
         describe_counter!(name, describe);
         register_counter!(name);
@@ -148,27 +150,13 @@ pub(crate) fn register_metrics() {
 
     for (name, describe) in [
         (
-            "total_busy_duration",
-            "The amount of time (in seconds) worker threads were busy.",
+            "max_local_queue_depth",
+            "The maximum number of tasks currently scheduled any worker's local queue.",
         ),
         (
-            "max_busy_duration",
-            "The maximum amount of time (in seconds) a worker thread was busy.",
+            "min_local_queue_depth",
+            "The minimum number of tasks currently scheduled any worker's local queue.",
         ),
-        (
-            "min_busy_duration",
-            "The minimum amount of time (in seconds) a worker thread was busy.",
-        ),
-        (
-            "elapsed",
-            "Total amount of time (in seconds) elapsed since observing runtime metrics.",
-        ),
-    ] {
-        describe_histogram!(name, describe);
-        register_histogram!(name);
-    }
-
-    for (name, describe) in [
         (
             "injection_queue_depth",
             "The number of tasks currently scheduled in the runtime's injection queue.",
