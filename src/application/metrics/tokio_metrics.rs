@@ -1,8 +1,8 @@
 //! Initialization of key [`metrics`](https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMetrics.html) of tokio tasks.
 
 use metrics::{
-    absolute_counter, describe_counter, describe_gauge, describe_histogram, gauge, histogram,
-    register_counter, register_gauge, register_histogram,
+    absolute_counter, describe_counter, describe_gauge, gauge, histogram, register_counter,
+    register_gauge, register_histogram,
 };
 use std::time::Duration;
 use tokio::runtime::Handle;
