@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.6.3] - 2022-12-16
+### Changed
+- Fixed tokio_metrics compile time error([#142](https://github.com/elefant-dev/fregate-rs/pull/142))
+
 ## [0.6.2] - 2022-12-13
 ### Added
 - http::Request extension to inject span into headers([#138](https://github.com/elefant-dev/fregate-rs/pull/138))
