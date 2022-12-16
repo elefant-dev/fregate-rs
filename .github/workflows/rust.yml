@@ -17,6 +17,27 @@ jobs:
           command: fmt
           args: --all -- --check
 
+  build-features:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: arduino/setup-protoc@v1
+
+      - name: tokio-metrics
+        run: cargo build --features tokio-metrics
+
+      - name: reqwest
+        run: cargo build --features reqwest
+
+      - name: use_native_tls
+        run: cargo build --features use_native_tls
+
+      - name: use_rustls
+        run: cargo build --features use_rustls
+
   clippy:
     runs-on: ubuntu-latest
     steps:
