@@ -1,8 +1,7 @@
 //! Initialization of key [`metrics`](https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMetrics.html) of tokio tasks.
 
 use metrics::{
-    absolute_counter, describe_counter, describe_gauge, gauge, histogram, register_counter,
-    register_gauge, register_histogram,
+    absolute_counter, describe_counter, describe_gauge, gauge, register_counter, register_gauge,
 };
 use std::time::Duration;
 use tokio::runtime::Handle;
@@ -86,9 +85,9 @@ pub fn init_tokio_metrics_task(metrics_update_interval: Duration) {
             absolute_counter!("total_polls_count", total_polls_count);
             absolute_counter!("max_polls_count", max_polls_count);
             absolute_counter!("min_polls_count", min_polls_count);
-            absolute_counter!("total_busy_duration", total_busy_duration);
-            absolute_counter!("max_busy_duration", max_busy_duration);
-            absolute_counter!("min_busy_duration", min_busy_duration);
+            absolute_counter!("total_busy_duration", total_busy_duration.as_secs());
+            absolute_counter!("max_busy_duration", max_busy_duration.as_secs());
+            absolute_counter!("min_busy_duration", min_busy_duration.as_secs());
             gauge!(
                 "injection_queue_depth",
                 usize_to_f64_saturated(injection_queue_depth)
@@ -105,7 +104,7 @@ pub fn init_tokio_metrics_task(metrics_update_interval: Duration) {
                 "min_local_queue_depth",
                 usize_to_f64_saturated(min_local_queue_depth)
             );
-            absolute_counter!("elapsed", elapsed);
+            absolute_counter!("elapsed", elapsed.as_secs());
             tokio::time::sleep(metrics_update_interval).await;
         }
     });
