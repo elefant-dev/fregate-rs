@@ -3,7 +3,7 @@ use crate::error::Result;
 use opentelemetry::trace::{SpanId, TraceContextExt};
 use serde::{ser::SerializeMap, Serialize, Serializer};
 use serde_json::Value;
-use std::{collections::BTreeMap, fmt, num::NonZeroU8};
+use std::{collections::BTreeMap, fmt, mem, num::NonZeroU8};
 use time::format_description::well_known::iso8601::{Config, Iso8601, TimePrecision};
 use tracing::{field::Field, Event, Subscriber};
 use tracing_opentelemetry::OtelData;
@@ -35,6 +35,7 @@ const DEFAULT_FIELDS: [&str; 11] = [
     VERSION, SERVICE, COMPONENT, TARGET, MSG, LOG_LEVEL, TIME, TIMESTAMP, MESSAGE, TRACE_ID,
     SPAN_ID,
 ];
+const DEFAULT_MESSAGE_SIZE: usize = 2048;
 
 /// Returns [`tracing_subscriber::Layer`] with custom event formatter [`EventFormatter`]
 pub fn fregate_layer<S>(formatter: EventFormatter) -> impl Layer<S>
@@ -131,11 +132,12 @@ where
         event: &Event<'_>,
     ) -> fmt::Result {
         let serialize = || {
-            let mut buf = Vec::with_capacity(event.fields().count());
+            let fields_number = event.fields().count() + self.default_fields.len();
+            let mut buf = Vec::with_capacity(DEFAULT_MESSAGE_SIZE);
             let mut serializer = serde_json::Serializer::new(&mut buf);
-            let mut map_serializer = serializer.serialize_map(None).unwrap();
+            let mut map_serializer = serializer.serialize_map(Some(fields_number)).unwrap();
 
-            let mut visitor = JsonVisitor::default();
+            let mut visitor = JsonVisitor::new(fields_number);
             event.record(&mut visitor);
 
             // serialize default fields
@@ -225,27 +227,84 @@ where
 #[derive(Clone, Debug, Default)]
 struct JsonVisitor {
     storage: BTreeMap<String, Value>,
+    field_size: usize,
 }
 
 impl JsonVisitor {
-    fn insert<T: Serialize>(&mut self, key: &str, value: T) {
-        self.storage
-            .insert(key.to_owned(), serde_json::json!(value));
+    fn new(fields_num: usize) -> Self {
+        Self {
+            storage: BTreeMap::new(),
+            field_size: DEFAULT_MESSAGE_SIZE / fields_num,
+        }
+    }
+}
+
+// TODO: remove when done
+// https://github.com/rust-lang/rust/issues/93743
+mod round {
+    pub(crate) fn floor_char_boundary(val: &str, index: usize) -> usize {
+        if index >= val.len() {
+            val.len()
+        } else {
+            let lower_bound = index.saturating_sub(3);
+            let new_index = val.as_bytes()[lower_bound..=index]
+                .iter()
+                .rposition(|b| is_utf8_char_boundary(*b));
+
+            lower_bound + new_index.unwrap_or_default()
+        }
+    }
+
+    #[inline]
+    const fn is_utf8_char_boundary(byte: u8) -> bool {
+        (byte as i8) >= -0x40
+    }
+}
+
+impl JsonVisitor {
+    fn insert<T: Serialize>(&mut self, key: impl Into<String>, value: T) {
+        let mut value = serde_json::json!(value);
+        limit_json_value(&mut value, self.field_size);
+        self.storage.insert(key.into(), value);
+    }
+}
+
+fn limit_json_value(value: &mut Value, limit: usize) {
+    match value {
+        Value::String(str) => {
+            if str.len() > limit {
+                let new_limit = round::floor_char_boundary(str, limit);
+                let (limited, _) = str.split_at(new_limit);
+                let _ = mem::replace(str, format!("{limited}..."));
+            }
+        }
+        Value::Array(array) => {
+            for value in array {
+                limit_json_value(value, limit);
+            }
+        }
+        Value::Object(object) => {
+            for (_, value) in object.iter_mut() {
+                limit_json_value(value, limit);
+            }
+        }
+        _ => {}
     }
 }
 
 impl tracing::field::Visit for JsonVisitor {
     #[cfg(tracing_unstable)]
     fn record_value(&mut self, field: &Field, value: valuable::Value<'_>) {
-        let serde_value = serde_json::json!(Serializable::new(value));
-        let structurable = value.as_structable();
+        let mut serde_value = serde_json::json!(Serializable::new(value));
+        let structure = value.as_structable();
 
-        if let Some(structurable) = structurable {
-            let definition = structurable.definition();
+        if let Some(structure) = structure {
+            let definition = structure.definition();
 
-            if definition.is_dynamic() && definition.name() == TRACING_FIELDS_STRUCTURE_NAME {
-                match serde_value.as_object() {
+            if definition.name() == TRACING_FIELDS_STRUCTURE_NAME {
+                match serde_value.as_object_mut() {
                     Some(value) => {
+                        let value = mem::take(value);
                         value.into_iter().for_each(|(k, v)| {
                             self.insert(k.as_str(), v);
                         });
@@ -258,7 +317,7 @@ impl tracing::field::Visit for JsonVisitor {
             }
         }
 
-        self.insert(field.name(), serde_value);
+        self.insert(field.name(), serde_value)
     }
 
     fn record_f64(&mut self, field: &Field, value: f64) {
