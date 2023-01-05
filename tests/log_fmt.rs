@@ -15,6 +15,9 @@ mod log_fmt_test {
     #[cfg(tracing_unstable)]
     use valuable::Valuable;
 
+    const CURRENT_TARGET: &str = "log_fmt::log_fmt_test";
+    const MIN_MESSAGE_SIZE: usize = 256;
+
     #[cfg(tracing_unstable)]
     #[derive(Serialize, Debug, valuable_derive::Valuable)]
     pub struct MarkerTest {
@@ -89,7 +92,7 @@ mod log_fmt_test {
     #[test]
     fn basic_test() {
         let mock_writer = MockMakeWriter::new();
-        let subscriber = subscriber(EventFormatter::new())
+        let subscriber = subscriber(EventFormatter::default())
             .with_writer(mock_writer.clone())
             .finish();
 
@@ -106,8 +109,8 @@ mod log_fmt_test {
     #[test]
     fn same_fields() {
         let mock_writer = MockMakeWriter::new();
-        let mut formatter = EventFormatter::new();
-        formatter.add_field_to_events("check", 999).unwrap();
+        let mut formatter = EventFormatter::default();
+        formatter.add_field_to_events("check", "999").unwrap();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -118,20 +121,17 @@ mod log_fmt_test {
         });
 
         let content = mock_writer.get_content();
-        let expected = "{\"check\":999,\"LogLevel\":\"INFO\",\"msg\":\"test\",\"target\":\"log_fmt::log_fmt_test\"}\n";
+        let expected = "{\"check\":\"999\",\"LogLevel\":\"INFO\",\"msg\":\"test\",\"target\":\"log_fmt::log_fmt_test\"}\n";
 
         compare(expected, content.as_str());
     }
 
     #[test]
-    fn default_fields() {
+    fn additional_fields() {
         let mock_writer = MockMakeWriter::new();
-        let mut formatter = EventFormatter::new();
+        let mut formatter = EventFormatter::default();
 
-        formatter.add_field_to_events("field_1", 999).unwrap();
-        formatter
-            .add_field_to_events("field_2", vec![1, 2, 3, 4, 5])
-            .unwrap();
+        formatter.add_field_to_events("field_1", "999").unwrap();
         formatter.add_field_to_events("field_3", "value_3").unwrap();
 
         let subscriber = subscriber(formatter)
@@ -143,7 +143,7 @@ mod log_fmt_test {
         });
 
         let content = mock_writer.get_content();
-        let expected = "{\"field_1\":999,\"field_2\":[1,2,3,4,5],\"field_3\":\"value_3\",\"LogLevel\":\"INFO\",\"msg\":\"test\",\"target\":\"log_fmt::log_fmt_test\"}\n";
+        let expected = "{\"field_1\":\"999\",\"field_3\":\"value_3\",\"LogLevel\":\"INFO\",\"msg\":\"test\",\"target\":\"log_fmt::log_fmt_test\"}\n";
 
         compare(expected, content.as_str());
     }
@@ -152,7 +152,7 @@ mod log_fmt_test {
     #[cfg(tracing_unstable)]
     fn valuable_field() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new();
+        let formatter = EventFormatter::default();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -179,7 +179,7 @@ mod log_fmt_test {
     #[cfg(tracing_unstable)]
     fn valuable_unnamed_structure() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new();
+        let formatter = EventFormatter::default();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -204,7 +204,7 @@ mod log_fmt_test {
     #[cfg(tracing_unstable)]
     fn valuable_named_structure() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new();
+        let formatter = EventFormatter::default();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -233,7 +233,7 @@ mod log_fmt_test {
     #[cfg(tracing_unstable)]
     fn one_level_flattening() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new();
+        let formatter = EventFormatter::default();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -271,7 +271,7 @@ mod log_fmt_test {
     #[cfg(tracing_unstable)]
     fn empty_marker() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new();
+        let formatter = EventFormatter::default();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -293,7 +293,7 @@ mod log_fmt_test {
     #[cfg(tracing_unstable)]
     fn marker_test() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new();
+        let formatter = EventFormatter::default();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -326,8 +326,73 @@ mod log_fmt_test {
     #[test]
     #[should_panic]
     fn default_field_with_message() {
-        EventFormatter::new()
+        EventFormatter::default()
             .add_field_to_events("message", "Hello")
             .unwrap();
+    }
+
+    #[test]
+    fn limit_single_field() {
+        let mock_writer = MockMakeWriter::new();
+        let subscriber = subscriber(EventFormatter::new(MIN_MESSAGE_SIZE))
+            .with_writer(mock_writer.clone())
+            .finish();
+
+        let message = "message";
+
+        with_default(subscriber, || {
+            tracing::info!("{message}");
+        });
+
+        let content = mock_writer.get_content();
+        let expected =
+            "{\"LogLevel\":\"INFO\",\"msg\":\" ...\",\"target\":\"log_fmt::log_fmt_test\"}\n";
+
+        compare(expected, content.as_str());
+    }
+
+    #[test]
+    fn partialy_limit_single_field() {
+        let mock_writer = MockMakeWriter::new();
+        let subscriber = subscriber(EventFormatter::new(
+            CURRENT_TARGET.len() + MIN_MESSAGE_SIZE + 4,
+        ))
+        .with_writer(mock_writer.clone())
+        .finish();
+
+        let message = "message";
+
+        with_default(subscriber, || {
+            tracing::info!("{message}");
+        });
+
+        let content = mock_writer.get_content();
+        let expected =
+            "{\"LogLevel\":\"INFO\",\"msg\":\"mess ...\",\"target\":\"log_fmt::log_fmt_test\"}\n";
+
+        compare(expected, content.as_str());
+    }
+
+    #[test]
+    fn limit_three_fields() {
+        let mock_writer = MockMakeWriter::new();
+        let subscriber = subscriber(EventFormatter::new(
+            CURRENT_TARGET.len() + MIN_MESSAGE_SIZE + 6,
+        ))
+        .with_writer(mock_writer.clone())
+        .finish();
+
+        let first = "first";
+        let second = "second";
+
+        with_default(subscriber, || {
+            tracing::info!(first = %first, second = %second, "message");
+        });
+
+        let content = mock_writer.get_content();
+        let expected =
+            "{\"LogLevel\":\"INFO\",\"msg\":\"me ...\",\"first\":\"fi ...\",\"second\":\"se ...\",\"target\":\"log_fmt::log_fmt_test\"}\n";
+
+        compare(expected, content.as_str());
     }
 }

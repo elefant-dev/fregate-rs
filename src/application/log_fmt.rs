@@ -35,7 +35,9 @@ const DEFAULT_FIELDS: [&str; 11] = [
     VERSION, SERVICE, COMPONENT, TARGET, MSG, LOG_LEVEL, TIME, TIMESTAMP, MESSAGE, TRACE_ID,
     SPAN_ID,
 ];
-const DEFAULT_MESSAGE_SIZE: usize = 2048;
+const MAX_MESSAGE_LEN: usize = 16 * 1024;
+const AVERAGE_MESSAGE_LEN: usize = 1024;
+const DEFAULT_FIELDS_LEN: usize = 256;
 
 /// Returns [`tracing_subscriber::Layer`] with custom event formatter [`EventFormatter`]
 pub fn fregate_layer<S>(formatter: EventFormatter) -> impl Layer<S>
@@ -56,8 +58,8 @@ where
 ///
 /// #[tokio::main]
 /// async fn main() {
-///     let mut formatter = EventFormatter::new();
-///     formatter.add_field_to_events("test", vec![0, 1]).unwrap();
+///     let mut formatter = EventFormatter::default();
+///     formatter.add_field_to_events("additional_field", "additional_value").unwrap();
 ///     registry().with(fregate_layer(formatter)).init();
 ///
 ///     info!("info message");
@@ -68,20 +70,44 @@ where
 ///```
 ///
 ///```json
-/// {"test":[0,1],"msg":"info message","target":"check_fregate","LogLevel":"INFO","time":1665672717498107000,"timestamp":"2022-10-13T14:51:57.498Z"}
-/// {"test":[0,1],"msg":"info message","target":"check_fregate","LogLevel":"DEBUG","time":1665672717498210000,"timestamp":"2022-10-13T14:51:57.498Z"}
-/// {"test":[0,1],"msg":"info message","target":"check_fregate","LogLevel":"TRACE","time":1665672717498247000,"timestamp":"2022-10-13T14:51:57.498Z"}
-/// {"test":[0,1],"msg":"info message","target":"check_fregate","LogLevel":"WARN","time":1665672717498279000,"timestamp":"2022-10-13T14:51:57.498Z"}
+/// {"additional_field":"additional_value","msg":"info message","target":"check_fregate","LogLevel":"INFO","time":1665672717498107000,"timestamp":"2022-10-13T14:51:57.498Z"}
+/// {"additional_field":"additional_value","msg":"info message","target":"check_fregate","LogLevel":"DEBUG","time":1665672717498210000,"timestamp":"2022-10-13T14:51:57.498Z"}
+/// {"additional_field":"additional_value","msg":"info message","target":"check_fregate","LogLevel":"TRACE","time":1665672717498247000,"timestamp":"2022-10-13T14:51:57.498Z"}
+/// {"additional_field":"additional_value","msg":"info message","target":"check_fregate","LogLevel":"WARN","time":1665672717498279000,"timestamp":"2022-10-13T14:51:57.498Z"}
 /// ```
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct EventFormatter {
-    default_fields: BTreeMap<String, Value>,
+    additional_fields: BTreeMap<String, Value>,
+    max_message_len: usize,
+    average_message_len: usize,
+    fields_len: usize,
+}
+
+impl Default for EventFormatter {
+    fn default() -> Self {
+        Self {
+            additional_fields: Default::default(),
+            max_message_len: MAX_MESSAGE_LEN,
+            average_message_len: AVERAGE_MESSAGE_LEN,
+            fields_len: 0,
+        }
+    }
 }
 
 impl EventFormatter {
     /// Creates new [`EventFormatter`]
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(max_message_size: usize) -> Self {
+        assert!(
+            max_message_size >= DEFAULT_FIELDS_LEN,
+            "Max message size should be >= 256."
+        );
+
+        Self {
+            additional_fields: Default::default(),
+            max_message_len: max_message_size,
+            average_message_len: AVERAGE_MESSAGE_LEN,
+            fields_len: 0,
+        }
     }
 
     /// add key-value pair which will be added to all events\
@@ -99,7 +125,7 @@ impl EventFormatter {
     /// pub(crate) const TRACE_ID: &str = "traceId";
     /// pub(crate) const SPAN_ID: &str = "spanId";
     /// ```
-    pub fn add_field_to_events<V: Serialize>(&mut self, key: &str, value: V) -> Result<()> {
+    pub fn add_field_to_events(&mut self, key: &str, value: &str) -> Result<()> {
         if DEFAULT_FIELDS.contains(&key) {
             Err(crate::error::Error::CustomError(format!(
                 "Prohibited to add key: {key} to EventFormatter"
@@ -109,14 +135,18 @@ impl EventFormatter {
         }
     }
 
-    pub(crate) fn add_default_field_to_events<V: Serialize>(
-        &mut self,
-        key: &str,
-        value: V,
-    ) -> Result<()> {
+    pub(crate) fn add_default_field_to_events(&mut self, key: &str, value: &str) -> Result<()> {
+        // this is for each kv pair symbols in resulting message: "":"",
+        const KV_SYMBOLS_SIZE: usize = 6;
+
         let val = serde_json::to_value(value)?;
-        self.default_fields.insert(key.to_owned(), val);
+        self.additional_fields.insert(key.to_owned(), val);
+        self.fields_len += key.len() + value.len() + KV_SYMBOLS_SIZE;
         Ok(())
+    }
+
+    fn fields_len(&self) -> usize {
+        self.additional_fields.len()
     }
 }
 
@@ -132,21 +162,30 @@ where
         event: &Event<'_>,
     ) -> fmt::Result {
         let serialize = || {
-            let fields_number = event.fields().count() + self.default_fields.len();
-            let mut buf = Vec::with_capacity(DEFAULT_MESSAGE_SIZE);
+            let event_fields_len = event.fields().count();
+            let total_fields_num = DEFAULT_FIELDS.len() + self.fields_len() + event_fields_len;
+
+            let mut buf = Vec::with_capacity(self.average_message_len);
             let mut serializer = serde_json::Serializer::new(&mut buf);
-            let mut map_serializer = serializer.serialize_map(Some(fields_number)).unwrap();
+            let mut map_serializer = serializer.serialize_map(Some(total_fields_num)).unwrap();
 
-            let mut visitor = JsonVisitor::new(fields_number);
+            let metadata = event.metadata();
+
+            let default_fields_size = metadata.target().len().saturating_add(DEFAULT_FIELDS_LEN);
+            let event_fields_limit = self
+                .max_message_len
+                .saturating_sub(self.fields_len)
+                .saturating_sub(default_fields_size);
+
+            let mut visitor = JsonVisitor::new(event_fields_len, event_fields_limit);
             event.record(&mut visitor);
+            let mut event_storage = visitor.storage;
 
-            // serialize default fields
-            self.default_fields
+            // serialize additional fields
+            self.additional_fields
                 .iter()
                 .try_for_each(|(key, value)| map_serializer.serialize_entry(key, value))?;
 
-            // serialize event fields
-            let mut event_storage = visitor.storage;
             let message = event_storage.remove(MESSAGE).unwrap_or_default();
             map_serializer.serialize_entry(MSG, &message)?;
 
@@ -154,7 +193,7 @@ where
                 .iter()
                 .filter(|(key, _)| {
                     !DEFAULT_FIELDS.contains(&key.as_str())
-                        && !self.default_fields.contains_key(key.as_str())
+                        && !self.additional_fields.contains_key(key.as_str())
                 })
                 .try_for_each(|(key, value)| map_serializer.serialize_entry(key, value))?;
 
@@ -181,8 +220,7 @@ where
                 map_serializer.serialize_entry(SPAN_ID, &span_id.to_string())?;
             }
 
-            // serialize current event metadata
-            let metadata = event.metadata();
+            // serialize current event metadata\
             map_serializer.serialize_entry(TARGET, metadata.target())?;
             map_serializer.serialize_entry(LOG_LEVEL, metadata.level().as_str())?;
 
@@ -231,64 +269,17 @@ struct JsonVisitor {
 }
 
 impl JsonVisitor {
-    fn new(fields_num: usize) -> Self {
+    fn new(fields_num: usize, limit: usize) -> Self {
         Self {
             storage: BTreeMap::new(),
-            field_size: DEFAULT_MESSAGE_SIZE / fields_num,
-        }
-    }
-}
-
-// TODO: remove when done
-// https://github.com/rust-lang/rust/issues/93743
-mod round {
-    pub(crate) fn floor_char_boundary(val: &str, index: usize) -> usize {
-        if index >= val.len() {
-            val.len()
-        } else {
-            let lower_bound = index.saturating_sub(3);
-            let new_index = val.as_bytes()[lower_bound..=index]
-                .iter()
-                .rposition(|b| is_utf8_char_boundary(*b));
-
-            lower_bound + new_index.unwrap_or_default()
+            field_size: limit.saturating_div(fields_num),
         }
     }
 
-    #[inline]
-    const fn is_utf8_char_boundary(byte: u8) -> bool {
-        (byte as i8) >= -0x40
-    }
-}
-
-impl JsonVisitor {
     fn insert<T: Serialize>(&mut self, key: impl Into<String>, value: T) {
         let mut value = serde_json::json!(value);
         limit_json_value(&mut value, self.field_size);
         self.storage.insert(key.into(), value);
-    }
-}
-
-fn limit_json_value(value: &mut Value, limit: usize) {
-    match value {
-        Value::String(str) => {
-            if str.len() > limit {
-                let new_limit = round::floor_char_boundary(str, limit);
-                let (limited, _) = str.split_at(new_limit);
-                let _ = mem::replace(str, format!("{limited}..."));
-            }
-        }
-        Value::Array(array) => {
-            for value in array {
-                limit_json_value(value, limit);
-            }
-        }
-        Value::Object(object) => {
-            for (_, value) in object.iter_mut() {
-                limit_json_value(value, limit);
-            }
-        }
-        _ => {}
     }
 }
 
@@ -353,5 +344,59 @@ impl tracing::field::Visit for JsonVisitor {
                 self.insert(name, format!("{:?}", value));
             }
         };
+    }
+}
+
+// TODO: remove when done
+// https://github.com/rust-lang/rust/issues/93743
+mod round {
+    pub(crate) fn floor_char_boundary(val: &str, index: usize) -> usize {
+        if index >= val.len() {
+            val.len()
+        } else {
+            let lower_bound = index.saturating_sub(3);
+            let new_index = val.as_bytes()[lower_bound..=index]
+                .iter()
+                .rposition(|b| is_utf8_char_boundary(*b));
+
+            let new_index = match new_index {
+                Some(val) => val,
+                None => unreachable!("This should always be correct"),
+            };
+
+            lower_bound + new_index
+        }
+    }
+
+    #[inline]
+    const fn is_utf8_char_boundary(byte: u8) -> bool {
+        (byte as i8) >= -0x40
+    }
+}
+
+fn limit_json_value(value: &mut Value, limit: usize) {
+    match value {
+        Value::String(str) => {
+            if str.len() > limit {
+                let new_limit = round::floor_char_boundary(str, limit);
+                let (limited, _) = str.split_at(new_limit);
+                let _ = mem::replace(str, format!("{limited} ..."));
+            }
+        }
+        Value::Array(array) => {
+            let arr_limit = limit.saturating_div(array.len());
+
+            for value in array {
+                limit_json_value(value, arr_limit);
+            }
+        }
+        Value::Object(object) => {
+            let obj_limit = limit.saturating_div(object.len());
+
+            for (_, value) in object.iter_mut() {
+                limit_json_value(value, obj_limit);
+            }
+        }
+        _ => {}
     }
 }
