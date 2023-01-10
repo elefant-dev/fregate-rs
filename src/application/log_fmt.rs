@@ -75,7 +75,7 @@ where
 #[derive(Debug, Clone)]
 pub struct EventFormatter {
     additional_fields: BTreeMap<String, Value>,
-    max_log_len: Option<usize>,
+    _max_log_len: Option<usize>,
     max_msg_len: Option<usize>,
 }
 
@@ -94,7 +94,7 @@ impl EventFormatter {
         } else {
             Ok(Self {
                 additional_fields: Default::default(),
-                max_log_len,
+                _max_log_len: max_log_len,
                 max_msg_len,
             })
         }
@@ -104,7 +104,7 @@ impl EventFormatter {
     pub fn new_no_limits() -> Self {
         Self {
             additional_fields: Default::default(),
-            max_log_len: None,
+            _max_log_len: None,
             max_msg_len: None,
         }
     }
@@ -181,8 +181,9 @@ where
 
             // serialize message field
             let mut message = event_storage.remove(MESSAGE).unwrap_or_default();
-            self.max_msg_len
-                .map(|limit| limit_str_value(&mut message, limit));
+            if let Some(limit) = self.max_msg_len {
+                limit_str_value(&mut message, limit)
+            }
             map_serializer.serialize_entry(MSG, &message)?;
 
             // serialize event fields
@@ -371,13 +372,10 @@ mod round {
 }
 
 fn limit_str_value(value: &mut Value, limit: usize) {
-    match value {
-        Value::String(str) => {
-            if str.len() > limit {
-                let new_limit = round::floor_char_boundary(str, limit);
-                str.replace_range(new_limit..str.len(), " ...");
-            }
+    if let Value::String(str) = value {
+        if str.len() > limit {
+            let new_limit = round::floor_char_boundary(str, limit);
+            str.replace_range(new_limit..str.len(), " ...");
         }
-        _ => {}
     }
 }
