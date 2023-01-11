@@ -95,7 +95,7 @@ pub fn init_tracing(
     component_name: &str,
     traces_endpoint: Option<&str>,
 ) -> Result<()> {
-    let mut formatter = EventFormatter::new();
+    let mut formatter = EventFormatter::new_no_limits();
 
     formatter.add_default_field_to_events(VERSION, version)?;
     formatter.add_default_field_to_events(SERVICE, service_name)?;
