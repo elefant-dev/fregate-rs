@@ -8,6 +8,10 @@ port = 8000
 
 [log]
 level = "info"
+length = 16384 #in bytes
+
+[log.msg]
+length = 8192 #in bytes
 
 [trace]
 level = "info"

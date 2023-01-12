@@ -25,6 +25,8 @@ mod app_config_tests {
         assert_eq!(logger.component_name, "example".to_owned());
         assert_eq!(logger.trace_level, "info".to_owned());
         assert_eq!(logger.log_level, "info".to_owned());
+        assert_eq!(logger.length, Some(16384));
+        assert_eq!(logger.msg_length, Some(8192));
     }
 
     #[test]

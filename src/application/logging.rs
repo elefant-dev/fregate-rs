@@ -94,8 +94,9 @@ pub fn init_tracing(
     service_name: &str,
     component_name: &str,
     traces_endpoint: Option<&str>,
+    log_msg_length: Option<usize>,
 ) -> Result<()> {
-    let mut formatter = EventFormatter::new_no_limits();
+    let mut formatter = EventFormatter::new_with_limits(log_msg_length)?;
 
     formatter.add_default_field_to_events(VERSION, version)?;
     formatter.add_default_field_to_events(SERVICE, service_name)?;
