@@ -35,6 +35,7 @@ const DEFAULT_FIELDS: [&str; 11] = [
     VERSION, SERVICE, COMPONENT, TARGET, MSG, LOG_LEVEL, TIME, TIMESTAMP, MESSAGE, TRACE_ID,
     SPAN_ID,
 ];
+const MIN_LOG_MESSAGE_LEN: usize = 256;
 
 /// Returns [`tracing_subscriber::Layer`] with custom event formatter [`EventFormatter`]
 pub fn fregate_layer<S>(formatter: EventFormatter) -> impl Layer<S>
@@ -55,7 +56,7 @@ where
 ///
 /// #[tokio::main]
 /// async fn main() {
-///     let mut formatter = EventFormatter::new_no_limits();
+///     let mut formatter = EventFormatter::new();
 ///     formatter.add_field_to_events("additional_field", "additional_value").unwrap();
 ///     registry().with(fregate_layer(formatter)).init();
 ///
@@ -72,40 +73,23 @@ where
 /// {"additional_field":"additional_value","msg":"info message","target":"check_fregate","LogLevel":"TRACE","time":1665672717498247000,"timestamp":"2022-10-13T14:51:57.498Z"}
 /// {"additional_field":"additional_value","msg":"info message","target":"check_fregate","LogLevel":"WARN","time":1665672717498279000,"timestamp":"2022-10-13T14:51:57.498Z"}
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct EventFormatter {
     additional_fields: BTreeMap<String, Value>,
-    _max_log_len: Option<usize>,
-    max_msg_len: Option<usize>,
+    msg_len: Option<usize>,
 }
 
 impl EventFormatter {
-    /// Creates new [`EventFormatter`], returns Error if max_log_len < max_msg_len
-    pub fn new(max_log_len: Option<usize>, max_msg_len: Option<usize>) -> Result<Self> {
-        let is_correct = match (max_log_len, max_msg_len) {
-            (Some(max_log_len), Some(max_msg_len)) => max_log_len >= max_msg_len,
-            _ => true,
-        };
-
-        if !is_correct {
-            Err(Error::CustomError(
-                "Max log len should size should be >= max msg len.".to_owned(),
-            ))
-        } else {
-            Ok(Self {
-                additional_fields: Default::default(),
-                _max_log_len: max_log_len,
-                max_msg_len,
-            })
-        }
+    /// This is equal to call [`EventFormatter::new_with_limits(None)`]
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    /// This is equal to call [`EventFormatter::new(None, None)`] but it skip check
-    pub fn new_no_limits() -> Self {
+    /// Creates new [`EventFormatter`] with limits for msg field
+    pub fn new_with_limits(msg_len: Option<usize>) -> Self {
         Self {
             additional_fields: Default::default(),
-            _max_log_len: None,
-            max_msg_len: None,
+            msg_len,
         }
     }
 
@@ -143,10 +127,6 @@ impl EventFormatter {
         self.additional_fields.insert(key.to_owned(), val);
         Ok(())
     }
-
-    fn fields_len(&self) -> usize {
-        self.additional_fields.len()
-    }
 }
 
 impl<S, N> FormatEvent<S, N> for EventFormatter
@@ -160,43 +140,36 @@ where
         mut writer: format::Writer<'_>,
         event: &Event<'_>,
     ) -> fmt::Result {
-        const AVERAGE_MESSAGE_LEN: usize = 512;
-
         let serialize = || {
-            let event_fields_len = event.fields().count();
-            let total_fields_len = DEFAULT_FIELDS.len() + self.fields_len() + event_fields_len;
-
-            let mut buf = Vec::with_capacity(AVERAGE_MESSAGE_LEN);
+            let mut buf = Vec::with_capacity(MIN_LOG_MESSAGE_LEN);
             let mut serializer = serde_json::Serializer::new(&mut buf);
-            let mut map_serializer = serializer.serialize_map(Some(total_fields_len)).unwrap();
+            let mut map_fmt = serializer.serialize_map(None)?;
 
             let mut visitor = JsonVisitor::new();
             event.record(&mut visitor);
-            let mut event_storage = visitor.storage;
 
-            // serialize additional fields
-            self.additional_fields
-                .iter()
-                .try_for_each(|(key, value)| map_serializer.serialize_entry(key, value))?;
-
-            // serialize message field
-            let mut message = event_storage.remove(MESSAGE).unwrap_or_default();
-            if let Some(limit) = self.max_msg_len {
-                limit_str_value(&mut message, limit)
-            }
-            map_serializer.serialize_entry(MSG, &message)?;
-
-            // serialize event fields
-            event_storage
-                .iter()
-                .filter(|(key, _)| {
-                    !DEFAULT_FIELDS.contains(&key.as_str())
-                        && !self.additional_fields.contains_key(key.as_str())
-                })
-                .try_for_each(|(key, value)| map_serializer.serialize_entry(key, value))?;
-
-            // If event under span print traceId and spanId
-            if let Some((span_id, trace_id)) = ctx
+            let mut message = visitor.storage.remove(MESSAGE).unwrap_or_default();
+            let mut event_fields = visitor.storage.iter_mut().filter(|(key, _)| {
+                !DEFAULT_FIELDS.contains(&key.as_str())
+                    && !self.additional_fields.contains_key(key.as_str())
+            });
+            let mut additional_fields = self.additional_fields.clone();
+            let target = event.metadata().target();
+            let level = event.metadata().level();
+            let time = time::OffsetDateTime::now_utc();
+            let time_ns = time.unix_timestamp_nanos();
+            let timestamp = time.format(
+                &Iso8601::<
+                    {
+                        Config::DEFAULT
+                            .set_time_precision(TimePrecision::Second {
+                                decimal_digits: NonZeroU8::new(3),
+                            })
+                            .encode()
+                    },
+                >,
+            );
+            let tracing_fields = ctx
                 .lookup_current()
                 .as_ref()
                 .map(SpanRef::extensions)
@@ -212,45 +185,46 @@ where
                         let span_id = otel_data.builder.span_id.unwrap_or(SpanId::INVALID);
                         (span_id, trace_id)
                     })
-                })
-            {
-                map_serializer.serialize_entry(TRACE_ID, &trace_id.to_string())?;
-                map_serializer.serialize_entry(SPAN_ID, &span_id.to_string())?;
-            }
-
-            // serialize event metadata\
-            let metadata = event.metadata();
-            map_serializer.serialize_entry(TARGET, metadata.target())?;
-            map_serializer.serialize_entry(LOG_LEVEL, metadata.level().as_str())?;
+                });
 
             // serialize time
-            let time = time::OffsetDateTime::now_utc();
-            let time_ns = time.unix_timestamp_nanos();
-            map_serializer.serialize_entry(TIME, &time_ns)?;
+            map_fmt.serialize_entry(TIME, &time_ns)?;
+            if let Ok(timestamp) = timestamp {
+                map_fmt.serialize_entry(TIMESTAMP, timestamp.as_str())?;
+            }
 
-            if let Ok(time) = time.format(
-                &Iso8601::<
-                    {
-                        Config::DEFAULT
-                            .set_time_precision(TimePrecision::Second {
-                                decimal_digits: NonZeroU8::new(3),
-                            })
-                            .encode()
-                    },
-                >,
-            ) {
-                map_serializer.serialize_entry(TIMESTAMP, time.as_str())?;
+            // serialize event metadata
+            map_fmt.serialize_entry(LOG_LEVEL, level.as_str())?;
+            map_fmt.serialize_entry(TARGET, target)?;
+
+            // If event under span serialize traceId and spanId
+            if let Some((span_id, trace_id)) = tracing_fields {
+                map_fmt.serialize_entry(TRACE_ID, &trace_id.to_string())?;
+                map_fmt.serialize_entry(SPAN_ID, &span_id.to_string())?;
+            }
+
+            // serialize additional fields
+            additional_fields
+                .iter_mut()
+                .try_for_each(|(k, v)| map_fmt.serialize_entry(k, v))?;
+
+            // Limit msg field len if max_msg_len is set
+            if let Some(max_msg_len) = self.max_msg_len {
+                limit_str_value(&mut message, max_msg_len);
             };
+            map_fmt.serialize_entry(MSG, &message)?;
 
-            map_serializer.end()?;
+            // serialize event fields
+            event_fields.try_for_each(|(k, v)| map_fmt.serialize_entry(k, v))?;
+
+            map_fmt.end()?;
             Ok(buf)
         };
 
-        let result: std::io::Result<Vec<u8>> = serialize();
+        let buffer: std::result::Result<Vec<u8>, std::io::Error> = serialize();
 
-        match result {
+        match buffer {
             Ok(formatted) => {
-                // todo: check here total length
                 write!(writer, "{}", String::from_utf8_lossy(&formatted))?;
             }
             Err(err) => {
@@ -270,7 +244,7 @@ struct JsonVisitor {
 impl JsonVisitor {
     fn new() -> Self {
         Self {
-            storage: BTreeMap::new(),
+            storage: Default::default(),
         }
     }
 
