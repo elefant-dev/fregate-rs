@@ -86,6 +86,30 @@ impl EventFormatter {
     }
 
     /// Creates new [`EventFormatter`] with limits for msg field
+    /// Example:
+    /// ```rust
+    ///  use fregate::log_fmt::{fregate_layer, EventFormatter};
+    ///  use std::str::FromStr;
+    ///  use tracing::info;
+    ///  use tracing_subscriber::layer::SubscriberExt;
+    ///  use tracing_subscriber::util::SubscriberInitExt;
+    ///  use tracing_subscriber::{registry, EnvFilter, Layer};
+    ///  
+    ///  #[tokio::main]
+    ///  async fn main() {
+    ///      let log_layer = fregate_layer(EventFormatter::new_with_limits(Some(1)));
+    ///  
+    ///      registry()
+    ///          .with(log_layer.with_filter(EnvFilter::from_str("info").unwrap()))
+    ///          .init();
+    ///  
+    ///      info!("message");
+    ///  }
+    /// ```
+    /// Will print next log message:
+    /// ```json
+    /// {"time":1673608228799729000,"timestamp":"2023-01-13T11:10:28.800Z","LogLevel":"INFO","target":"playground","msg":"m ..."}
+    /// ```
     pub fn new_with_limits(msg_len: Option<usize>) -> Self {
         Self {
             additional_fields: Default::default(),
