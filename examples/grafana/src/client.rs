@@ -50,7 +50,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "client",
         Some("http://0.0.0.0:4317"),
         None,
-        None,
     )
     .unwrap();
 

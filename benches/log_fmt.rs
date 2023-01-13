@@ -1,7 +1,5 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use fregate::log_fmt::EventFormatter;
-use std::collections::hash_map::RandomState;
-use std::collections::HashMap;
 use std::io;
 use time::format_description::well_known::Rfc3339;
 use tracing::subscriber::with_default;
@@ -12,18 +10,12 @@ use tracing_subscriber::EnvFilter;
 
 fn benchmark(c: &mut Criterion) {
     let i = 1000;
-    let data = HashMap::<_, _, RandomState>::from_iter(
-        [
-            ("secret".to_owned(), "Debug Secret".to_owned()),
-            ("random data".to_owned(), "random data".to_owned()),
-        ]
-        .into_iter(),
-    );
+    let data = unsafe { String::from_utf8_unchecked(vec![b'X'; 3000]) };
 
-    let mut group = c.benchmark_group("Logging");
+    let mut group = c.benchmark_group("Event Formatter");
 
     group.bench_with_input(
-        BenchmarkId::new("Tracing Subscriber Json Event Formatter", i),
+        BenchmarkId::new("Default tracing", i),
         &(i, &data),
         |b, (i, data)| {
             let subscriber = tracing_subscriber();
@@ -31,22 +23,37 @@ fn benchmark(c: &mut Criterion) {
             with_default(subscriber, || {
                 b.iter(|| {
                     for _ in 0..*i {
-                        tracing::info!(data = ?data, secret = "12345", "message");
+                        tracing::info!(secret = "12345", "message = {data}");
                     }
                 });
             });
         },
     );
     group.bench_with_input(
-        BenchmarkId::new("Fregate Event Formatter No Limits", i),
+        BenchmarkId::new("Fregate None", i),
         &(i, &data),
         |b, (i, data)| {
-            let subscriber = subscriber(EventFormatter::new_no_limits());
+            let subscriber = subscriber(EventFormatter::new_with_limits(None));
 
             with_default(subscriber, || {
                 b.iter(|| {
                     for _ in 0..*i {
-                        tracing::info!(data = ?data, secret = "12345", "message");
+                        tracing::info!(secret = "12345", "message = {data}");
+                    }
+                });
+            });
+        },
+    );
+    group.bench_with_input(
+        BenchmarkId::new("Fregate Some(256)", i),
+        &(i, &data),
+        |b, (i, data)| {
+            let subscriber = subscriber(EventFormatter::new_with_limits(Some(256)));
+
+            with_default(subscriber, || {
+                b.iter(|| {
+                    for _ in 0..*i {
+                        tracing::info!(secret = "12345", "message = {data}");
                     }
                 });
             });

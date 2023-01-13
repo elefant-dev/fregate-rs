@@ -15,11 +15,10 @@ mod app_config_from_env {
         std::env::set_var("TEST_SERVICE_NAME", "TEST");
         std::env::set_var("TEST_COMPONENT_NAME", "COMPONENT_TEST");
         std::env::set_var("TEST_COMPONENT_VERSION", "1.0.0");
-        std::env::set_var("TEST_LOG_LENGTH", "300");
-        std::env::set_var("TEST_LOG_MSG_LENGTH", "0");
         std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
         std::env::set_var("TEST_TRACE_LEVEL", "debug");
         std::env::set_var("TEST_LOG_LEVEL", "trace");
+        std::env::set_var("TEST_LOG_MSG_LENGTH", "0");
         std::env::set_var("TEST_NUMBER", "100");
 
         let config = AppConfig::<TestStruct>::load_from([ConfigSource::EnvPrefix("TEST")])
@@ -44,27 +43,26 @@ mod app_config_from_env {
         assert_eq!(logger.service_name, "TEST".to_owned());
         assert_eq!(logger.trace_level, "debug".to_owned());
         assert_eq!(logger.log_level, "trace".to_owned());
-        assert_eq!(logger.length, Some(300));
         assert_eq!(logger.msg_length, Some(0));
     }
 
     #[test]
     #[should_panic]
-    fn negative_log_length() {
-        std::env::set_var("WRONG_LOG_LENGTH", "-123");
-        let config = AppConfig::<TestStruct>::load_from([ConfigSource::EnvPrefix("TEST")])
+    fn negative_msg_length() {
+        std::env::set_var("WRONG_LOG_MSG_LENGTH", "-123");
+        let config = AppConfig::<TestStruct>::load_from([ConfigSource::EnvPrefix("WRONG")])
             .expect("Failed to build AppConfig");
 
-        assert_eq!(config.logger.length, None);
+        assert_eq!(config.logger.msg_length, None);
     }
 
     #[test]
     #[should_panic]
-    fn wrong_log_length() {
-        std::env::set_var("WRONG_LOG_LENGTH", "1a123");
-        let config = AppConfig::<TestStruct>::load_from([ConfigSource::EnvPrefix("TEST")])
+    fn wrong_msg_length() {
+        std::env::set_var("WRONG_LOG_MSG_LENGTH", "1a123");
+        let config = AppConfig::<TestStruct>::load_from([ConfigSource::EnvPrefix("WRONG")])
             .expect("Failed to build AppConfig");
 
-        assert_eq!(config.logger.length, None);
+        assert_eq!(config.logger.msg_length, None);
     }
 }

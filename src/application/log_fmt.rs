@@ -147,13 +147,22 @@ where
 
             let mut visitor = JsonVisitor::new();
             event.record(&mut visitor);
+            let mut event_storage = visitor.storage;
 
-            let mut message = visitor.storage.remove(MESSAGE).unwrap_or_default();
-            let mut event_fields = visitor.storage.iter_mut().filter(|(key, _)| {
+            let message = event_storage
+                .remove(MESSAGE)
+                .map(|mut msg| {
+                    if let Some(limit) = self.msg_len {
+                        limit_str_value(&mut msg, limit);
+                    }
+                    msg
+                })
+                .unwrap_or_default();
+            let mut event_fields = event_storage.iter().filter(|(key, _)| {
                 !DEFAULT_FIELDS.contains(&key.as_str())
                     && !self.additional_fields.contains_key(key.as_str())
             });
-            let mut additional_fields = self.additional_fields.clone();
+            let mut additional_fields = self.additional_fields.iter();
             let target = event.metadata().target();
             let level = event.metadata().level();
             let time = time::OffsetDateTime::now_utc();
@@ -204,14 +213,9 @@ where
             }
 
             // serialize additional fields
-            additional_fields
-                .iter_mut()
-                .try_for_each(|(k, v)| map_fmt.serialize_entry(k, v))?;
+            additional_fields.try_for_each(|(k, v)| map_fmt.serialize_entry(k, v))?;
 
-            // Limit msg field len if max_msg_len is set
-            if let Some(max_msg_len) = self.max_msg_len {
-                limit_str_value(&mut message, max_msg_len);
-            };
+            // Limit msg field
             map_fmt.serialize_entry(MSG, &message)?;
 
             // serialize event fields
@@ -224,9 +228,14 @@ where
         let buffer: std::result::Result<Vec<u8>, std::io::Error> = serialize();
 
         match buffer {
-            Ok(formatted) => {
-                write!(writer, "{}", String::from_utf8_lossy(&formatted))?;
-            }
+            Ok(formatted) => match std::str::from_utf8(&formatted) {
+                Ok(str) => {
+                    write!(writer, "{}", str)?;
+                }
+                Err(_) => {
+                    write!(writer, "{}", String::from_utf8_lossy(&formatted))?;
+                }
+            },
             Err(err) => {
                 write!(writer, "{}", err)?;
             }

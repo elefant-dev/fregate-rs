@@ -89,7 +89,7 @@ mod log_fmt_test {
     #[test]
     fn basic_test() {
         let mock_writer = MockMakeWriter::new();
-        let subscriber = subscriber(EventFormatter::new_no_limits())
+        let subscriber = subscriber(EventFormatter::new())
             .with_writer(mock_writer.clone())
             .finish();
 
@@ -106,7 +106,7 @@ mod log_fmt_test {
     #[test]
     fn same_fields() {
         let mock_writer = MockMakeWriter::new();
-        let mut formatter = EventFormatter::new_no_limits();
+        let mut formatter = EventFormatter::new();
         formatter.add_field_to_events("check", 999).unwrap();
 
         let subscriber = subscriber(formatter)
@@ -126,7 +126,7 @@ mod log_fmt_test {
     #[test]
     fn default_fields() {
         let mock_writer = MockMakeWriter::new();
-        let mut formatter = EventFormatter::new_no_limits();
+        let mut formatter = EventFormatter::new();
 
         formatter.add_field_to_events("field_1", 999).unwrap();
         formatter
@@ -152,7 +152,7 @@ mod log_fmt_test {
     #[cfg(tracing_unstable)]
     fn valuable_field() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new_no_limits();
+        let formatter = EventFormatter::new();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -179,7 +179,7 @@ mod log_fmt_test {
     #[cfg(tracing_unstable)]
     fn valuable_unnamed_structure() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new_no_limits();
+        let formatter = EventFormatter::new();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -204,7 +204,7 @@ mod log_fmt_test {
     #[cfg(tracing_unstable)]
     fn valuable_named_structure() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new_no_limits();
+        let formatter = EventFormatter::new();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -233,7 +233,7 @@ mod log_fmt_test {
     #[cfg(tracing_unstable)]
     fn one_level_flattening() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new_no_limits();
+        let formatter = EventFormatter::new();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -271,7 +271,7 @@ mod log_fmt_test {
     #[cfg(tracing_unstable)]
     fn empty_marker() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new_no_limits();
+        let formatter = EventFormatter::new();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -293,7 +293,7 @@ mod log_fmt_test {
     #[cfg(tracing_unstable)]
     fn marker_test() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new_no_limits();
+        let formatter = EventFormatter::new();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -326,7 +326,7 @@ mod log_fmt_test {
     #[test]
     #[should_panic]
     fn additional_message_field() {
-        EventFormatter::new_no_limits()
+        EventFormatter::new()
             .add_field_to_events("message", "Hello")
             .unwrap();
     }
@@ -334,27 +334,15 @@ mod log_fmt_test {
     #[test]
     #[should_panic]
     fn additional_msg_field() {
-        EventFormatter::new_no_limits()
+        EventFormatter::new()
             .add_field_to_events("msg", "Hello")
             .unwrap();
     }
 
     #[test]
-    #[should_panic]
-    fn message_len_larger_then_log_len() {
-        EventFormatter::new(Some(1), Some(10)).unwrap();
-    }
-
-    #[test]
-    fn message_len_equal_to_log_len() {
-        let formatter = EventFormatter::new(Some(10), Some(10));
-        assert!(formatter.is_ok())
-    }
-
-    #[test]
     fn limit_exact_message_size() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new(None, Some(10)).unwrap();
+        let formatter = EventFormatter::new_with_limits(Some(10));
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -374,7 +362,7 @@ mod log_fmt_test {
     #[test]
     fn limit_1_byte_overflow() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new(None, Some(10)).unwrap();
+        let formatter = EventFormatter::new_with_limits(Some(10));
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -394,7 +382,7 @@ mod log_fmt_test {
     #[test]
     fn no_limit() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new(None, None).unwrap();
+        let formatter = EventFormatter::new();
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -414,15 +402,15 @@ mod log_fmt_test {
     #[test]
     fn limit_large_message() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new(None, Some(10)).unwrap();
+        let formatter = EventFormatter::new_with_limits(Some(10));
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
             .finish();
 
-        let long_message = (0..4096).map(|_| "X").collect::<String>();
+        let data = unsafe { String::from_utf8_unchecked(vec![b'X'; 3000]) };
         with_default(subscriber, || {
-            tracing::info!("{long_message}");
+            tracing::info!("{data}");
         });
 
         let content = mock_writer.get_content();
@@ -435,7 +423,7 @@ mod log_fmt_test {
     #[test]
     fn limit_empty_message() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new(None, Some(10)).unwrap();
+        let formatter = EventFormatter::new_with_limits(Some(10));
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
