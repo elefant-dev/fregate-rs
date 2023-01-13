@@ -325,9 +325,118 @@ mod log_fmt_test {
 
     #[test]
     #[should_panic]
-    fn default_field_with_message() {
+    fn additional_message_field() {
         EventFormatter::new()
             .add_field_to_events("message", "Hello")
             .unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn additional_msg_field() {
+        EventFormatter::new()
+            .add_field_to_events("msg", "Hello")
+            .unwrap();
+    }
+
+    #[test]
+    fn limit_exact_message_size() {
+        let mock_writer = MockMakeWriter::new();
+        let formatter = EventFormatter::new_with_limits(Some(10));
+
+        let subscriber = subscriber(formatter)
+            .with_writer(mock_writer.clone())
+            .finish();
+
+        with_default(subscriber, || {
+            tracing::info!("1234567890");
+        });
+
+        let content = mock_writer.get_content();
+        let expected =
+            "{\"msg\":\"1234567890\",\"target\":\"log_fmt::log_fmt_test\",\"LogLevel\":\"INFO\"}\n";
+
+        compare(expected, content.as_str());
+    }
+
+    #[test]
+    fn limit_1_byte_overflow() {
+        let mock_writer = MockMakeWriter::new();
+        let formatter = EventFormatter::new_with_limits(Some(10));
+
+        let subscriber = subscriber(formatter)
+            .with_writer(mock_writer.clone())
+            .finish();
+
+        with_default(subscriber, || {
+            tracing::info!("12345678901");
+        });
+
+        let content = mock_writer.get_content();
+        let expected =
+            "{\"msg\":\"1234567890 ...\",\"target\":\"log_fmt::log_fmt_test\",\"LogLevel\":\"INFO\"}\n";
+
+        compare(expected, content.as_str());
+    }
+
+    #[test]
+    fn no_limit() {
+        let mock_writer = MockMakeWriter::new();
+        let formatter = EventFormatter::new();
+
+        let subscriber = subscriber(formatter)
+            .with_writer(mock_writer.clone())
+            .finish();
+
+        with_default(subscriber, || {
+            tracing::info!("1234567890");
+        });
+
+        let content = mock_writer.get_content();
+        let expected =
+            "{\"msg\":\"1234567890\",\"target\":\"log_fmt::log_fmt_test\",\"LogLevel\":\"INFO\"}\n";
+
+        compare(expected, content.as_str());
+    }
+
+    #[test]
+    fn limit_large_message() {
+        let mock_writer = MockMakeWriter::new();
+        let formatter = EventFormatter::new_with_limits(Some(10));
+
+        let subscriber = subscriber(formatter)
+            .with_writer(mock_writer.clone())
+            .finish();
+
+        let data = unsafe { String::from_utf8_unchecked(vec![b'X'; 3000]) };
+        with_default(subscriber, || {
+            tracing::info!("{data}");
+        });
+
+        let content = mock_writer.get_content();
+        let expected =
+            "{\"msg\":\"XXXXXXXXXX ...\",\"target\":\"log_fmt::log_fmt_test\",\"LogLevel\":\"INFO\"}\n";
+
+        compare(expected, content.as_str());
+    }
+
+    #[test]
+    fn limit_empty_message() {
+        let mock_writer = MockMakeWriter::new();
+        let formatter = EventFormatter::new_with_limits(Some(10));
+
+        let subscriber = subscriber(formatter)
+            .with_writer(mock_writer.clone())
+            .finish();
+
+        with_default(subscriber, || {
+            tracing::info!("");
+        });
+
+        let content = mock_writer.get_content();
+        let expected =
+            "{\"msg\":\"\",\"target\":\"log_fmt::log_fmt_test\",\"LogLevel\":\"INFO\"}\n";
+
+        compare(expected, content.as_str());
     }
 }

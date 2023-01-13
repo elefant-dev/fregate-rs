@@ -24,6 +24,7 @@ const PORT_PTR: &str = "/port";
 #[cfg(feature = "tokio-metrics")]
 const SERVER_METRICS_UPDATE_INTERVAL: &str = "/server/metrics/update_interval";
 const LOG_LEVEL_PTR: &str = "/log/level";
+const LOG_MSG_LENGTH: &str = "/log/msg/length";
 const TRACE_LEVEL_PTR: &str = "/trace/level";
 const SERVICE_NAME_PTR: &str = "/service/name";
 const COMPONENT_NAME_PTR: &str = "/component/name";
@@ -68,6 +69,8 @@ pub struct AppConfig<T> {
 pub struct LoggerConfig {
     /// log level read to string and later parsed into EnvFilter
     pub log_level: String,
+    /// Maximum message field length, if set: message field will be cut if len() exceed this limit
+    pub msg_length: Option<usize>,
     /// trace level read to string and later parsed into EnvFilter
     pub trace_level: String,
     /// service name to be used in logs
@@ -104,9 +107,13 @@ impl<'de> Deserialize<'de> for LoggerConfig {
         #[cfg(feature = "tokio-metrics")]
         let metrics_update_interval =
             config.pointer_and_deserialize::<u64, D::Error>(SERVER_METRICS_UPDATE_INTERVAL)?;
+        let msg_length = config
+            .pointer_and_deserialize::<_, D::Error>(LOG_MSG_LENGTH)
+            .ok();
 
         Ok(LoggerConfig {
             log_level,
+            msg_length,
             version,
             trace_level,
             service_name,

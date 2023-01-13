@@ -49,6 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "fregate",
         "client",
         Some("http://0.0.0.0:4317"),
+        None,
     )
     .unwrap();
 

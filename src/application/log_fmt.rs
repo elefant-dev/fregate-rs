@@ -1,9 +1,10 @@
 //! Fregate [`FormatEvent`] trait implementation
-use crate::error::Result;
+use crate::error::{Error, Result};
 use opentelemetry::trace::{SpanId, TraceContextExt};
 use serde::{ser::SerializeMap, Serialize, Serializer};
 use serde_json::Value;
-use std::{collections::BTreeMap, fmt, num::NonZeroU8};
+use std::borrow::Cow;
+use std::{collections::BTreeMap, fmt, mem, num::NonZeroU8};
 use time::format_description::well_known::iso8601::{Config, Iso8601, TimePrecision};
 use tracing::{field::Field, Event, Subscriber};
 use tracing_opentelemetry::OtelData;
@@ -35,6 +36,7 @@ const DEFAULT_FIELDS: [&str; 11] = [
     VERSION, SERVICE, COMPONENT, TARGET, MSG, LOG_LEVEL, TIME, TIMESTAMP, MESSAGE, TRACE_ID,
     SPAN_ID,
 ];
+const MIN_LOG_MESSAGE_LEN: usize = 256;
 
 /// Returns [`tracing_subscriber::Layer`] with custom event formatter [`EventFormatter`]
 pub fn fregate_layer<S>(formatter: EventFormatter) -> impl Layer<S>
@@ -56,7 +58,7 @@ where
 /// #[tokio::main]
 /// async fn main() {
 ///     let mut formatter = EventFormatter::new();
-///     formatter.add_field_to_events("test", vec![0, 1]).unwrap();
+///     formatter.add_field_to_events("additional_field", "additional_value").unwrap();
 ///     registry().with(fregate_layer(formatter)).init();
 ///
 ///     info!("info message");
@@ -67,20 +69,53 @@ where
 ///```
 ///
 ///```json
-/// {"test":[0,1],"msg":"info message","target":"check_fregate","LogLevel":"INFO","time":1665672717498107000,"timestamp":"2022-10-13T14:51:57.498Z"}
-/// {"test":[0,1],"msg":"info message","target":"check_fregate","LogLevel":"DEBUG","time":1665672717498210000,"timestamp":"2022-10-13T14:51:57.498Z"}
-/// {"test":[0,1],"msg":"info message","target":"check_fregate","LogLevel":"TRACE","time":1665672717498247000,"timestamp":"2022-10-13T14:51:57.498Z"}
-/// {"test":[0,1],"msg":"info message","target":"check_fregate","LogLevel":"WARN","time":1665672717498279000,"timestamp":"2022-10-13T14:51:57.498Z"}
+/// {"additional_field":"additional_value","msg":"info message","target":"check_fregate","LogLevel":"INFO","time":1665672717498107000,"timestamp":"2022-10-13T14:51:57.498Z"}
+/// {"additional_field":"additional_value","msg":"info message","target":"check_fregate","LogLevel":"DEBUG","time":1665672717498210000,"timestamp":"2022-10-13T14:51:57.498Z"}
+/// {"additional_field":"additional_value","msg":"info message","target":"check_fregate","LogLevel":"TRACE","time":1665672717498247000,"timestamp":"2022-10-13T14:51:57.498Z"}
+/// {"additional_field":"additional_value","msg":"info message","target":"check_fregate","LogLevel":"WARN","time":1665672717498279000,"timestamp":"2022-10-13T14:51:57.498Z"}
 /// ```
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct EventFormatter {
-    default_fields: BTreeMap<String, Value>,
+    additional_fields: BTreeMap<String, Value>,
+    msg_len: Option<usize>,
 }
 
 impl EventFormatter {
-    /// Creates new [`EventFormatter`]
+    /// This is equal to call [`EventFormatter::new_with_limits(None)`]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Creates new [`EventFormatter`] with limits for msg field
+    /// Example:
+    /// ```rust
+    ///  use fregate::log_fmt::{fregate_layer, EventFormatter};
+    ///  use std::str::FromStr;
+    ///  use tracing::info;
+    ///  use tracing_subscriber::layer::SubscriberExt;
+    ///  use tracing_subscriber::util::SubscriberInitExt;
+    ///  use tracing_subscriber::{registry, EnvFilter, Layer};
+    ///  
+    ///  #[tokio::main]
+    ///  async fn main() {
+    ///      let log_layer = fregate_layer(EventFormatter::new_with_limits(Some(1)));
+    ///  
+    ///      registry()
+    ///          .with(log_layer.with_filter(EnvFilter::from_str("info").unwrap()))
+    ///          .init();
+    ///  
+    ///      info!("message");
+    ///  }
+    /// ```
+    /// Will print next log message:
+    /// ```json
+    /// {"time":1673608228799729000,"timestamp":"2023-01-13T11:10:28.800Z","LogLevel":"INFO","target":"playground","msg":"m ..."}
+    /// ```
+    pub fn new_with_limits(msg_len: Option<usize>) -> Self {
+        Self {
+            additional_fields: Default::default(),
+            msg_len,
+        }
     }
 
     /// add key-value pair which will be added to all events\
@@ -100,8 +135,8 @@ impl EventFormatter {
     /// ```
     pub fn add_field_to_events<V: Serialize>(&mut self, key: &str, value: V) -> Result<()> {
         if DEFAULT_FIELDS.contains(&key) {
-            Err(crate::error::Error::CustomError(format!(
-                "Prohibited to add key: {key} to EventFormatter"
+            Err(Error::CustomError(format!(
+                "Prohibited to add key: '{key}' to EventFormatter"
             )))
         } else {
             self.add_default_field_to_events(key, value)
@@ -114,7 +149,7 @@ impl EventFormatter {
         value: V,
     ) -> Result<()> {
         let val = serde_json::to_value(value)?;
-        self.default_fields.insert(key.to_owned(), val);
+        self.additional_fields.insert(key.to_owned(), val);
         Ok(())
     }
 }
@@ -131,33 +166,44 @@ where
         event: &Event<'_>,
     ) -> fmt::Result {
         let serialize = || {
-            let mut buf = Vec::with_capacity(event.fields().count());
+            let mut buf = Vec::with_capacity(MIN_LOG_MESSAGE_LEN);
             let mut serializer = serde_json::Serializer::new(&mut buf);
-            let mut map_serializer = serializer.serialize_map(None).unwrap();
+            let mut map_fmt = serializer.serialize_map(None)?;
 
-            let mut visitor = JsonVisitor::default();
+            let mut visitor = JsonVisitor::new();
             event.record(&mut visitor);
-
-            // serialize default fields
-            self.default_fields
-                .iter()
-                .try_for_each(|(key, value)| map_serializer.serialize_entry(key, value))?;
-
-            // serialize event fields
             let mut event_storage = visitor.storage;
-            let message = event_storage.remove(MESSAGE).unwrap_or_default();
-            map_serializer.serialize_entry(MSG, &message)?;
 
-            event_storage
-                .iter()
-                .filter(|(key, _)| {
-                    !DEFAULT_FIELDS.contains(&key.as_str())
-                        && !self.default_fields.contains_key(key.as_str())
+            let message = event_storage
+                .remove(MESSAGE)
+                .map(|mut msg| {
+                    if let Some(limit) = self.msg_len {
+                        limit_str_value(&mut msg, limit);
+                    }
+                    msg
                 })
-                .try_for_each(|(key, value)| map_serializer.serialize_entry(key, value))?;
-
-            // If event under span print traceId and spanId
-            if let Some((span_id, trace_id)) = ctx
+                .unwrap_or_default();
+            let mut event_fields = event_storage.iter().filter(|(key, _)| {
+                !DEFAULT_FIELDS.contains(&key.as_ref())
+                    && !self.additional_fields.contains_key(key.as_ref())
+            });
+            let mut additional_fields = self.additional_fields.iter();
+            let target = event.metadata().target();
+            let level = event.metadata().level();
+            let time = time::OffsetDateTime::now_utc();
+            let time_ns = time.unix_timestamp_nanos();
+            let timestamp = time.format(
+                &Iso8601::<
+                    {
+                        Config::DEFAULT
+                            .set_time_precision(TimePrecision::Second {
+                                decimal_digits: NonZeroU8::new(3),
+                            })
+                            .encode()
+                    },
+                >,
+            );
+            let tracing_fields = ctx
                 .lookup_current()
                 .as_ref()
                 .map(SpanRef::extensions)
@@ -173,46 +219,48 @@ where
                         let span_id = otel_data.builder.span_id.unwrap_or(SpanId::INVALID);
                         (span_id, trace_id)
                     })
-                })
-            {
-                map_serializer.serialize_entry(TRACE_ID, &trace_id.to_string())?;
-                map_serializer.serialize_entry(SPAN_ID, &span_id.to_string())?;
-            }
-
-            // serialize current event metadata
-            let metadata = event.metadata();
-            map_serializer.serialize_entry(TARGET, metadata.target())?;
-            map_serializer.serialize_entry(LOG_LEVEL, metadata.level().as_str())?;
+                });
 
             // serialize time
-            let time = time::OffsetDateTime::now_utc();
-            let time_ns = time.unix_timestamp_nanos();
-            map_serializer.serialize_entry(TIME, &time_ns)?;
+            map_fmt.serialize_entry(TIME, &time_ns)?;
+            if let Ok(timestamp) = timestamp {
+                map_fmt.serialize_entry(TIMESTAMP, timestamp.as_str())?;
+            }
 
-            if let Ok(time) = time.format(
-                &Iso8601::<
-                    {
-                        Config::DEFAULT
-                            .set_time_precision(TimePrecision::Second {
-                                decimal_digits: NonZeroU8::new(3),
-                            })
-                            .encode()
-                    },
-                >,
-            ) {
-                map_serializer.serialize_entry(TIMESTAMP, time.as_str())?;
-            };
+            // serialize event metadata
+            map_fmt.serialize_entry(LOG_LEVEL, level.as_str())?;
+            map_fmt.serialize_entry(TARGET, target)?;
 
-            map_serializer.end()?;
+            // If event under span serialize traceId and spanId
+            if let Some((span_id, trace_id)) = tracing_fields {
+                map_fmt.serialize_entry(TRACE_ID, &trace_id.to_string())?;
+                map_fmt.serialize_entry(SPAN_ID, &span_id.to_string())?;
+            }
+
+            // serialize additional fields
+            additional_fields.try_for_each(|(k, v)| map_fmt.serialize_entry(k, v))?;
+
+            // Limit msg field
+            map_fmt.serialize_entry(MSG, &message)?;
+
+            // serialize event fields
+            event_fields.try_for_each(|(k, v)| map_fmt.serialize_entry(k, v))?;
+
+            map_fmt.end()?;
             Ok(buf)
         };
 
-        let result: std::io::Result<Vec<u8>> = serialize();
+        let buffer: std::result::Result<Vec<u8>, std::io::Error> = serialize();
 
-        match result {
-            Ok(formatted) => {
-                write!(writer, "{}", String::from_utf8_lossy(&formatted))?;
-            }
+        match buffer {
+            Ok(formatted) => match std::str::from_utf8(&formatted) {
+                Ok(str) => {
+                    write!(writer, "{}", str)?;
+                }
+                Err(_) => {
+                    write!(writer, "{}", String::from_utf8_lossy(&formatted))?;
+                }
+            },
             Err(err) => {
                 write!(writer, "{}", err)?;
             }
@@ -223,31 +271,43 @@ where
 }
 
 #[derive(Clone, Debug, Default)]
-struct JsonVisitor {
-    storage: BTreeMap<String, Value>,
+struct JsonVisitor<'a> {
+    storage: BTreeMap<Cow<'a, str>, Value>,
 }
 
-impl JsonVisitor {
-    fn insert<T: Serialize>(&mut self, key: &str, value: T) {
-        self.storage
-            .insert(key.to_owned(), serde_json::json!(value));
+impl<'a> JsonVisitor<'a> {
+    fn new() -> Self {
+        Self {
+            storage: Default::default(),
+        }
+    }
+
+    fn insert_owned<T: Serialize>(&mut self, key: String, value: T) {
+        let value = serde_json::json!(value);
+        self.storage.insert(Cow::Owned(key), value);
+    }
+
+    fn insert_borrowed<T: Serialize>(&mut self, key: &'a str, value: T) {
+        let value = serde_json::json!(value);
+        self.storage.insert(Cow::Borrowed(key), value);
     }
 }
 
-impl tracing::field::Visit for JsonVisitor {
+impl<'a> tracing::field::Visit for JsonVisitor<'a> {
     #[cfg(tracing_unstable)]
     fn record_value(&mut self, field: &Field, value: valuable::Value<'_>) {
-        let serde_value = serde_json::json!(Serializable::new(value));
-        let structurable = value.as_structable();
+        let mut serde_value = serde_json::json!(Serializable::new(value));
+        let structure = value.as_structable();
 
-        if let Some(structurable) = structurable {
-            let definition = structurable.definition();
+        if let Some(structure) = structure {
+            let definition = structure.definition();
 
-            if definition.is_dynamic() && definition.name() == TRACING_FIELDS_STRUCTURE_NAME {
-                match serde_value.as_object() {
+            if definition.name() == TRACING_FIELDS_STRUCTURE_NAME {
+                match serde_value.as_object_mut() {
                     Some(value) => {
+                        let value = mem::take(value);
                         value.into_iter().for_each(|(k, v)| {
-                            self.insert(k.as_str(), v);
+                            self.insert_owned(k, v);
                         });
                         return;
                     }
@@ -258,41 +318,77 @@ impl tracing::field::Visit for JsonVisitor {
             }
         }
 
-        self.insert(field.name(), serde_value);
+        self.insert_borrowed(field.name(), serde_value)
     }
 
     fn record_f64(&mut self, field: &Field, value: f64) {
-        self.insert(field.name(), value);
+        self.insert_borrowed(field.name(), value);
     }
 
     fn record_i64(&mut self, field: &Field, value: i64) {
-        self.insert(field.name(), value);
+        self.insert_borrowed(field.name(), value);
     }
 
     fn record_u64(&mut self, field: &Field, value: u64) {
-        self.insert(field.name(), value);
+        self.insert_borrowed(field.name(), value);
     }
 
     fn record_bool(&mut self, field: &Field, value: bool) {
-        self.insert(field.name(), value);
+        self.insert_borrowed(field.name(), value);
     }
 
     fn record_str(&mut self, field: &Field, value: &str) {
-        self.insert(field.name(), value);
+        self.insert_borrowed(field.name(), value);
     }
 
     fn record_error(&mut self, field: &Field, value: &(dyn std::error::Error + 'static)) {
-        self.insert(field.name(), value.to_string());
+        self.insert_borrowed(field.name(), value.to_string());
     }
 
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
         match field.name() {
             name if name.starts_with("r#") => {
-                self.insert(&name[2..], format!("{:?}", value));
+                self.insert_borrowed(&name[2..], format!("{:?}", value));
             }
             name => {
-                self.insert(name, format!("{:?}", value));
+                self.insert_borrowed(name, format!("{:?}", value));
             }
         };
+    }
+}
+
+// TODO: remove when done
+// https://github.com/rust-lang/rust/issues/93743
+mod round {
+    pub(crate) fn floor_char_boundary(val: &str, index: usize) -> usize {
+        if index >= val.len() {
+            val.len()
+        } else {
+            let lower_bound = index.saturating_sub(3);
+            let new_index = val.as_bytes()[lower_bound..=index]
+                .iter()
+                .rposition(|b| is_utf8_char_boundary(*b));
+
+            let new_index = match new_index {
+                Some(val) => val,
+                None => unreachable!("floor_char_boundary fn should never fail"),
+            };
+
+            lower_bound + new_index
+        }
+    }
+
+    #[inline]
+    const fn is_utf8_char_boundary(byte: u8) -> bool {
+        (byte as i8) >= -0x40
+    }
+}
+
+fn limit_str_value(value: &mut Value, limit: usize) {
+    if let Value::String(str) = value {
+        if str.len() > limit {
+            let new_limit = round::floor_char_boundary(str, limit);
+            str.replace_range(new_limit..str.len(), " ...");
+        }
     }
 }

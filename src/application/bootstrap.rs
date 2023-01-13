@@ -43,6 +43,7 @@ where
         service_name,
         component_name,
         traces_endpoint,
+        msg_length,
         ..
     } = &config.logger;
 
@@ -53,6 +54,7 @@ where
         service_name,
         component_name,
         traces_endpoint.as_deref(),
+        *msg_length,
     )?;
 
     init_metrics()?;

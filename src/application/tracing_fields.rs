@@ -18,7 +18,7 @@ pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
 ///
 /// #[tokio::main]
 /// async fn main() {
-///    init_tracing("info", "info", "0.0.0", "fregate", "marker", None).unwrap();
+///    init_tracing("info", "info", "0.0.0", "fregate", "marker", None, None).unwrap();
 ///
 ///    let mut marker = TracingFields::with_capacity(10);
 ///
