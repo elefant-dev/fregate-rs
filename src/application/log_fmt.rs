@@ -3,6 +3,7 @@ use crate::error::{Error, Result};
 use opentelemetry::trace::{SpanId, TraceContextExt};
 use serde::{ser::SerializeMap, Serialize, Serializer};
 use serde_json::Value;
+use std::borrow::Cow;
 use std::{collections::BTreeMap, fmt, mem, num::NonZeroU8};
 use time::format_description::well_known::iso8601::{Config, Iso8601, TimePrecision};
 use tracing::{field::Field, Event, Subscriber};
@@ -183,8 +184,8 @@ where
                 })
                 .unwrap_or_default();
             let mut event_fields = event_storage.iter().filter(|(key, _)| {
-                !DEFAULT_FIELDS.contains(&key.as_str())
-                    && !self.additional_fields.contains_key(key.as_str())
+                !DEFAULT_FIELDS.contains(&key.as_ref())
+                    && !self.additional_fields.contains_key(key.as_ref())
             });
             let mut additional_fields = self.additional_fields.iter();
             let target = event.metadata().target();
@@ -270,24 +271,29 @@ where
 }
 
 #[derive(Clone, Debug, Default)]
-struct JsonVisitor {
-    storage: BTreeMap<String, Value>,
+struct JsonVisitor<'a> {
+    storage: BTreeMap<Cow<'a, str>, Value>,
 }
 
-impl JsonVisitor {
+impl<'a> JsonVisitor<'a> {
     fn new() -> Self {
         Self {
             storage: Default::default(),
         }
     }
 
-    fn insert<T: Serialize>(&mut self, key: impl Into<String>, value: T) {
+    fn insert_owned<T: Serialize>(&mut self, key: String, value: T) {
         let value = serde_json::json!(value);
-        self.storage.insert(key.into(), value);
+        self.storage.insert(Cow::Owned(key), value);
+    }
+
+    fn insert_borrowed<T: Serialize>(&mut self, key: &'a str, value: T) {
+        let value = serde_json::json!(value);
+        self.storage.insert(Cow::Borrowed(key), value);
     }
 }
 
-impl tracing::field::Visit for JsonVisitor {
+impl<'a> tracing::field::Visit for JsonVisitor<'a> {
     #[cfg(tracing_unstable)]
     fn record_value(&mut self, field: &Field, value: valuable::Value<'_>) {
         let mut serde_value = serde_json::json!(Serializable::new(value));
@@ -301,7 +307,7 @@ impl tracing::field::Visit for JsonVisitor {
                     Some(value) => {
                         let value = mem::take(value);
                         value.into_iter().for_each(|(k, v)| {
-                            self.insert(k.as_str(), v);
+                            self.insert_owned(k, v);
                         });
                         return;
                     }
@@ -312,40 +318,40 @@ impl tracing::field::Visit for JsonVisitor {
             }
         }
 
-        self.insert(field.name(), serde_value)
+        self.insert_borrowed(field.name(), serde_value)
     }
 
     fn record_f64(&mut self, field: &Field, value: f64) {
-        self.insert(field.name(), value);
+        self.insert_borrowed(field.name(), value);
     }
 
     fn record_i64(&mut self, field: &Field, value: i64) {
-        self.insert(field.name(), value);
+        self.insert_borrowed(field.name(), value);
     }
 
     fn record_u64(&mut self, field: &Field, value: u64) {
-        self.insert(field.name(), value);
+        self.insert_borrowed(field.name(), value);
     }
 
     fn record_bool(&mut self, field: &Field, value: bool) {
-        self.insert(field.name(), value);
+        self.insert_borrowed(field.name(), value);
     }
 
     fn record_str(&mut self, field: &Field, value: &str) {
-        self.insert(field.name(), value);
+        self.insert_borrowed(field.name(), value);
     }
 
     fn record_error(&mut self, field: &Field, value: &(dyn std::error::Error + 'static)) {
-        self.insert(field.name(), value.to_string());
+        self.insert_borrowed(field.name(), value.to_string());
     }
 
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
         match field.name() {
             name if name.starts_with("r#") => {
-                self.insert(&name[2..], format!("{:?}", value));
+                self.insert_borrowed(&name[2..], format!("{:?}", value));
             }
             name => {
-                self.insert(name, format!("{:?}", value));
+                self.insert_borrowed(name, format!("{:?}", value));
             }
         };
     }
