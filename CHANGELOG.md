@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.7.0] - 2023-01-16
+### Changed
+- Limit msg field in log through EvenFormatter([#147](https://github.com/elefant-dev/fregate-rs/pull/147))
+
 ## [0.6.3] - 2022-12-16
 ### Changed
 - Fixed tokio_metrics compile time error([#142](https://github.com/elefant-dev/fregate-rs/pull/142))
