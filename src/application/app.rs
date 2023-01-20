@@ -1,7 +1,8 @@
 #[cfg(feature = "tls")]
 pub(crate) mod tls;
 
-use crate::middleware::{trace_request, Attributes};
+use crate::middleware::config::TraceRequestConfig;
+use crate::middleware::trace_request;
 use crate::{
     build_management_router,
     error::Result,
@@ -43,6 +44,8 @@ pub struct Application<'a, H, T> {
     health_indicator: Option<H>,
     router: Option<Router>,
     metrics_callback: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
+    use_default_trace_layer: bool,
+    trace_request_config: TraceRequestConfig,
 }
 
 impl<'a, H: Debug, T: Debug> Debug for Application<'a, H, T> {
@@ -52,11 +55,15 @@ impl<'a, H: Debug, T: Debug> Debug for Application<'a, H, T> {
             health_indicator,
             router,
             metrics_callback,
+            use_default_trace_layer,
+            trace_request_config,
         } = self;
         f.debug_struct("Application")
             .field("config", config)
             .field("health_indicator", health_indicator)
             .field("router", router)
+            .field("use_default_trace_layer", use_default_trace_layer)
+            .field("trace_request_config", trace_request_config)
             .field(
                 "metrics_callback",
                 if metrics_callback.is_some() {
@@ -72,11 +79,17 @@ impl<'a, H: Debug, T: Debug> Debug for Application<'a, H, T> {
 impl<'a, T> Application<'a, AlwaysReadyAndAlive, T> {
     /// Creates new Application with health checks always returning [200 OK]
     pub fn new(config: &'a AppConfig<T>) -> Self {
+        let trace_request_config = TraceRequestConfig::default()
+            .service_name(config.logger.service_name.as_str())
+            .component_name(config.logger.component_name.as_str());
+
         Application::<'a, AlwaysReadyAndAlive, T> {
             config,
             health_indicator: Some(AlwaysReadyAndAlive {}),
             router: None,
             metrics_callback: None,
+            use_default_trace_layer: true,
+            trace_request_config,
         }
     }
 }
@@ -89,6 +102,8 @@ impl<'a, H, T> Application<'a, H, T> {
             health_indicator: _,
             router,
             metrics_callback,
+            use_default_trace_layer,
+            trace_request_config,
         } = self;
 
         Application::<'a, Hh, T> {
@@ -96,6 +111,8 @@ impl<'a, H, T> Application<'a, H, T> {
             health_indicator: Some(health),
             router,
             metrics_callback,
+            use_default_trace_layer,
+            trace_request_config,
         }
     }
 
@@ -111,6 +128,50 @@ impl<'a, H, T> Application<'a, H, T> {
     pub fn metrics_callback(self, metrics_callback: impl Fn() + Send + Sync + 'static) -> Self {
         Self {
             metrics_callback: Some(Arc::new(metrics_callback)),
+            ..self
+        }
+    }
+
+    /// Example:
+    /// In this case [`trace_request`] is not attached to Application so no default tracing/metrics/logging for incoming requests
+    /// ```no_run
+    ///   use fregate::{AppConfig, Application};
+    ///
+    ///    #[tokio::main]
+    ///   async fn main() {
+    ///        Application::new(&AppConfig::default())
+    ///            .use_default_tracing_layer(false)
+    ///            .serve()
+    ///            .await
+    ///            .unwrap();
+    ///    }
+    /// ```
+    pub fn use_default_tracing_layer(self, use_default: bool) -> Self {
+        Self {
+            use_default_trace_layer: use_default,
+            ..self
+        }
+    }
+
+    /// Example:
+    /// In this case [`trace_request`] deos not record default metrics for each incoming request.
+    /// ```no_run
+    ///   use fregate::{AppConfig, Application};
+    ///
+    ///    #[tokio::main]
+    ///   async fn main() {
+    ///        Application::new(&AppConfig::default())
+    ///            .record_metrics(false)
+    ///            .serve()
+    ///            .await
+    ///            .unwrap();
+    ///    }
+    /// ```
+    pub fn record_metrics(self, record_metrics: bool) -> Self {
+        let trace_request_config = self.trace_request_config.metrics_recording(record_metrics);
+
+        Self {
+            trace_request_config,
             ..self
         }
     }
@@ -176,11 +237,14 @@ impl<'a, H, T> Application<'a, H, T> {
     where
         H: Health,
     {
-        let attributes = Attributes::new_from_config(self.config);
-        let router = self.router.map(|r| {
-            r.layer(from_fn(move |req, next| {
-                trace_request(req, next, attributes.clone())
-            }))
+        let router = self.router.map(|router| {
+            if self.use_default_trace_layer {
+                router.layer(from_fn(move |req, next| {
+                    trace_request(req, next, self.trace_request_config.clone())
+                }))
+            } else {
+                router
+            }
         });
 
         let router = build_management_router(self.health_indicator, self.metrics_callback)
