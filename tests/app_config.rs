@@ -20,6 +20,7 @@ mod app_config_tests {
         let logger = config.logger;
 
         assert_eq!(logger.traces_endpoint, None);
+        assert_eq!(logger.buffered_lines_limit, None);
         assert_eq!(logger.service_name, "fregate".to_owned());
         assert_eq!(logger.version, "0.1.0".to_owned());
         assert_eq!(logger.component_name, "example".to_owned());

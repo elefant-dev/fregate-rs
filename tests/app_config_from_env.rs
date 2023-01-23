@@ -20,6 +20,7 @@ mod app_config_from_env {
         std::env::set_var("TEST_LOG_LEVEL", "trace");
         std::env::set_var("TEST_LOG_MSG_LENGTH", "0");
         std::env::set_var("TEST_NUMBER", "100");
+        std::env::set_var("TEST_BUFFERED_LINES_LIMIT", "999");
 
         let config = AppConfig::<TestStruct>::load_from([ConfigSource::EnvPrefix("TEST")])
             .expect("Failed to build AppConfig");
@@ -44,6 +45,7 @@ mod app_config_from_env {
         assert_eq!(logger.trace_level, "debug".to_owned());
         assert_eq!(logger.log_level, "trace".to_owned());
         assert_eq!(logger.msg_length, Some(0));
+        assert_eq!(logger.buffered_lines_limit, Some(999));
     }
 
     #[test]

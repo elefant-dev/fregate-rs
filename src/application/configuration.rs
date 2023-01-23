@@ -10,21 +10,15 @@ use serde::{
 use serde_json::{from_value, Value};
 use std::marker::PhantomData;
 use std::{fmt::Debug, net::IpAddr};
+use tracing_appender::non_blocking::WorkerGuard;
 
-// FIXME(kos): There is simpler way of loading config: just use the
-//             `Deserialize` derive.
-//             Custom algorithm might has some advantages, but drawbacks are
-//             such:
-//             - it makes extension of config difficult, every service has its
-//               own structure of config;
-//             - it makes code more complicated.
-//             After refactoring less than 50 lines will stay.
 const HOST_PTR: &str = "/host";
 const PORT_PTR: &str = "/port";
 #[cfg(feature = "tokio-metrics")]
 const SERVER_METRICS_UPDATE_INTERVAL: &str = "/server/metrics/update_interval";
 const LOG_LEVEL_PTR: &str = "/log/level";
 const LOG_MSG_LENGTH: &str = "/log/msg/length";
+const BUFFERED_LINES_LIMIT: &str = "/buffered/lines/limit";
 const TRACE_LEVEL_PTR: &str = "/trace/level";
 const SERVICE_NAME_PTR: &str = "/service/name";
 const COMPONENT_NAME_PTR: &str = "/component/name";
@@ -62,6 +56,8 @@ pub struct AppConfig<T> {
     pub tls: tls::TlsConfigurationVariables,
     /// field for each application specific configuration
     pub private: T,
+    /// Why it is here read more: [`https://docs.rs/tracing-appender/latest/tracing_appender/non_blocking/struct.WorkerGuard.html`]
+    pub(crate) worker_guard: Option<WorkerGuard>,
 }
 
 /// configuration for logs and traces
@@ -71,6 +67,8 @@ pub struct LoggerConfig {
     pub log_level: String,
     /// Maximum message field length, if set: message field will be cut if len() exceed this limit
     pub msg_length: Option<usize>,
+    /// Sets limit for [`tracing_appender::non_blocking::NonBlocking`]
+    pub buffered_lines_limit: Option<usize>,
     /// trace level read to string and later parsed into EnvFilter
     pub trace_level: String,
     /// service name to be used in logs
@@ -110,6 +108,9 @@ impl<'de> Deserialize<'de> for LoggerConfig {
         let msg_length = config
             .pointer_and_deserialize::<_, D::Error>(LOG_MSG_LENGTH)
             .ok();
+        let buffered_lines_limit = config
+            .pointer_and_deserialize::<_, D::Error>(BUFFERED_LINES_LIMIT)
+            .ok();
 
         Ok(LoggerConfig {
             log_level,
@@ -119,6 +120,7 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             service_name,
             component_name,
             traces_endpoint,
+            buffered_lines_limit,
             #[cfg(feature = "tokio-metrics")]
             metrics_update_interval: std::time::Duration::from_millis(metrics_update_interval),
         })
@@ -149,6 +151,7 @@ where
             #[cfg(feature = "tls")]
             tls,
             private,
+            worker_guard: None,
         })
     }
 }
