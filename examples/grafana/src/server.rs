@@ -10,7 +10,6 @@ async fn main() {
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
 
     let config = bootstrap::<Empty, _>([]).unwrap();
-
     let hello_service = HelloServer::new(MyHello);
 
     let rest = Router::new().route("/check", get(|| async { StatusCode::OK }));

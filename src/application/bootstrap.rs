@@ -34,7 +34,7 @@ where
     S: IntoIterator<Item = ConfigSource<'a>>,
     ConfigExt: Debug + DeserializeOwned,
 {
-    let config = AppConfig::<ConfigExt>::load_from(sources)?;
+    let mut config = AppConfig::<ConfigExt>::load_from(sources)?;
 
     let LoggerConfig {
         log_level,
@@ -44,10 +44,11 @@ where
         component_name,
         traces_endpoint,
         msg_length,
+        buffered_lines_limit,
         ..
     } = &config.logger;
 
-    init_tracing(
+    let worker_guard = init_tracing(
         log_level,
         trace_level,
         version,
@@ -55,14 +56,15 @@ where
         component_name,
         traces_endpoint.as_deref(),
         *msg_length,
+        *buffered_lines_limit,
     )?;
 
+    config.worker_guard.replace(worker_guard);
     init_metrics()?;
 
     #[cfg(feature = "tokio-metrics")]
     tokio_metrics::init_tokio_metrics_task(config.logger.metrics_update_interval);
 
     info!("Configuration: `{config:?}`.");
-
     Ok(config)
 }

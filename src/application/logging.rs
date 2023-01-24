@@ -8,6 +8,7 @@ use opentelemetry::{global, sdk, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use std::str::FromStr;
 use tracing::Subscriber;
+use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::layer::Layered;
 use tracing_subscriber::{
     filter::{filter_fn, EnvFilter},
@@ -86,7 +87,13 @@ fn set_panic_hook() {
     }));
 }
 
-/// Set up global subscriber with formatting log layer to print logs in json format to console and if traces_endpoint is provided opentelemetry exporter to send traces to grafana
+/// Sets up:\
+/// 1. [`fregate_layer`] with custom event formatter [`EventFormatter`].\
+/// 2. [`tracing_opentelemetry::layer()`].\
+/// 3. Reload filters for both layers: [`HANDLE_TRACE_LAYER`] and [`HANDLE_LOG_LAYER`].\
+/// 4. Sets panic hook: [`set_panic_hook`].\
+/// Uses [`tracing_appender`] crate to do non blocking writes to stdout, so returns [`WorkerGuard`]. Read more here: [`https://docs.rs/tracing-appender/latest/tracing_appender/non_blocking/struct.WorkerGuard.html`]
+#[allow(clippy::too_many_arguments)]
 pub fn init_tracing(
     log_level: &str,
     trace_level: &str,
@@ -95,14 +102,15 @@ pub fn init_tracing(
     component_name: &str,
     traces_endpoint: Option<&str>,
     log_msg_length: Option<usize>,
-) -> Result<()> {
+    buffered_lines_limit: Option<usize>,
+) -> Result<WorkerGuard> {
     let mut formatter = EventFormatter::new_with_limits(log_msg_length);
 
     formatter.add_default_field_to_events(VERSION, version)?;
     formatter.add_default_field_to_events(SERVICE, service_name)?;
     formatter.add_default_field_to_events(COMPONENT, component_name)?;
 
-    let log_layer = fregate_layer(formatter);
+    let (log_layer, guard) = fregate_layer(formatter, buffered_lines_limit);
     let log_filter = EnvFilter::from_str(log_level).unwrap_or_default();
     let (log_filter, reload_log_filter) = reload::Layer::new(log_filter);
     let log_layer = log_layer.with_filter(log_filter);
@@ -131,5 +139,5 @@ pub fn init_tracing(
     })?;
     set_panic_hook();
 
-    Ok(())
+    Ok(guard)
 }

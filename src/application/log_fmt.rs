@@ -7,6 +7,7 @@ use std::borrow::Cow;
 use std::{collections::BTreeMap, fmt, mem, num::NonZeroU8};
 use time::format_description::well_known::iso8601::{Config, Iso8601, TimePrecision};
 use tracing::{field::Field, Event, Subscriber};
+use tracing_appender::non_blocking::{WorkerGuard, DEFAULT_BUFFERED_LINES_LIMIT};
 use tracing_opentelemetry::OtelData;
 use tracing_subscriber::registry::{Extensions, SpanRef};
 use tracing_subscriber::{
@@ -39,11 +40,25 @@ const DEFAULT_FIELDS: [&str; 11] = [
 const MIN_LOG_MESSAGE_LEN: usize = 256;
 
 /// Returns [`tracing_subscriber::Layer`] with custom event formatter [`EventFormatter`]
-pub fn fregate_layer<S>(formatter: EventFormatter) -> impl Layer<S>
+pub fn fregate_layer<S>(
+    formatter: EventFormatter,
+    buffered_lines_limit: Option<usize>,
+) -> (impl Layer<S>, WorkerGuard)
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    tracing_subscriber::fmt::layer().event_format(formatter)
+    let buffered_lines_limit = buffered_lines_limit.unwrap_or(DEFAULT_BUFFERED_LINES_LIMIT);
+
+    let (writer, guard) = tracing_appender::non_blocking::NonBlockingBuilder::default()
+        .lossy(false)
+        .buffered_lines_limit(buffered_lines_limit)
+        .finish(std::io::stdout());
+
+    let layer = tracing_subscriber::fmt::layer()
+        .with_writer(writer)
+        .event_format(formatter);
+
+    (layer, guard)
 }
 
 /// Fregate [`EventFormatter`]
@@ -59,7 +74,9 @@ where
 /// async fn main() {
 ///     let mut formatter = EventFormatter::new();
 ///     formatter.add_field_to_events("additional_field", "additional_value").unwrap();
-///     registry().with(fregate_layer(formatter)).init();
+///
+///     let (log_layer, _guard) = fregate_layer(EventFormatter::new_with_limits(Some(1)), None);
+///     registry().with(log_layer).init();
 ///
 ///     info!("info message");
 ///     debug!("debug message");
@@ -98,7 +115,7 @@ impl EventFormatter {
     ///  
     ///  #[tokio::main]
     ///  async fn main() {
-    ///      let log_layer = fregate_layer(EventFormatter::new_with_limits(Some(1)));
+    ///     let (log_layer, _guard) = fregate_layer(EventFormatter::new_with_limits(Some(1)), None);
     ///  
     ///      registry()
     ///          .with(log_layer.with_filter(EnvFilter::from_str("info").unwrap()))
