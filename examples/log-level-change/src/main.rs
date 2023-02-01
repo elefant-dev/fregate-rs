@@ -1,11 +1,9 @@
-use fregate::logging::get_trace_filter;
+use fregate::logging::{LOG_LAYER_HANDLE, TRACE_LAYER_HANDLE};
 use fregate::tokio;
 use fregate::tracing::trace_span;
 use fregate::{
     axum::{routing::get, Router},
-    bootstrap,
-    logging::get_log_filter,
-    Application, Empty,
+    bootstrap, Application, Empty,
 };
 use std::str::FromStr;
 use std::time::Duration;
@@ -27,13 +25,13 @@ async fn main() {
         let trace_span = trace_span!("This won't be sent by default");
         drop(trace_span);
 
-        let log_filter_reloader = get_log_filter().unwrap();
+        let log_filter_reloader = LOG_LAYER_HANDLE.get().unwrap();
 
         log_filter_reloader
             .modify(|filter| *filter = EnvFilter::from_str("trace").unwrap())
             .unwrap();
 
-        let trace_filter_reloader = get_trace_filter().unwrap();
+        let trace_filter_reloader = TRACE_LAYER_HANDLE.get().unwrap();
         trace_filter_reloader
             .modify(|filter| *filter = EnvFilter::from_str("trace").unwrap())
             .unwrap();

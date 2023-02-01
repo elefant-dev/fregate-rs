@@ -6,6 +6,7 @@ use opentelemetry::global::set_error_handler;
 use opentelemetry::sdk::propagation::TraceContextPropagator;
 use opentelemetry::{global, sdk, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
+use std::collections::HashSet;
 use std::str::FromStr;
 use tracing::Subscriber;
 use tracing_appender::non_blocking::WorkerGuard;
@@ -21,29 +22,32 @@ use tracing_subscriber::{
     Layer, Registry,
 };
 
-static HANDLE_LOG_LAYER: OnceCell<HandleLogLayer> = OnceCell::new();
-static HANDLE_TRACE_LAYER: OnceCell<HandleTraceLayer> = OnceCell::new();
+/// Global value to be used everywhere.
+pub const SANITIZED_VALUE: &str = "*****";
+
+/// This by default uninitialised unless you call [`bootstrap`] or [`init_tracing`] functions.
+/// Contains parsed values from <prefix>_SANITIZED_FIELDS environmnent value.
+/// Expects string values separated with ','. Environment variable example:
+///  
+/// ```no_run
+/// std::env::set_var("TEST_SANITIZE_FIELDS", "password,check,authorization");
+/// ```
+pub static SANITIZE_FIELDS: OnceCell<HashSet<String>> = OnceCell::new();
+
+/// This by default uninitialised unless you call [`bootstrap`] or [`init_tracing`] functions.
+/// Used to change log level filter
+pub static LOG_LAYER_HANDLE: OnceCell<LogLayerHandle> = OnceCell::new();
+
+/// This by default uninitialised unless you call [`bootstrap`] or [`init_tracing`] functions.
+/// Used to change trace level filter
+pub static TRACE_LAYER_HANDLE: OnceCell<TraceLayerHandle> = OnceCell::new();
 
 /// Alias for [`Handle<EnvFilter, Layered<Option<Box<dyn Layer<Registry> + Send + Sync>>, Registry>>`]
-pub type HandleLogLayer =
+pub type LogLayerHandle =
     Handle<EnvFilter, Layered<Option<Box<dyn Layer<Registry> + Send + Sync>>, Registry>>;
 
 /// Alias for [`Handle<EnvFilter, Registry>`]
-pub type HandleTraceLayer = Handle<EnvFilter, Registry>;
-
-/// Return Some(&'static HandleLogLayer) if Handler is set up, otherwise return None
-/// Initialised through [`init_tracing`] fn call
-/// Used to change log level filter
-pub fn get_log_filter() -> Option<&'static HandleLogLayer> {
-    HANDLE_LOG_LAYER.get()
-}
-
-/// Return [`Some(&'static Handle<EnvFilter, Registry>)`] if Handler is set up, otherwise return None
-/// Initialised through [`init_tracing`] fn call
-/// Used to change trace level filter
-pub fn get_trace_filter() -> Option<&'static HandleTraceLayer> {
-    HANDLE_TRACE_LAYER.get()
-}
+pub type TraceLayerHandle = Handle<EnvFilter, Registry>;
 
 /// Configures [`tracing_opentelemetry::OpenTelemetryLayer`] and returns [`Layer`]
 pub fn get_trace_layer<S>(component_name: &str, traces_endpoint: &str) -> Result<impl Layer<S>>
@@ -90,7 +94,7 @@ fn set_panic_hook() {
 /// Sets up:\
 /// 1. [`fregate_layer`] with custom event formatter [`EventFormatter`].\
 /// 2. [`tracing_opentelemetry::layer()`].\
-/// 3. Reload filters for both layers: [`HANDLE_TRACE_LAYER`] and [`HANDLE_LOG_LAYER`].\
+/// 3. Reload filters for both layers: [`TRACE_LAYER_HANDLE`] and [`LOG_LAYER_HANDLE`].\
 /// 4. Sets panic hook: [`set_panic_hook`].\
 /// Uses [`tracing_appender`] crate to do non blocking writes to stdout, so returns [`WorkerGuard`]. Read more here: [`https://docs.rs/tracing-appender/latest/tracing_appender/non_blocking/struct.WorkerGuard.html`]
 #[allow(clippy::too_many_arguments)]
@@ -103,6 +107,7 @@ pub fn init_tracing(
     traces_endpoint: Option<&str>,
     log_msg_length: Option<usize>,
     buffered_lines_limit: Option<usize>,
+    sanitize_fields: Option<HashSet<String>>,
 ) -> Result<WorkerGuard> {
     let mut formatter = EventFormatter::new_with_limits(log_msg_length);
 
@@ -125,14 +130,18 @@ pub fn init_tracing(
             .with_filter(filter_fn(|metadata| metadata.is_span()))
             .boxed();
 
-        let _ = HANDLE_TRACE_LAYER.get_or_init(|| reload_trace_filter);
+        let _ = TRACE_LAYER_HANDLE.get_or_init(|| reload_trace_filter);
         Some(trace_layer)
     } else {
         None
     };
 
+    if let Some(sanitize_fields) = sanitize_fields {
+        SANITIZE_FIELDS.get_or_init(|| sanitize_fields);
+    }
+
     registry().with(trace_layer).with(log_layer).try_init()?;
-    let _ = HANDLE_LOG_LAYER.get_or_init(|| reload_log_filter);
+    let _ = LOG_LAYER_HANDLE.get_or_init(|| reload_log_filter);
 
     set_error_handler(|err| {
         tracing::error!("{err}");
