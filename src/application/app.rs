@@ -19,25 +19,6 @@ use std::sync::Arc;
 use tokio::signal;
 use tracing::info;
 
-// TODO(kos): Consider avoiding doing framework and eliminating `Application`.
-//            Better than the alternative.
-
-// TODO(kos): Alternatively:
-//            - hide as much as possible, proxying what is needed by the
-//              `Application`.
-//            - accept constructor function in `Application::router`, that
-//              allows getting proxy accessors to various extensions, like
-//              `logging` or `opentelemetry` context.
-//            - provide a function like
-//              `with_application_state(impl FnOnce(ApplicationState))`, that
-//              would be a single access point to the global state.
-//            - `init_metrics` and `init_tracing` should be methods of
-//              `Application`.
-//            - `bootstrap()` is redundant, move its content into
-//              `Application::new()`
-//            - make `Application::new()` async if necessary.
-//            But removing the `Application` is a better option.
-
 /// Application to set up HTTP server with given config [`AppConfig`]
 pub struct Application<'a, H, T> {
     config: &'a AppConfig<T>,
@@ -149,29 +130,6 @@ impl<'a, H, T> Application<'a, H, T> {
     pub fn use_default_tracing_layer(self, use_default: bool) -> Self {
         Self {
             use_default_trace_layer: use_default,
-            ..self
-        }
-    }
-
-    /// Example:
-    /// In this case [`trace_request`] deos not record default metrics for each incoming request.
-    /// ```no_run
-    ///   use fregate::{AppConfig, Application};
-    ///
-    ///    #[tokio::main]
-    ///   async fn main() {
-    ///        Application::new(&AppConfig::default())
-    ///            .record_metrics(false)
-    ///            .serve()
-    ///            .await
-    ///            .unwrap();
-    ///    }
-    /// ```
-    pub fn record_metrics(self, record_metrics: bool) -> Self {
-        let trace_request_config = self.trace_request_config.metrics_recording(record_metrics);
-
-        Self {
-            trace_request_config,
             ..self
         }
     }
