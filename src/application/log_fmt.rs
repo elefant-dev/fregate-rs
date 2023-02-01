@@ -272,14 +272,14 @@ where
         match buffer {
             Ok(formatted) => match std::str::from_utf8(&formatted) {
                 Ok(str) => {
-                    write!(writer, "{}", str)?;
+                    write!(writer, "{str}")?;
                 }
                 Err(_) => {
                     write!(writer, "{}", String::from_utf8_lossy(&formatted))?;
                 }
             },
             Err(err) => {
-                write!(writer, "{}", err)?;
+                write!(writer, "{err}")?;
             }
         }
 
@@ -365,10 +365,10 @@ impl<'a> tracing::field::Visit for JsonVisitor<'a> {
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
         match field.name() {
             name if name.starts_with("r#") => {
-                self.insert_borrowed(&name[2..], format!("{:?}", value));
+                self.insert_borrowed(&name[2..], format!("{value:?}"));
             }
             name => {
-                self.insert_borrowed(name, format!("{:?}", value));
+                self.insert_borrowed(name, format!("{value:?}"));
             }
         };
     }
