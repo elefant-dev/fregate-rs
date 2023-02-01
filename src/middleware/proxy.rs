@@ -32,7 +32,7 @@ where
         // Be careful of what gets sent in `err`.
         Err(err) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed with: {}", err),
+            format!("Failed with: {err}"),
         )
             .into_response(),
     }

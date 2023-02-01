@@ -5,7 +5,6 @@ use axum::middleware::Next;
 use axum::response::IntoResponse;
 use hyper::header::CONTENT_TYPE;
 use hyper::Request;
-use metrics::{histogram, increment_counter};
 use opentelemetry::{global::get_text_map_propagator, Context};
 use opentelemetry_http::HeaderExtractor;
 use std::net::SocketAddr;
@@ -16,24 +15,12 @@ use tracing::{info, span, Level, Span};
 const HEADER_GRPC_STATUS: &str = "grpc-status";
 const PROTOCOL_GRPC: &str = "grpc";
 const PROTOCOL_HTTP: &str = "http";
-const REQ_RESP: &str = "reqresp";
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 /// Configuration for Default tracing Layer.
 pub struct TraceRequestConfig {
     service_name: String,
     component_name: String,
-    record_metrics: bool,
-}
-
-impl Default for TraceRequestConfig {
-    fn default() -> Self {
-        Self {
-            service_name: String::new(),
-            component_name: String::new(),
-            record_metrics: true,
-        }
-    }
 }
 
 impl TraceRequestConfig {
@@ -49,14 +36,6 @@ impl TraceRequestConfig {
     pub fn service_name(self, service_name: &str) -> Self {
         Self {
             service_name: service_name.to_owned(),
-            ..self
-        }
-    }
-
-    /// Turns off metrics recording in [`crate::middleware::trace_request`] layer
-    pub fn metrics_recording(self, record: bool) -> Self {
-        Self {
-            record_metrics: record,
             ..self
         }
     }
@@ -97,24 +76,7 @@ pub async fn trace_http_request<B>(
     let elapsed = duration.elapsed();
 
     let duration = elapsed.as_millis();
-    let duration_in_sec = elapsed.as_secs_f64();
     let status = response.status();
-
-    if config.record_metrics {
-        increment_counter!(
-            "traffic_count_total",
-            "protocol" => PROTOCOL_HTTP,
-            "channel" => REQ_RESP,
-        );
-        increment_counter!("traffic_sum_total");
-        histogram!(
-            "processing_duration_seconds_sum_total",
-            duration_in_sec,
-            "protocol" => PROTOCOL_HTTP,
-            "channel" => REQ_RESP,
-            "code" => status.to_string(),
-        );
-    }
 
     span.record("http.status_code", status.as_str());
 
@@ -157,29 +119,12 @@ pub async fn trace_grpc_request<B>(
     let elapsed = duration.elapsed();
 
     let duration = elapsed.as_millis();
-    let duration_in_sec = elapsed.as_secs_f64();
 
     let status: i32 = extract_grpc_status_code(response.headers())
         .unwrap_or(tonic::Code::Unknown)
         .into();
 
     span.record("rpc.grpc.status_code", status);
-
-    if config.record_metrics {
-        increment_counter!(
-            "traffic_count_total",
-            "protocol" => PROTOCOL_GRPC,
-            "channel" => REQ_RESP,
-        );
-        increment_counter!("traffic_sum_total");
-        histogram!(
-            "processing_duration_seconds_sum_total",
-            duration_in_sec,
-            "protocol" => PROTOCOL_GRPC,
-            "channel" => REQ_RESP,
-            "code" => status.to_string()
-        );
-    }
 
     info!(
         url = &grpc_method,
