@@ -16,20 +16,11 @@ const HEADER_GRPC_STATUS: &str = "grpc-status";
 const PROTOCOL_GRPC: &str = "grpc";
 const PROTOCOL_HTTP: &str = "http";
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 /// Configuration for Default tracing Layer.
 pub struct TraceRequestConfig {
     service_name: String,
     component_name: String,
-}
-
-impl Default for TraceRequestConfig {
-    fn default() -> Self {
-        Self {
-            service_name: String::new(),
-            component_name: String::new(),
-        }
-    }
 }
 
 impl TraceRequestConfig {

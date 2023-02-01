@@ -5,6 +5,7 @@ use crate::middleware::config::{
 use axum::http::Request;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
+use std::sync::Arc;
 use tracing::Instrument;
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
@@ -14,7 +15,7 @@ pub mod config;
 pub async fn trace_request<B>(
     req: Request<B>,
     next: Next<B>,
-    config: TraceRequestConfig,
+    config: Arc<TraceRequestConfig>,
 ) -> impl IntoResponse {
     if is_grpc(req.headers()) {
         let grpc_span = make_grpc_span();

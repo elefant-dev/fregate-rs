@@ -26,7 +26,7 @@ pub struct Application<'a, H, T> {
     router: Option<Router>,
     metrics_callback: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
     use_default_trace_layer: bool,
-    trace_request_config: TraceRequestConfig,
+    trace_request_config: Arc<TraceRequestConfig>,
 }
 
 impl<'a, H: Debug, T: Debug> Debug for Application<'a, H, T> {
@@ -70,7 +70,7 @@ impl<'a, T> Application<'a, AlwaysReadyAndAlive, T> {
             router: None,
             metrics_callback: None,
             use_default_trace_layer: true,
-            trace_request_config,
+            trace_request_config: Arc::new(trace_request_config),
         }
     }
 }
