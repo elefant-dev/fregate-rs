@@ -8,6 +8,7 @@ use serde::{
     Deserialize, Deserializer,
 };
 use serde_json::{from_value, Value};
+use std::collections::HashSet;
 use std::marker::PhantomData;
 use std::{fmt::Debug, net::IpAddr};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -15,10 +16,11 @@ use tracing_appender::non_blocking::WorkerGuard;
 const HOST_PTR: &str = "/host";
 const PORT_PTR: &str = "/port";
 #[cfg(feature = "tokio-metrics")]
-const SERVER_METRICS_UPDATE_INTERVAL: &str = "/server/metrics/update_interval";
+const SERVER_METRICS_UPDATE_INTERVAL_PTR: &str = "/server/metrics/update_interval";
 const LOG_LEVEL_PTR: &str = "/log/level";
-const LOG_MSG_LENGTH: &str = "/log/msg/length";
-const BUFFERED_LINES_LIMIT: &str = "/buffered/lines/limit";
+const SANITIZE_FIELDS_PTR: &str = "/sanitize/fields";
+const LOG_MSG_LENGTH_PTR: &str = "/log/msg/length";
+const BUFFERED_LINES_LIMIT_PTR: &str = "/buffered/lines/limit";
 const TRACE_LEVEL_PTR: &str = "/trace/level";
 const SERVICE_NAME_PTR: &str = "/service/name";
 const COMPONENT_NAME_PTR: &str = "/component/name";
@@ -82,6 +84,8 @@ pub struct LoggerConfig {
     pub metrics_update_interval: std::time::Duration,
     /// endpoint where to export traces
     pub traces_endpoint: Option<String>,
+    /// used to initialize [`SANITIZE_FIELDS`] static variable in [`bootstrap`] or [`init_tracing`] fn.
+    pub sanitize_fields: Option<HashSet<String>>,
 }
 
 impl<'de> Deserialize<'de> for LoggerConfig {
@@ -104,13 +108,23 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             .map_err(Error::custom)?;
         #[cfg(feature = "tokio-metrics")]
         let metrics_update_interval =
-            config.pointer_and_deserialize::<u64, D::Error>(SERVER_METRICS_UPDATE_INTERVAL)?;
+            config.pointer_and_deserialize::<u64, D::Error>(SERVER_METRICS_UPDATE_INTERVAL_PTR)?;
         let msg_length = config
-            .pointer_and_deserialize::<_, D::Error>(LOG_MSG_LENGTH)
+            .pointer_and_deserialize::<_, D::Error>(LOG_MSG_LENGTH_PTR)
             .ok();
         let buffered_lines_limit = config
-            .pointer_and_deserialize::<_, D::Error>(BUFFERED_LINES_LIMIT)
+            .pointer_and_deserialize::<_, D::Error>(BUFFERED_LINES_LIMIT_PTR)
             .ok();
+        let sanitize_fields: Option<String> = config
+            .pointer_and_deserialize::<_, D::Error>(SANITIZE_FIELDS_PTR)
+            .ok();
+
+        let sanitize_fields = sanitize_fields.map(|sanitize_fields| {
+            sanitize_fields
+                .split(',')
+                .map(|field| field.trim().to_ascii_lowercase())
+                .collect::<HashSet<String>>()
+        });
 
         Ok(LoggerConfig {
             log_level,
@@ -121,6 +135,7 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             component_name,
             traces_endpoint,
             buffered_lines_limit,
+            sanitize_fields,
             #[cfg(feature = "tokio-metrics")]
             metrics_update_interval: std::time::Duration::from_millis(metrics_update_interval),
         })
