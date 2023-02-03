@@ -1,11 +1,11 @@
-use crate::headers::{Filter, HeadersFilter, HEADER_FILTER};
+use crate::headers::{Filter, HeadersFilter, HEADERS_FILTER};
 use crate::logging::SANITIZED_VALUE;
 use axum::headers::HeaderMap;
 use hyper::http::HeaderValue;
 use std::borrow::Cow;
 
 /// Extension trait to get filtered headers.
-/// Current implementation relies on [`HEADER_FILTER`].
+/// Current implementation relies on [`HEADERS_FILTER`].
 pub trait HeaderFilterExt
 where
     Self: Clone,
@@ -15,9 +15,9 @@ where
 }
 
 impl HeaderFilterExt for HeaderMap {
-    /// If [`HEADER_FILTER`] is uninitialised returns [`Cow::Borrowed`] otherwise creates clone and returns [`Cow::Owned`] from included and sanitized fields.
+    /// If [`HEADERS_FILTER`] is uninitialised returns [`Cow::Borrowed`] otherwise creates clone and returns [`Cow::Owned`] from included and sanitized fields.
     fn get_filtered(&self) -> Cow<'_, Self> {
-        HEADER_FILTER
+        HEADERS_FILTER
             .get()
             .map(
                 |HeadersFilter {

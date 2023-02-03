@@ -10,7 +10,7 @@ const INCLUDE_PTR: &str = "/include";
 const EXCLUDE_PTR: &str = "/exclude";
 
 /// This is uninitialised unless you call [`crate::bootstrap`] or [`crate::logging::init_tracing`] functions.
-/// If initialised but env variables are not set fregate will include all headers.///
+/// If initialised but env variables are not set fregate will include all headers.
 /// Expects string values separated with ',' or standalone "*" character meaning: all.
 /// Example:
 /// ```no_run
@@ -19,8 +19,8 @@ const EXCLUDE_PTR: &str = "/exclude";
 /// std::env::set_var("TEST_HEADERS_INCLUDE", "*");
 /// ```
 /// In [`crate::extensions::HeaderFilterExt`] trait implementation will have next behaviour:
-/// Include all headers except for "authorization" and sanitize "password" header.
-pub static HEADER_FILTER: OnceCell<HeadersFilter> = OnceCell::new();
+/// Include all headers except for "authorization" and sanitize "password,login,client_id" headers.
+pub static HEADERS_FILTER: OnceCell<HeadersFilter> = OnceCell::new();
 
 /// Headers filter options
 #[derive(Debug, Clone)]

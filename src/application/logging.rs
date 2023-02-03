@@ -1,6 +1,6 @@
 //! Tools initialise logging and tracing
 use crate::error::Result;
-use crate::headers::{HeadersFilter, HEADER_FILTER};
+use crate::headers::{HeadersFilter, HEADERS_FILTER};
 use crate::log_fmt::{fregate_layer, EventFormatter, COMPONENT, SERVICE, VERSION};
 use once_cell::sync::OnceCell;
 use opentelemetry::global::set_error_handler;
@@ -86,7 +86,7 @@ fn set_panic_hook() {
 /// 1. [`fregate_layer`] with custom event formatter [`EventFormatter`].\
 /// 2. [`tracing_opentelemetry::layer()`].\
 /// 3. Reload filters for both layers: [`TRACE_LAYER_HANDLE`] and [`LOG_LAYER_HANDLE`].\
-/// 4. [`HEADER_FILTER`] to be used in [`crate::extensions::HeaderFilterExt`].\
+/// 4. [`HEADERS_FILTER`] to be used in [`crate::extensions::HeaderFilterExt`].\
 /// 5. Sets panic hook: [`set_panic_hook`].\
 /// Uses [`tracing_appender`] crate to do non blocking writes to stdout, so returns [`WorkerGuard`]. Read more here: [`https://docs.rs/tracing-appender/latest/tracing_appender/non_blocking/struct.WorkerGuard.html`]
 #[allow(clippy::too_many_arguments)]
@@ -99,7 +99,7 @@ pub fn init_tracing(
     traces_endpoint: Option<&str>,
     log_msg_length: Option<usize>,
     buffered_lines_limit: Option<usize>,
-    header_filter: Option<HeadersFilter>,
+    headers_filter: Option<HeadersFilter>,
 ) -> Result<WorkerGuard> {
     let mut formatter = EventFormatter::new_with_limits(log_msg_length);
 
@@ -128,8 +128,8 @@ pub fn init_tracing(
         None
     };
 
-    if let Some(header_filter) = header_filter {
-        HEADER_FILTER.get_or_init(|| header_filter);
+    if let Some(headers_filter) = headers_filter {
+        HEADERS_FILTER.get_or_init(|| headers_filter);
     }
 
     registry().with(trace_layer).with(log_layer).try_init()?;

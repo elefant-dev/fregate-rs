@@ -86,8 +86,8 @@ pub struct LoggerConfig {
     pub metrics_update_interval: std::time::Duration,
     /// configures [`tracing_opentelemetry::layer`] endpoint for sending traces.
     pub traces_endpoint: Option<String>,
-    /// initialize [`crate::logging::HEADER_FILTER`] static variable in [`bootstrap`] or [`init_tracing`] fn.
-    pub header_filter: Option<HeadersFilter>,
+    /// initialize [`crate::logging::HEADERS_FILTER`] static variable in [`bootstrap`] or [`init_tracing`] fn.
+    pub headers_filter: Option<HeadersFilter>,
 }
 
 impl<'de> Deserialize<'de> for LoggerConfig {
@@ -130,7 +130,7 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             component_name,
             traces_endpoint,
             buffered_lines_limit,
-            header_filter: headers_filter,
+            headers_filter,
             #[cfg(feature = "tokio-metrics")]
             metrics_update_interval: std::time::Duration::from_millis(metrics_update_interval),
         })
