@@ -1,8 +1,8 @@
 #[cfg(feature = "tls")]
 pub(crate) mod tls;
 
-use crate::middleware::config::TraceRequestConfig;
 use crate::middleware::trace_request;
+use crate::middleware::TraceRequestConfig;
 use crate::{
     build_management_router,
     error::Result,
