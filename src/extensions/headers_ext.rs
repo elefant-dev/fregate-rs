@@ -1,6 +1,6 @@
 use crate::headers::{Filter, HeadersFilter, HEADERS_FILTER};
 use crate::logging::SANITIZED_VALUE;
-use axum::headers::HeaderMap;
+use axum::headers::{HeaderMap, HeaderName};
 use hyper::http::HeaderValue;
 use std::borrow::Cow;
 
@@ -31,42 +31,73 @@ impl HeaderFilterExt for HeaderMap {
                             let lowercase = name.as_str().to_ascii_lowercase();
                             (lowercase, name, value)
                         })
-                        .filter_map(|(lowercase, name, value)| match include {
-                            Filter::All => Some((lowercase, name, value)),
-                            Filter::Set(set) => {
-                                if set.contains(&lowercase) {
-                                    Some((lowercase, name, value))
-                                } else {
-                                    None
-                                }
-                            }
+                        .filter_map(|(lowercase, name, value)| {
+                            include_value(include, lowercase, name, value)
                         })
-                        .filter_map(|(lowercase, name, value)| match exclude {
-                            Filter::All => None,
-                            Filter::Set(set) => {
-                                if set.contains(&lowercase) {
-                                    None
-                                } else {
-                                    Some((lowercase, name, value))
-                                }
-                            }
+                        .filter_map(|(lowercase, name, value)| {
+                            exclude_value(exclude, lowercase, name, value)
                         })
-                        .map(|(lowercase, name, value)| match sanitize {
-                            Filter::All => {
-                                (name.clone(), HeaderValue::from_static(SANITIZED_VALUE))
-                            }
-                            Filter::Set(set) => {
-                                if set.contains(&lowercase) {
-                                    (name.clone(), HeaderValue::from_static(SANITIZED_VALUE))
-                                } else {
-                                    (name.clone(), value.clone())
-                                }
-                            }
+                        .map(|(lowercase, name, value)| {
+                            sanitize_value(sanitize, lowercase, name, value)
                         })
                         .collect();
                     Cow::Owned(filtered)
                 },
             )
             .unwrap_or(Cow::Borrowed(self))
+    }
+}
+
+fn sanitize_value<'a>(
+    sanitize: &'a Filter,
+    lowercase: String,
+    name: &'a HeaderName,
+    value: &'a HeaderValue,
+) -> (HeaderName, HeaderValue) {
+    match sanitize {
+        Filter::All => (name.clone(), HeaderValue::from_static(SANITIZED_VALUE)),
+        Filter::Set(set) => {
+            if set.contains(&lowercase) {
+                (name.clone(), HeaderValue::from_static(SANITIZED_VALUE))
+            } else {
+                (name.clone(), value.clone())
+            }
+        }
+    }
+}
+
+fn include_value<'a>(
+    include: &'a Filter,
+    lowercase: String,
+    name: &'a HeaderName,
+    value: &'a HeaderValue,
+) -> Option<(String, &'a HeaderName, &'a HeaderValue)> {
+    match include {
+        Filter::All => Some((lowercase, name, value)),
+        Filter::Set(set) => {
+            if set.contains(&lowercase) {
+                Some((lowercase, name, value))
+            } else {
+                None
+            }
+        }
+    }
+}
+
+fn exclude_value<'a>(
+    exclude: &'a Filter,
+    lowercase: String,
+    name: &'a HeaderName,
+    value: &'a HeaderValue,
+) -> Option<(String, &'a HeaderName, &'a HeaderValue)> {
+    match exclude {
+        Filter::All => None,
+        Filter::Set(set) => {
+            if set.contains(&lowercase) {
+                None
+            } else {
+                Some((lowercase, name, value))
+            }
+        }
     }
 }
