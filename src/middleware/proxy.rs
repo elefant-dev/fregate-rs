@@ -78,7 +78,7 @@ where
     }
 }
 
-/// Middleware that takes: Fn(&Request<Body>) -> bool which decides if to proxy request or not, and proxy it to destination using client
+/// Middleware that takes: [`Fn(&Request<Body>)`] -> [`bool`] which decides if to proxy request or not, and proxy it to destination using client
 #[derive(Clone, Debug)]
 pub struct Proxy<F, S> {
     client: Client,

@@ -86,7 +86,7 @@ pub struct LoggerConfig {
     pub metrics_update_interval: std::time::Duration,
     /// configures [`tracing_opentelemetry::layer`] endpoint for sending traces.
     pub traces_endpoint: Option<String>,
-    /// initialize [`crate::logging::HEADERS_FILTER`] static variable in [`bootstrap`] or [`init_tracing`] fn.
+    /// initialize [`headers::HEADERS_FILTER`] static variable in [`crate::bootstrap`] or [`crate::logging::init_tracing`] fn.
     pub headers_filter: Option<HeadersFilter>,
 }
 

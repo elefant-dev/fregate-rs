@@ -22,14 +22,13 @@ pub(crate) async fn yaml(content: &'static str) -> Response<BoxBody> {
         .into_response()
 }
 
-//TODO: Might be substituted with Router::nest(other.unwrap_or_default())
-/// Used to merge and nest Option<Router>
+/// Used to merge and nest [`Option<Router>`]
 #[sealed]
 pub trait RouterOptionalExt {
-    /// Used to merge Option<Router>
+    /// Used to merge [`Option<Router>`]
     fn merge_optional(self, other: Option<Router>) -> Self;
 
-    /// Used to nest Option<Router>
+    /// Used to nest [`Option<Router>`]
     fn nest_optional(self, path: &str, other: Option<Router>) -> Self;
 }
 
