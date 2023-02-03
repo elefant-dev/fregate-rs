@@ -30,6 +30,9 @@ handshake_timeout = 10000 # in milliseconds
 [server.metrics]
 update_interval = 1000 # in milliseconds
 
+[headers]
+include = "*"
+
 #[server.tls]
 #key_path = "/tls.key"
 #cert_path = "/tls.cert"

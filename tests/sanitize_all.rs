@@ -1,12 +1,15 @@
-mod sanitize_uninitialised {
-    use fregate::extensions::SanitizeExt;
-    use fregate::{bootstrap, Empty};
+mod exclude_one_test {
+    use fregate::extensions::HeaderFilterExt;
+    use fregate::logging::SANITIZED_VALUE;
+    use fregate::{bootstrap, ConfigSource, Empty};
     use hyper::http::HeaderValue;
     use hyper::{Body, Request};
 
     #[tokio::test]
-    async fn headermap_test() {
-        let _config = bootstrap::<Empty, _>([]).unwrap();
+    async fn exclude_all() {
+        std::env::set_var("TEST_HEADERS_SANITIZE", "*");
+
+        let _config = bootstrap::<Empty, _>([ConfigSource::EnvPrefix("TEST")]).unwrap();
 
         let request = Request::builder()
             .method("GET")
@@ -16,19 +19,19 @@ mod sanitize_uninitialised {
             .body(Body::empty())
             .expect("Failed to build request");
 
-        let sanitized_headers = request.headers().get_sanitized();
+        let sanitized_headers = request.headers().get_filtered();
 
         assert_eq!(
             sanitized_headers.get("PassworD"),
-            Some(&HeaderValue::from_str("PasswordValue").unwrap())
+            Some(&HeaderValue::from_static(SANITIZED_VALUE))
         );
         assert_eq!(
             sanitized_headers.get("authorization"),
-            Some(&HeaderValue::from_str("authorization").unwrap())
+            Some(&HeaderValue::from_static(SANITIZED_VALUE))
         );
         assert_eq!(
             sanitized_headers.get("is_client"),
-            Some(&HeaderValue::from_str("true").unwrap())
+            Some(&HeaderValue::from_static(SANITIZED_VALUE))
         );
     }
 }
