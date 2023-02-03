@@ -1,14 +1,15 @@
+pub mod headers;
 #[cfg(feature = "tls")]
 mod tls;
 
 use crate::{error::Result, extensions::DeserializeExt};
 use config::{builder::DefaultState, ConfigBuilder, Environment, File, FileFormat};
+use headers::HeadersFilter;
 use serde::{
     de::{DeserializeOwned, Error},
     Deserialize, Deserializer,
 };
 use serde_json::{from_value, Value};
-use std::collections::HashSet;
 use std::marker::PhantomData;
 use std::{fmt::Debug, net::IpAddr};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -18,7 +19,6 @@ const PORT_PTR: &str = "/port";
 #[cfg(feature = "tokio-metrics")]
 const SERVER_METRICS_UPDATE_INTERVAL_PTR: &str = "/server/metrics/update_interval";
 const LOG_LEVEL_PTR: &str = "/log/level";
-const SANITIZE_FIELDS_PTR: &str = "/sanitize/fields";
 const LOG_MSG_LENGTH_PTR: &str = "/log/msg/length";
 const BUFFERED_LINES_LIMIT_PTR: &str = "/buffered/lines/limit";
 const TRACE_LEVEL_PTR: &str = "/trace/level";
@@ -26,6 +26,8 @@ const SERVICE_NAME_PTR: &str = "/service/name";
 const COMPONENT_NAME_PTR: &str = "/component/name";
 const COMPONENT_VERSION_PTR: &str = "/component/version";
 const TRACES_ENDPOINT_PTR: &str = "/exporter/otlp/traces/endpoint";
+const HEADERS_PTR: &str = "/headers";
+
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
 const DEFAULT_SEPARATOR: &str = "_";
 
@@ -82,10 +84,10 @@ pub struct LoggerConfig {
     /// Tokio metrics update interval
     #[cfg(feature = "tokio-metrics")]
     pub metrics_update_interval: std::time::Duration,
-    /// endpoint where to export traces
+    /// configures [`tracing_opentelemetry::layer`] endpoint for sending traces.
     pub traces_endpoint: Option<String>,
-    /// used to initialize [`SANITIZE_FIELDS`] static variable in [`bootstrap`] or [`init_tracing`] fn.
-    pub sanitize_fields: Option<HashSet<String>>,
+    /// initialize [`crate::logging::HEADER_FILTER`] static variable in [`bootstrap`] or [`init_tracing`] fn.
+    pub header_filter: Option<HeadersFilter>,
 }
 
 impl<'de> Deserialize<'de> for LoggerConfig {
@@ -115,16 +117,9 @@ impl<'de> Deserialize<'de> for LoggerConfig {
         let buffered_lines_limit = config
             .pointer_and_deserialize::<_, D::Error>(BUFFERED_LINES_LIMIT_PTR)
             .ok();
-        let sanitize_fields: Option<String> = config
-            .pointer_and_deserialize::<_, D::Error>(SANITIZE_FIELDS_PTR)
+        let headers_filter: Option<HeadersFilter> = config
+            .pointer_and_deserialize::<_, D::Error>(HEADERS_PTR)
             .ok();
-
-        let sanitize_fields = sanitize_fields.map(|sanitize_fields| {
-            sanitize_fields
-                .split(',')
-                .map(|field| field.trim().to_ascii_lowercase())
-                .collect::<HashSet<String>>()
-        });
 
         Ok(LoggerConfig {
             log_level,
@@ -135,7 +130,7 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             component_name,
             traces_endpoint,
             buffered_lines_limit,
-            sanitize_fields,
+            header_filter: headers_filter,
             #[cfg(feature = "tokio-metrics")]
             metrics_update_interval: std::time::Duration::from_millis(metrics_update_interval),
         })

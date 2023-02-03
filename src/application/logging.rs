@@ -1,12 +1,12 @@
 //! Tools initialise logging and tracing
 use crate::error::Result;
+use crate::headers::{HeadersFilter, HEADER_FILTER};
 use crate::log_fmt::{fregate_layer, EventFormatter, COMPONENT, SERVICE, VERSION};
 use once_cell::sync::OnceCell;
 use opentelemetry::global::set_error_handler;
 use opentelemetry::sdk::propagation::TraceContextPropagator;
 use opentelemetry::{global, sdk, sdk::Resource, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
-use std::collections::HashSet;
 use std::str::FromStr;
 use tracing::Subscriber;
 use tracing_appender::non_blocking::WorkerGuard;
@@ -24,15 +24,6 @@ use tracing_subscriber::{
 
 /// Global value to be used everywhere.
 pub const SANITIZED_VALUE: &str = "*****";
-
-/// This by default uninitialised unless you call [`bootstrap`] or [`init_tracing`] functions.
-/// Contains parsed values from <prefix>_SANITIZED_FIELDS environmnent value.
-/// Expects string values separated with ','. Environment variable example:
-///  
-/// ```no_run
-/// std::env::set_var("TEST_SANITIZE_FIELDS", "password,check,authorization");
-/// ```
-pub static SANITIZE_FIELDS: OnceCell<HashSet<String>> = OnceCell::new();
 
 /// This by default uninitialised unless you call [`bootstrap`] or [`init_tracing`] functions.
 /// Used to change log level filter
@@ -95,7 +86,8 @@ fn set_panic_hook() {
 /// 1. [`fregate_layer`] with custom event formatter [`EventFormatter`].\
 /// 2. [`tracing_opentelemetry::layer()`].\
 /// 3. Reload filters for both layers: [`TRACE_LAYER_HANDLE`] and [`LOG_LAYER_HANDLE`].\
-/// 4. Sets panic hook: [`set_panic_hook`].\
+/// 4. [`HEADER_FILTER`] to be used in [`crate::extensions::HeaderFilterExt`].\
+/// 5. Sets panic hook: [`set_panic_hook`].\
 /// Uses [`tracing_appender`] crate to do non blocking writes to stdout, so returns [`WorkerGuard`]. Read more here: [`https://docs.rs/tracing-appender/latest/tracing_appender/non_blocking/struct.WorkerGuard.html`]
 #[allow(clippy::too_many_arguments)]
 pub fn init_tracing(
@@ -107,7 +99,7 @@ pub fn init_tracing(
     traces_endpoint: Option<&str>,
     log_msg_length: Option<usize>,
     buffered_lines_limit: Option<usize>,
-    sanitize_fields: Option<HashSet<String>>,
+    header_filter: Option<HeadersFilter>,
 ) -> Result<WorkerGuard> {
     let mut formatter = EventFormatter::new_with_limits(log_msg_length);
 
@@ -136,8 +128,8 @@ pub fn init_tracing(
         None
     };
 
-    if let Some(sanitize_fields) = sanitize_fields {
-        SANITIZE_FIELDS.get_or_init(|| sanitize_fields);
+    if let Some(header_filter) = header_filter {
+        HEADER_FILTER.get_or_init(|| header_filter);
     }
 
     registry().with(trace_layer).with(log_layer).try_init()?;

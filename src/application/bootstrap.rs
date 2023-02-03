@@ -45,7 +45,7 @@ where
         traces_endpoint,
         msg_length,
         buffered_lines_limit,
-        sanitize_fields,
+        header_filter,
         ..
     } = &config.logger;
 
@@ -58,7 +58,7 @@ where
         traces_endpoint.as_deref(),
         *msg_length,
         *buffered_lines_limit,
-        sanitize_fields.clone(),
+        header_filter.clone(),
     )?;
 
     config.worker_guard.replace(worker_guard);

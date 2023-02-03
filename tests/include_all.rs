@@ -1,13 +1,12 @@
-mod sanitize_initialised {
-    use fregate::extensions::SanitizeExt;
-    use fregate::logging::SANITIZED_VALUE;
+mod include_all_test {
+    use fregate::extensions::HeaderFilterExt;
     use fregate::{bootstrap, ConfigSource, Empty};
     use hyper::http::HeaderValue;
     use hyper::{Body, Request};
 
     #[tokio::test]
-    async fn headermap_test() {
-        std::env::set_var("TEST_SANITIZE_FIELDS", "password,check,authorization");
+    async fn include_all() {
+        std::env::set_var("TEST_HEADERS_INCLUDE", "*");
 
         let _config = bootstrap::<Empty, _>([ConfigSource::EnvPrefix("TEST")]).unwrap();
 
@@ -19,15 +18,15 @@ mod sanitize_initialised {
             .body(Body::empty())
             .expect("Failed to build request");
 
-        let sanitized_headers = request.headers().get_sanitized();
+        let sanitized_headers = request.headers().get_filtered();
 
         assert_eq!(
             sanitized_headers.get("PassworD"),
-            Some(&HeaderValue::from_static(SANITIZED_VALUE))
+            Some(&HeaderValue::from_str("PasswordValue").unwrap())
         );
         assert_eq!(
             sanitized_headers.get("authorization"),
-            Some(&HeaderValue::from_static(SANITIZED_VALUE))
+            Some(&HeaderValue::from_str("authorization").unwrap())
         );
         assert_eq!(
             sanitized_headers.get("is_client"),
