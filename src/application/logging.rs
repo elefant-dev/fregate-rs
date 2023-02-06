@@ -25,11 +25,11 @@ use tracing_subscriber::{
 /// Global value to be used everywhere.
 pub const SANITIZED_VALUE: &str = "*****";
 
-/// This by default uninitialised unless you call [`bootstrap`] or [`init_tracing`] functions.
+/// This by default uninitialised unless you call [`crate::bootstrap`] or [`init_tracing`] functions.
 /// Used to change log level filter
 pub static LOG_LAYER_HANDLE: OnceCell<LogLayerHandle> = OnceCell::new();
 
-/// This by default uninitialised unless you call [`bootstrap`] or [`init_tracing`] functions.
+/// This by default uninitialised unless you call [`crate::bootstrap`] or [`init_tracing`] functions.
 /// Used to change trace level filter
 pub static TRACE_LAYER_HANDLE: OnceCell<TraceLayerHandle> = OnceCell::new();
 
@@ -87,7 +87,7 @@ fn set_panic_hook() {
 /// 2. [`tracing_opentelemetry::layer()`].\
 /// 3. Reload filters for both layers: [`TRACE_LAYER_HANDLE`] and [`LOG_LAYER_HANDLE`].\
 /// 4. [`HEADERS_FILTER`] to be used in [`crate::extensions::HeaderFilterExt`].\
-/// 5. Sets panic hook: [`set_panic_hook`].\
+/// 5. Sets panic hook.\
 /// Uses [`tracing_appender`] crate to do non blocking writes to stdout, so returns [`WorkerGuard`]. Read more here: [`https://docs.rs/tracing-appender/latest/tracing_appender/non_blocking/struct.WorkerGuard.html`]
 #[allow(clippy::too_many_arguments)]
 pub fn init_tracing(

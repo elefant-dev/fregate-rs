@@ -1,9 +1,19 @@
 # Changelog
 All notable changes to this project will be documented in this file.
-
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
+
+## [0.8.0] - 2023-02-03
+### Added
+- Add HeadersExt([#155](https://github.com/elefant-dev/fregate-rs/pull/155))
+
+### Removed
+- Unused metrics initialization([#153](https://github.com/elefant-dev/fregate-rs/pull/153))
+
+### Changed
+- Use none blocking writer from tracing_appender crate([#151](https://github.com/elefant-dev/fregate-rs/pull/151))
+- Make tracing_layer optional in Application([#149](https://github.com/elefant-dev/fregate-rs/pull/149))
 
 ## [0.7.0] - 2023-01-16
 ### Changed

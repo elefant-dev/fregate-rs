@@ -8,6 +8,10 @@
 //!
 //! This project is in progress and might change a lot from version to version.
 //!
+//! # Examples
+//!
+//! Examples can be found [`here`](https://github.com/elefant-dev/fregate-rs/tree/main/examples).
+
 mod application;
 
 pub mod extensions;

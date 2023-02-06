@@ -1,7 +1,4 @@
-use crate::middleware::config::{
-    extract_context, is_grpc, make_grpc_span, make_http_span, trace_grpc_request,
-    trace_http_request, TraceRequestConfig,
-};
+mod config;
 use axum::http::Request;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
@@ -9,7 +6,7 @@ use std::sync::Arc;
 use tracing::Instrument;
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
-pub mod config;
+pub use crate::middleware::tracing::config::*;
 
 /// Fn to be used with [`axum::middleware::from_fn`]
 pub async fn trace_request<B>(
