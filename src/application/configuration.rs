@@ -61,7 +61,7 @@ pub struct AppConfig<T> {
     /// field for each application specific configuration
     pub private: T,
     /// Why it is here read more: [`https://docs.rs/tracing-appender/latest/tracing_appender/non_blocking/struct.WorkerGuard.html`]
-    pub(crate) worker_guard: Option<WorkerGuard>,
+    pub worker_guard: Option<WorkerGuard>,
 }
 
 /// configuration for logs and traces
