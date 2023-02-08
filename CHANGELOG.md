@@ -4,6 +4,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.8.1] - 2023-02-08
+### Changed
+- make AppConfig worker_guard field to be public([#157](https://github.com/elefant-dev/fregate-rs/pull/157))
+
 ## [0.8.0] - 2023-02-03
 ### Added
 - Add HeadersExt([#155](https://github.com/elefant-dev/fregate-rs/pull/155))
