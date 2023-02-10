@@ -25,6 +25,7 @@ pub struct TraceRequestConfig {
 
 impl TraceRequestConfig {
     /// Set component name to be present in Spans and Logs
+    #[must_use]
     pub fn component_name(self, component_name: &str) -> Self {
         Self {
             service_name: component_name.to_owned(),
@@ -33,6 +34,7 @@ impl TraceRequestConfig {
     }
 
     /// Set service name to be present in Spans and Logs
+    #[must_use]
     pub fn service_name(self, service_name: &str) -> Self {
         Self {
             service_name: service_name.to_owned(),
@@ -61,8 +63,7 @@ pub async fn trace_http_request<B>(
     let url = request
         .extensions()
         .get::<MatchedPath>()
-        .map(MatchedPath::as_str)
-        .unwrap_or_else(|| request.uri().path())
+        .map_or_else(|| request.uri().path(), MatchedPath::as_str)
         .to_owned();
 
     info!(
@@ -175,10 +176,9 @@ pub fn extract_context<B>(request: &Request<B>) -> Context {
 
 /// Return [`true`] if incoming Request is grpc by checking if [`CONTENT_TYPE`] header value starts with "application/grpc"
 pub fn is_grpc(headers: &HeaderMap) -> bool {
-    headers
-        .get(CONTENT_TYPE)
-        .map(|content_type| content_type.as_bytes().starts_with(b"application/grpc"))
-        .unwrap_or(false)
+    headers.get(CONTENT_TYPE).map_or(false, |content_type| {
+        content_type.as_bytes().starts_with(b"application/grpc")
+    })
 }
 
 /// Creates HTTP [`Span`] with predefined empty attributes.

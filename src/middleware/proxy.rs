@@ -2,13 +2,14 @@
 //             https://github.com/felipenoris/hyper-reverse-proxy
 //             Does not it fit your needs?
 
-use axum::{body::BoxBody, http::StatusCode, response::IntoResponse, BoxError};
-use bytes::Bytes;
-use hyper::{
-    client::HttpConnector,
-    http::{Request, Response},
-    Body, Uri,
+use axum::{
+    body::BoxBody,
+    http::{uri::PathAndQuery, Request, Response, StatusCode},
+    response::IntoResponse,
+    BoxError,
 };
+use bytes::Bytes;
+use hyper::{client::HttpConnector, Body, Uri};
 use pin_project_lite::pin_project;
 use std::{
     error::Error,
@@ -117,8 +118,7 @@ where
             let path_query = req
                 .uri()
                 .path_and_query()
-                .map(|v| v.as_str())
-                .unwrap_or_else(|| req.uri().path());
+                .map_or_else(|| req.uri().path(), PathAndQuery::as_str);
 
             let uri = format!("{}{}", self.destination, path_query);
 

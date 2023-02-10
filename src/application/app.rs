@@ -98,6 +98,7 @@ impl<'a, H, T> Application<'a, H, T> {
     }
 
     /// Set up Router Application will serve to
+    #[must_use]
     pub fn router(self, router: Router) -> Self {
         Self {
             router: Some(router),
@@ -106,6 +107,7 @@ impl<'a, H, T> Application<'a, H, T> {
     }
 
     /// Set up callback which will be called before metrics will render.
+    #[must_use]
     pub fn metrics_callback(self, metrics_callback: impl Fn() + Send + Sync + 'static) -> Self {
         Self {
             metrics_callback: Some(Arc::new(metrics_callback)),
@@ -127,6 +129,7 @@ impl<'a, H, T> Application<'a, H, T> {
     ///            .unwrap();
     ///    }
     /// ```
+    #[must_use]
     pub fn use_default_tracing_layer(self, use_default: bool) -> Self {
         Self {
             use_default_trace_layer: use_default,

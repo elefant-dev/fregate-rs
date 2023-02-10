@@ -365,7 +365,8 @@ impl<'a> tracing::field::Visit for JsonVisitor<'a> {
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
         match field.name() {
             name if name.starts_with("r#") => {
-                self.insert_borrowed(&name[2..], format!("{value:?}"));
+                let name = name.get(2..).unwrap_or_default();
+                self.insert_borrowed(name, format!("{value:?}"));
             }
             name => {
                 self.insert_borrowed(name, format!("{value:?}"));
@@ -382,7 +383,10 @@ mod round {
             val.len()
         } else {
             let lower_bound = index.saturating_sub(3);
-            let new_index = val.as_bytes()[lower_bound..=index]
+            let new_index = val
+                .as_bytes()
+                .get(lower_bound..=index)
+                .unwrap_or_default()
                 .iter()
                 .rposition(|b| is_utf8_char_boundary(*b));
 
