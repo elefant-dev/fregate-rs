@@ -103,9 +103,10 @@ async fn fetch_tls_handle_commands(
     } else {
         select! {
             tcp_stream = tcp_stream.try_next() => {
-                tcp_stream?.map(TlsHandleCommands::TcpStream).unwrap_or(TlsHandleCommands::Break)
+                tcp_stream?.map_or(TlsHandleCommands::Break, TlsHandleCommands::TcpStream)
             }
             tls_stream = tasks.next() => {
+                #[allow(clippy::expect_used)]
                 let tls_stream = tls_stream.expect("FuturesUnordered stream can't be closed in ordinary circumstances")??;
                 TlsHandleCommands::TlsStream(tls_stream)
             }

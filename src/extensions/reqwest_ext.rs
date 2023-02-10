@@ -8,9 +8,11 @@ use tracing_opentelemetry::OpenTelemetrySpanExt;
 /// Injects [`Span`] context into request headers;
 pub trait ReqwestExt {
     /// Injects Context from [`Span::current()`]
+    #[must_use]
     fn inject_from_current_span(self) -> Self;
 
     /// Injects Context from given [`Span`]
+    #[must_use]
     fn inject_from_span(self, span: &Span) -> Self;
 }
 
