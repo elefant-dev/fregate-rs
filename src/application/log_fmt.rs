@@ -363,15 +363,9 @@ impl<'a> tracing::field::Visit for JsonVisitor<'a> {
     }
 
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
-        match field.name() {
-            name if name.starts_with("r#") => {
-                let name = name.get(2..).unwrap_or_default();
-                self.insert_borrowed(name, format!("{value:?}"));
-            }
-            name => {
-                self.insert_borrowed(name, format!("{value:?}"));
-            }
-        };
+        let name = field.name();
+        let name = name.strip_prefix("r#").unwrap_or(name);
+        self.insert_borrowed(name, format!("{value:?}"));
     }
 }
 
