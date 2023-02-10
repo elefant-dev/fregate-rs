@@ -26,9 +26,11 @@ pub(crate) async fn yaml(content: &'static str) -> Response<BoxBody> {
 #[sealed]
 pub trait RouterOptionalExt {
     /// Used to merge [`Option<Router>`]
+    #[must_use]
     fn merge_optional(self, other: Option<Router>) -> Self;
 
     /// Used to nest [`Option<Router>`]
+    #[must_use]
     fn nest_optional(self, path: &str, other: Option<Router>) -> Self;
 }
 

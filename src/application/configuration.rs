@@ -245,6 +245,7 @@ impl<T> AppConfigBuilder<T> {
     }
 
     /// Add default config
+    #[must_use]
     pub fn add_default(mut self) -> Self {
         self.builder = self
             .builder
@@ -253,18 +254,21 @@ impl<T> AppConfigBuilder<T> {
     }
 
     /// Add file
+    #[must_use]
     pub fn add_file(mut self, path: &str) -> Self {
         self.builder = self.builder.add_source(File::with_name(path));
         self
     }
 
     /// Add string
+    #[must_use]
     pub fn add_str(mut self, str: &str, format: FileFormat) -> Self {
         self.builder = self.builder.add_source(File::from_str(str, format));
         self
     }
 
     /// Add environment variables with specified prefix and default separator: "_"
+    #[must_use]
     pub fn add_env_prefixed(mut self, prefix: &str) -> Self {
         self.builder = self.builder.add_source(
             Environment::with_prefix(prefix)

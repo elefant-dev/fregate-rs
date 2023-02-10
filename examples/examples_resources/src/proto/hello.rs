@@ -100,7 +100,7 @@ pub mod hello_client {
 pub mod hello_server {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
-    /// Generated trait containing gRPC methods that should be implemented for use with HelloServer.
+    ///Generated trait containing gRPC methods that should be implemented for use with HelloServer.
     #[async_trait]
     pub trait Hello: Send + Sync + 'static {
         async fn say_hello(

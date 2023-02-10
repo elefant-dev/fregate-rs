@@ -2,8 +2,10 @@
 
 use axum::{
     extract::Extension,
-    http::StatusCode,
-    http::{uri::Uri, Request},
+    http::{
+        uri::{PathAndQuery, Uri},
+        Request, StatusCode,
+    },
     response::IntoResponse,
     routing::any,
     Router,
@@ -23,8 +25,7 @@ async fn proxy_handler(
     let path_query = request
         .uri()
         .path_and_query()
-        .map(|v| v.as_str())
-        .unwrap_or_else(|| request.uri().path());
+        .map_or_else(|| request.uri().path(), PathAndQuery::as_str);
 
     let uri = format!("{destination}{path_query}");
     //TODO: return error in response
