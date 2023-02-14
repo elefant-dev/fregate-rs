@@ -46,7 +46,7 @@ mod tls {
             let next_config = config.clone();
             let application_handle = timeout(
                 Duration::from_secs(1),
-                tokio::task::spawn(async move { Application::new(next_config).serve_tls().await }),
+                tokio::task::spawn(async move { Application::new(&next_config).serve_tls().await }),
             )
             .await;
 

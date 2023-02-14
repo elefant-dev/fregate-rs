@@ -19,15 +19,15 @@ use tokio::signal;
 use tracing::info;
 
 /// Application to set up HTTP server with given config [`AppConfig`]
-pub struct Application<H = AlwaysReadyAndAlive, T = Empty> {
-    config: AppConfig<T>,
+pub struct Application<'a, H = AlwaysReadyAndAlive, T = Empty> {
+    config: &'a AppConfig<T>,
     health_indicator: H,
     router: Option<Router>,
     metrics_callback: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
     use_default_trace_layer: bool,
 }
 
-impl<H: Debug, T: Debug> Debug for Application<H, T> {
+impl<'a, H: Debug, T: Debug> Debug for Application<'a, H, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let Self {
             config,
@@ -53,10 +53,10 @@ impl<H: Debug, T: Debug> Debug for Application<H, T> {
     }
 }
 
-impl<T> Application<T> {
+impl<'a, T> Application<'a, T> {
     /// Creates new Application with health checks always returning [200 OK]
-    pub fn new(config: AppConfig<T>) -> Application<AlwaysReadyAndAlive, T> {
-        Application::<AlwaysReadyAndAlive, T> {
+    pub fn new(config: &'a AppConfig<T>) -> Application<'a, AlwaysReadyAndAlive, T> {
+        Application::<'a, AlwaysReadyAndAlive, T> {
             config,
             health_indicator: AlwaysReadyAndAlive::default(),
             router: None,
@@ -66,9 +66,9 @@ impl<T> Application<T> {
     }
 }
 
-impl<H, T> Application<H, T> {
+impl<'a, H, T> Application<'a, H, T> {
     /// Set up new health indicator
-    pub fn health_indicator<Hh: Health>(self, health: Hh) -> Application<Hh, T> {
+    pub fn health_indicator<Hh: Health>(self, health: Hh) -> Application<'a, Hh, T> {
         let Self {
             config,
             health_indicator: _,
@@ -77,7 +77,7 @@ impl<H, T> Application<H, T> {
             use_default_trace_layer,
         } = self;
 
-        Application::<Hh, T> {
+        Application::<'a, Hh, T> {
             config,
             health_indicator: health,
             router,
@@ -111,7 +111,7 @@ impl<H, T> Application<H, T> {
     ///
     ///    #[tokio::main]
     ///   async fn main() {
-    ///        Application::new(AppConfig::default())
+    ///        Application::new(&AppConfig::default())
     ///            .use_default_tracing_layer(false)
     ///            .serve()
     ///            .await

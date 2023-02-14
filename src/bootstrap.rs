@@ -24,7 +24,7 @@ use std::fmt::Debug;
 ///     ])
 ///     .unwrap();
 ///
-///     Application::new(config)
+///     Application::new(&config)
 ///         .router(Router::new().route("/", get(|| async { "Hello World"})))
 ///         .serve()
 ///         .await

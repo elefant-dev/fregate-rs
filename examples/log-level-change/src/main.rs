@@ -42,7 +42,11 @@ async fn main() {
 
     let rest = Router::new().route("/", get(handler));
 
-    Application::new(config).router(rest).serve().await.unwrap();
+    Application::new(&config)
+        .router(rest)
+        .serve()
+        .await
+        .unwrap();
 }
 
 async fn handler() -> &'static str {

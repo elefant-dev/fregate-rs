@@ -33,7 +33,7 @@ impl Health for CustomHealth {
 async fn main() {
     let config: AppConfig = bootstrap([]).unwrap();
 
-    Application::new(config)
+    Application::new(&config)
         .health_indicator(CustomHealth::default())
         .serve()
         .await

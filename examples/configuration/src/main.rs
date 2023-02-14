@@ -50,7 +50,7 @@ async fn main() {
     let _conf: AppConfig<Custom> =
         AppConfig::default_with("./examples/configuration/app.yaml", "TEST").unwrap();
 
-    Application::new(AppConfig::default())
+    Application::new(&AppConfig::default())
         .router(Router::new().route("/", get(handler)))
         .serve()
         .await
