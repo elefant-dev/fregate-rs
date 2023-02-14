@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use fregate::log_fmt::EventFormatter;
+use fregate::observability::EventFormatter;
 use std::io;
 use time::format_description::well_known::Rfc3339;
 use tracing::subscriber::with_default;

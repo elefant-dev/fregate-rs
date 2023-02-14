@@ -1,5 +1,4 @@
 //! Trait to implement custom Health checks
-
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 

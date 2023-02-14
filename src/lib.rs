@@ -19,10 +19,33 @@
 #![forbid(non_ascii_idents)]
 #![forbid(unsafe_code)]
 
-//! Developing an HTTP server requires to add code for logging, configuration, metrics, health checks etc.
-//! This crate aims to solve these problems providing user with `Application` builder for setting up HTTP service.
+//! Set of instruments to simplify http server set-up.\
 //!
 //! This project is in progress and might change a lot from version to version.
+//!
+//! Example:
+//! ```no_run
+//! use fregate::{
+//!     axum::{routing::get, Router},
+//!     bootstrap, tokio, AppConfig, Application,
+//! };
+//!
+//! async fn handler() -> &'static str {
+//!     "Hello, World!"
+//! }
+//!
+//! #[tokio::main]
+//! async fn main() {
+//!     let config: AppConfig = bootstrap([]).unwrap();
+//!
+//! Application::new(&config)
+//!         .router(Router::new().route("/", get(handler)))
+//!         .serve()
+//!         .await
+//!         .unwrap();
+//! }
+//! ```
+//!
 //!
 //! # Examples
 //!
@@ -30,12 +53,20 @@
 
 mod application;
 
+pub mod bootstrap;
+pub mod configuration;
+pub mod error;
 pub mod extensions;
 pub mod middleware;
+pub mod observability;
 pub mod sugar;
 
 #[doc(inline)]
 pub use application::*;
+#[doc(inline)]
+pub use bootstrap::*;
+#[doc(inline)]
+pub use configuration::*;
 
 pub use axum;
 pub use config;

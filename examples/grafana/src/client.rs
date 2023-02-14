@@ -1,6 +1,6 @@
 use fregate::extensions::{ReqwestExt, TonicReqExt};
 use fregate::hyper::StatusCode;
-use fregate::logging::init_tracing;
+use fregate::observability::init_tracing;
 use fregate::{tokio, tonic, tracing};
 use opentelemetry::global::shutdown_tracer_provider;
 use reqwest::Url;

@@ -1,7 +1,7 @@
 use fregate::axum::{routing::get, Router};
 use fregate::config::FileFormat;
-use fregate::tokio;
-use fregate::{bootstrap, AppConfig, Application, ConfigSource, Empty};
+use fregate::{bootstrap, tokio};
+use fregate::{AppConfig, Application, ConfigSource, Empty};
 use serde::Deserialize;
 
 async fn handler() -> &'static str {
@@ -28,7 +28,7 @@ async fn main() {
     // There are multiple ways to read AppConfig:
 
     // This will read AppConfig and call init_tracing() with arguments read in AppConfig
-    let _conf: AppConfig<Empty> = bootstrap([
+    let _conf: AppConfig = bootstrap([
         ConfigSource::File("./examples/configuration/app.yaml"),
         ConfigSource::EnvPrefix("TEST"),
     ])

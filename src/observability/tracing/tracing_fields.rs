@@ -7,10 +7,12 @@ pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
     "tracing_fields:fc848aeb-3723-438e-b3c3-35162b737a98";
 
 /// Example:
-/// This is how [`TracingFields`] is serialized to logs if used with tracing_unstable feature and [`crate::log_fmt::EventFormatter`]
+/// This is how [`TracingFields`] is serialized if used with tracing_unstable feature and [`crate::observability::EventFormatter`]
 ///```rust
 /// use fregate::valuable::Valuable;
-/// use fregate::{logging::init_tracing, tokio, tracing::info, tracing_fields::TracingFields};
+/// use fregate::observability::TracingFields;
+/// use fregate::observability::init_tracing;
+/// use fregate::{tokio, tracing::info};
 /// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 ///
 /// const STATIC_KEY: &str = "STATIC_KEY";
@@ -19,7 +21,6 @@ pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
 /// #[tokio::main]
 /// async fn main() {
 ///    let  _guard = init_tracing("info", "info", "0.0.0", "fregate", "marker", None, None, None, None).unwrap();
-///
 ///    let mut marker = TracingFields::with_capacity(10);
 ///
 ///    let local_key = "LOCAL_KEY".to_owned();
@@ -67,7 +68,7 @@ impl<'a> Debug for TracingFields<'a> {
 }
 
 impl<'a> TracingFields<'a> {
-    /// Creates empty [`TracingFields`]
+    /// Creates empty [`TracingFields`].
     pub fn new() -> Self {
         Self::default()
     }
@@ -79,31 +80,31 @@ impl<'a> TracingFields<'a> {
         }
     }
 
-    /// Inserts a key-value pair of references into the map. If key is present its value is overwritten.
+    /// Inserts a key-value pair of references into the map. If key is present value is overwritten.
     pub fn insert<V: Valuable + Send + Sync>(&mut self, key: &'a str, value: &'a V) {
         self.fields.insert(key, Field::ValuableRef(value));
     }
 
-    /// Converts value to [`String`] using [`Display`] implementation prior to insertion key-value pair. If key is present its value is overwritten.
-    /// This will cause additional allocation.
+    /// Converts value to [`String`] using [`Display`] implementation before insertion. If key is present value is overwritten.
+    /// This makes an allocation.
     pub fn insert_as_string<V: Display + Sync>(&mut self, key: &'a str, value: &V) {
         self.fields.insert(key, Field::String(value.to_string()));
     }
 
-    /// Converts value to [`String`] using [`Debug`] implementation prior to insertion key-value pair. If key is present its value is overwritten.
-    /// This will cause additional allocation.
+    /// Converts value to [`String`] using [`Debug`] implementation before insertion. If key is present value is overwritten.
+    /// This makes an allocation.
     pub fn insert_as_debug<V: Debug + Sync>(&mut self, key: &'a str, value: &V) {
         self.fields.insert(key, Field::String(format!("{value:?}")));
     }
 
-    /// Removes key-value pairs from the by given keys.
+    /// Removes each key from the map.
     pub fn remove_keys<'b>(&mut self, keys: impl IntoIterator<Item = &'b str>) {
         for key in keys {
             self.remove_by_key(key);
         }
     }
 
-    /// Removes key-value pair by key.
+    /// Removes a key from the map.
     pub fn remove_by_key(&mut self, key: &str) {
         self.fields.remove(key);
     }

@@ -1,3 +1,4 @@
+//! [`HashBuilder`] struct wrapping [`std::collections::hash_map::RandomState`] or [`ahash::RandomState`] depends on feature "ahash"
 #[cfg(feature = "ahash")]
 use ahash::RandomState;
 #[cfg(not(feature = "ahash"))]
@@ -20,7 +21,7 @@ impl HashBuilder {
     /// Calculate hash for value.
     /// # Example
     /// ```rust
-    /// use fregate::sugar::HashBuilder;
+    /// use fregate::sugar::hash_builder::HashBuilder;
     ///
     /// let hash_builder = HashBuilder::new();
     ///

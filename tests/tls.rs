@@ -13,7 +13,7 @@ mod tls {
         sync::Arc,
         time::{Duration, SystemTime},
     };
-    use tokio::{sync::Mutex, time::timeout};
+    use tokio::time::timeout;
 
     const ROOTLES_PORT: u16 = 1025;
     const MAX_PORT: u16 = u16::MAX;
@@ -31,28 +31,22 @@ mod tls {
         std::env::set_var("TEST_SERVER_TLS_KEY_PATH", TLS_KEY_FULL_PATH);
         std::env::set_var("TEST_SERVER_TLS_CERT_PATH", TLS_CERTIFICATE_FULL_PATH);
 
-        let config = Arc::new(Mutex::new(
-            AppConfig::<Empty>::builder()
-                .add_env_prefixed("TEST")
-                .add_default()
-                .build()
-                .unwrap(),
-        ));
+        let mut config = AppConfig::<Empty>::builder()
+            .add_env_prefixed("TEST")
+            .add_default()
+            .build()
+            .unwrap();
 
         let mut free_port = None;
-        let tls_timeout = config.lock().await.tls.handshake_timeout;
+        let tls_timeout = config.tls.handshake_timeout;
 
         for port in ROOTLES_PORT..MAX_PORT {
-            config.lock().await.port = port;
+            config.port = port;
 
-            let config = config.clone();
+            let next_config = config.clone();
             let application_handle = timeout(
                 Duration::from_secs(1),
-                tokio::task::spawn(async move {
-                    let mut config = config.lock_owned().await;
-                    config.port = port;
-                    Application::new(&config).serve_tls().await
-                }),
+                tokio::task::spawn(async move { Application::new(&next_config).serve_tls().await }),
             )
             .await;
 

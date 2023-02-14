@@ -17,7 +17,7 @@ mod app_config_tests {
         assert_eq!(config.host, IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)));
         assert_eq!(config.private, Empty {});
 
-        let logger = config.logger;
+        let logger = config.observability_cfg;
 
         assert_eq!(logger.traces_endpoint, None);
         assert_eq!(logger.buffered_lines_limit, None);
@@ -45,7 +45,7 @@ mod app_config_tests {
         assert_eq!(config.host, IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)));
         assert_eq!(config.private, Empty {});
 
-        let logger = config.logger;
+        let logger = config.observability_cfg;
 
         assert_eq!(logger.traces_endpoint, None);
         assert_eq!(logger.service_name, "fregate".to_owned());
@@ -70,7 +70,7 @@ mod app_config_tests {
         );
         assert_eq!(config.private, Empty {});
 
-        let logger = config.logger;
+        let logger = config.observability_cfg;
 
         assert_eq!(logger.traces_endpoint, None);
         assert_eq!(logger.service_name, "Test".to_owned());
@@ -93,7 +93,7 @@ mod app_config_tests {
         );
         assert_eq!(config.private, Empty {});
 
-        let logger = config.logger;
+        let logger = config.observability_cfg;
 
         assert_eq!(logger.traces_endpoint, None);
         assert_eq!(logger.service_name, "Test".to_owned());

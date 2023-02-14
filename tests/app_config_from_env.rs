@@ -32,7 +32,7 @@ mod app_config_from_env {
         );
         assert_eq!(config.private, TestStruct { number: 100 });
 
-        let logger = config.logger;
+        let logger = config.observability_cfg;
 
         assert_eq!(
             logger.traces_endpoint,
@@ -55,7 +55,7 @@ mod app_config_from_env {
         let config = AppConfig::<TestStruct>::load_from([ConfigSource::EnvPrefix("WRONG")])
             .expect("Failed to build AppConfig");
 
-        assert_eq!(config.logger.msg_length, None);
+        assert_eq!(config.observability_cfg.msg_length, None);
     }
 
     #[test]
@@ -65,6 +65,6 @@ mod app_config_from_env {
         let config = AppConfig::<TestStruct>::load_from([ConfigSource::EnvPrefix("WRONG")])
             .expect("Failed to build AppConfig");
 
-        assert_eq!(config.logger.msg_length, None);
+        assert_eq!(config.observability_cfg.msg_length, None);
     }
 }

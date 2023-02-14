@@ -10,8 +10,8 @@ mod log_fmt_test {
     use tracing_subscriber::fmt::format::DefaultFields;
     use tracing_subscriber::fmt::{MakeWriter, SubscriberBuilder};
 
-    use fregate::log_fmt::EventFormatter;
-    use fregate::tracing_fields::TracingFields;
+    use fregate::observability::EventFormatter;
+    use fregate::observability::TracingFields;
     #[cfg(tracing_unstable)]
     use valuable::Valuable;
 
@@ -342,7 +342,7 @@ mod log_fmt_test {
     #[test]
     fn limit_exact_message_size() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new_with_limits(Some(10));
+        let formatter = EventFormatter::new_with_limit(Some(10));
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -362,7 +362,7 @@ mod log_fmt_test {
     #[test]
     fn limit_1_byte_overflow() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new_with_limits(Some(10));
+        let formatter = EventFormatter::new_with_limit(Some(10));
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -402,7 +402,7 @@ mod log_fmt_test {
     #[test]
     fn limit_large_message() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new_with_limits(Some(10));
+        let formatter = EventFormatter::new_with_limit(Some(10));
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())
@@ -423,7 +423,7 @@ mod log_fmt_test {
     #[test]
     fn limit_empty_message() {
         let mock_writer = MockMakeWriter::new();
-        let formatter = EventFormatter::new_with_limits(Some(10));
+        let formatter = EventFormatter::new_with_limit(Some(10));
 
         let subscriber = subscriber(formatter)
             .with_writer(mock_writer.clone())

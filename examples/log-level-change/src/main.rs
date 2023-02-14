@@ -1,10 +1,10 @@
-use fregate::logging::{LOG_LAYER_HANDLE, TRACE_LAYER_HANDLE};
-use fregate::tokio;
+use fregate::observability::{LOG_LAYER_HANDLE, OTLP_LAYER_HANDLE};
 use fregate::tracing::trace_span;
 use fregate::{
     axum::{routing::get, Router},
-    bootstrap, Application, Empty,
+    bootstrap, Application,
 };
+use fregate::{tokio, AppConfig};
 use std::str::FromStr;
 use std::time::Duration;
 use tracing_subscriber::EnvFilter;
@@ -17,7 +17,7 @@ async fn main() {
     std::env::set_var("OTEL_COMPONENT_NAME", "server");
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
 
-    let config = bootstrap::<Empty, _>([]).unwrap();
+    let config: AppConfig = bootstrap([]).unwrap();
 
     tokio::spawn(async move {
         tokio::time::sleep(Duration::from_secs(10)).await;
@@ -31,7 +31,7 @@ async fn main() {
             .modify(|filter| *filter = EnvFilter::from_str("trace").unwrap())
             .unwrap();
 
-        let trace_filter_reloader = TRACE_LAYER_HANDLE.get().unwrap();
+        let trace_filter_reloader = OTLP_LAYER_HANDLE.get().unwrap();
         trace_filter_reloader
             .modify(|filter| *filter = EnvFilter::from_str("trace").unwrap())
             .unwrap();

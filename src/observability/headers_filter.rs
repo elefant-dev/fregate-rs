@@ -9,7 +9,7 @@ const SANITIZE_PTR: &str = "/sanitize";
 const INCLUDE_PTR: &str = "/include";
 const EXCLUDE_PTR: &str = "/exclude";
 
-/// This is uninitialised unless you call [`crate::bootstrap`] or [`crate::logging::init_tracing`] functions.
+/// This is uninitialised unless you call [`crate::bootstrap()`] or [`crate::observability::init_tracing()`] functions.
 /// If initialised but env variables are not set fregate will include all headers.
 /// Expects string values separated with ',' or standalone "*" character meaning: all.
 /// Example:
