@@ -1,7 +1,7 @@
 mod headers_ext_test {
     use fregate::extensions::HeaderFilterExt;
-    use fregate::logging::SANITIZED_VALUE;
-    use fregate::{bootstrap, ConfigSource, Empty};
+    use fregate::observability::SANITIZED_VALUE;
+    use fregate::{bootstrap, AppConfig, ConfigSource};
     use hyper::http::HeaderValue;
     use hyper::{Body, Request};
 
@@ -11,7 +11,7 @@ mod headers_ext_test {
         std::env::set_var("TEST_HEADERS_SANITIZE", "password,authorization");
         std::env::set_var("TEST_HEADERS_EXCLUDE", "password,");
 
-        let _config = bootstrap::<Empty, _>([ConfigSource::EnvPrefix("TEST")]).unwrap();
+        let _config: AppConfig = bootstrap([ConfigSource::EnvPrefix("TEST")]).unwrap();
 
         let request = Request::builder()
             .method("GET")

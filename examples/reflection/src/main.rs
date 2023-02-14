@@ -1,13 +1,12 @@
 #![allow(clippy::derive_partial_eq_without_eq)]
 
 use axum::{routing::get, Router};
-use fregate::{axum, bootstrap, extensions::RouterTonicExt, tokio, Application, Empty};
+use fregate::{axum, bootstrap, extensions::RouterTonicExt, tokio, AppConfig, Application};
 use resources::{grpc::MyEcho, proto::echo::echo_server::EchoServer, FILE_DESCRIPTOR_SET};
 
 #[tokio::main]
 async fn main() {
-    let config = bootstrap::<Empty, _>([]).unwrap();
-
+    let config: AppConfig = bootstrap([]).unwrap();
     let echo_service = EchoServer::new(MyEcho);
 
     let service = tonic_reflection::server::Builder::configure()
@@ -22,7 +21,7 @@ async fn main() {
 
     let app_router = rest.merge(grpc).merge(reflection);
 
-    Application::new(&config)
+    Application::new(config)
         .router(app_router)
         .serve()
         .await

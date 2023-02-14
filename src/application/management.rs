@@ -1,7 +1,6 @@
-use crate::{
-    extensions::{yaml, RouterOptionalExt},
-    health::Health,
-};
+use crate::application::health::Health;
+use crate::observability::render_metrics;
+use crate::sugar::yaml_response::yaml;
 use axum::{routing::get, Extension, Router};
 use std::sync::Arc;
 
@@ -15,41 +14,37 @@ const METRICS_PATH: &str = "/metrics";
 const OPENAPI: &str = include_str!("../resources/openapi.yaml");
 
 pub(crate) fn build_management_router<H: Health>(
-    health_indicator: Option<H>,
+    health_indicator: H,
     callback: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
 ) -> Router {
     Router::new()
         .route(OPENAPI_PATH, get(|| yaml(OPENAPI)))
-        .merge_optional(build_health_router(health_indicator))
+        .merge(build_health_router(health_indicator))
         .merge(build_metrics_router(callback))
 }
 
-fn build_health_router<H: Health>(health_indicator: Option<H>) -> Option<Router> {
-    let health_indicator = health_indicator?;
-
+fn build_health_router<H: Health>(health_indicator: H) -> Router {
     let alive_handler = |health: Extension<H>| async move { health.alive().await };
     let ready_handler = |health: Extension<H>| async move { health.ready().await };
 
-    Some(
-        Router::new()
-            .route(HEALTH_PATH, get(alive_handler))
-            .route(LIVE_PATH, get(alive_handler))
-            .route(READY_PATH, get(ready_handler))
-            .layer(Extension(health_indicator)),
-    )
+    Router::new()
+        .route(HEALTH_PATH, get(alive_handler))
+        .route(LIVE_PATH, get(alive_handler))
+        .route(READY_PATH, get(ready_handler))
+        .layer(Extension(health_indicator))
 }
 
 fn build_metrics_router(callback: Option<Arc<dyn Fn() + Send + Sync + 'static>>) -> Router {
     Router::new().route(
         METRICS_PATH,
-        get(move || std::future::ready(crate::get_metrics(callback.as_deref()))),
+        get(move || std::future::ready(render_metrics(callback.as_deref()))),
     )
 }
 
 #[cfg(test)]
 mod management_test {
     use super::*;
-    use crate::health::HealthResponse;
+    use crate::application::health::HealthResponse;
     use axum::http::{Request, StatusCode};
     use tower::ServiceExt;
 
@@ -69,7 +64,7 @@ mod management_test {
 
     #[tokio::test]
     async fn health_test() {
-        let router = build_management_router(Some(CustomHealth), None);
+        let router = build_management_router(CustomHealth, None);
         let request = Request::builder()
             .uri("http://0.0.0.0/health")
             .method("GET")
@@ -86,7 +81,7 @@ mod management_test {
 
     #[tokio::test]
     async fn live_test() {
-        let router = build_management_router(Some(CustomHealth), None);
+        let router = build_management_router(CustomHealth, None);
         let request = Request::builder()
             .uri("http://0.0.0.0/live")
             .method("GET")
@@ -103,7 +98,7 @@ mod management_test {
 
     #[tokio::test]
     async fn ready_test() {
-        let router = build_management_router(Some(CustomHealth), None);
+        let router = build_management_router(CustomHealth, None);
         let request = Request::builder()
             .uri("http://0.0.0.0/ready")
             .method("GET")

@@ -7,7 +7,7 @@ const TLS_HANDSHAKE_TIMEOUT: &str = "/server/tls/handshake_timeout";
 const TLS_KEY_PATH: &str = "/server/tls/key/path";
 const TLS_CERTIFICATE_PATH: &str = "/server/tls/cert/path";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TlsConfigurationVariables {
     /// TLS handshake timeout
     pub handshake_timeout: Duration,

@@ -7,10 +7,7 @@ compile_error!("native-tls and rustls cannot be used together");
 )))]
 compile_error!("can't use tls flags directly");
 
-use crate::{
-    application::{app::shutdown_signal, tls_config::RemoteAddr},
-    error::{Error, Result},
-};
+use crate::error::{Error, Result};
 use async_stream::stream;
 use axum::Router;
 use futures_util::{
@@ -18,7 +15,8 @@ use futures_util::{
     StreamExt, TryStreamExt,
 };
 use hyper::{server::accept, Server};
-use std::{net::SocketAddr, sync::Arc, time::Duration};
+pub(crate) use reexport::*;
+use std::{sync::Arc, time::Duration};
 use tokio::{
     net::{TcpListener, TcpStream},
     select,
@@ -28,9 +26,12 @@ use tokio::{
 use tokio_stream::wrappers::TcpListenerStream;
 use tracing::{info, warn};
 
-pub(crate) use reexport::*;
+use crate::application::shutdown_signal;
+use crate::tls::TlsStream;
+use axum::extract::connect_info::Connected;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-pub(super) async fn run_service(
+pub(in crate::application) async fn run_service(
     socket: &SocketAddr,
     router: Router,
     tls_handshake_timeout: Duration,
@@ -123,9 +124,9 @@ mod reexport {
     use tracing::info;
 
     pub(crate) type TlsStream = tokio_native_tls::TlsStream<tokio::net::TcpStream>;
-    pub(super) type TlsAcceptor = tokio_native_tls::TlsAcceptor;
+    pub(in crate::application) type TlsAcceptor = tokio_native_tls::TlsAcceptor;
 
-    pub(super) fn create_acceptor(pem: &[u8], key: &[u8]) -> Result<TlsAcceptor> {
+    pub(in crate::application) fn create_acceptor(pem: &[u8], key: &[u8]) -> Result<TlsAcceptor> {
         info!("Use native-tls");
 
         let identity = Identity::from_pkcs8(pem, key)?;
@@ -145,9 +146,9 @@ mod reexport {
 
     // Box because of: https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
     pub(crate) type TlsStream = Box<tokio_rustls::server::TlsStream<tokio::net::TcpStream>>;
-    pub(super) type TlsAcceptor = tokio_rustls::TlsAcceptor;
+    pub(in crate::application) type TlsAcceptor = tokio_rustls::TlsAcceptor;
 
-    pub(super) fn create_acceptor(pem: &[u8], key: &[u8]) -> Result<TlsAcceptor> {
+    pub(in crate::application) fn create_acceptor(pem: &[u8], key: &[u8]) -> Result<TlsAcceptor> {
         info!("Use rustls");
 
         fn extract_single_key(data: Vec<Vec<u8>>) -> Result<Vec<u8>> {
@@ -171,5 +172,37 @@ mod reexport {
             .with_single_cert(certs, key)?;
 
         Ok(Arc::new(config).into())
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// Wrapper for SocketAddr to implement [`Connected`] so
+/// we can run [`Router::into_make_service_with_connect_info`] with [`TlsStream>`]
+pub struct RemoteAddr(pub SocketAddr);
+
+#[cfg(feature = "use_native_tls")]
+impl Connected<&TlsStream> for RemoteAddr {
+    fn connect_info(target: &TlsStream) -> Self {
+        Self(
+            target
+                .get_ref()
+                .get_ref()
+                .get_ref()
+                .peer_addr()
+                .unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0)),
+        )
+    }
+}
+
+#[cfg(feature = "use_rustls")]
+impl Connected<&TlsStream> for RemoteAddr {
+    fn connect_info(target: &TlsStream) -> Self {
+        Self(
+            target
+                .get_ref()
+                .0
+                .peer_addr()
+                .unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0)),
+        )
     }
 }

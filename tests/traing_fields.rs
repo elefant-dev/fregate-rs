@@ -1,5 +1,5 @@
 mod tracing_fields {
-    use fregate::tracing_fields::TracingFields;
+    use fregate::observability::TracingFields;
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
     fn is_send(_val: impl Send) {}

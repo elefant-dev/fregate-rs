@@ -1,13 +1,13 @@
 mod exclude_one_test {
     use fregate::extensions::HeaderFilterExt;
-    use fregate::{bootstrap, ConfigSource, Empty};
+    use fregate::{bootstrap, AppConfig, ConfigSource};
     use hyper::{Body, Request};
 
     #[tokio::test]
     async fn exclude_all() {
         std::env::set_var("TEST_HEADERS_EXCLUDE", "*");
 
-        let _config = bootstrap::<Empty, _>([ConfigSource::EnvPrefix("TEST")]).unwrap();
+        let _config: AppConfig = bootstrap([ConfigSource::EnvPrefix("TEST")]).unwrap();
 
         let request = Request::builder()
             .method("GET")

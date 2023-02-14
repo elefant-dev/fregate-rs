@@ -1,6 +1,7 @@
 use axum::{middleware::from_fn, routing::get, Router};
 use fregate::{
-    axum, bootstrap, extensions::RouterTonicExt, tokio, Application, ConfigSource::EnvPrefix, Empty,
+    axum, bootstrap, extensions::RouterTonicExt, tokio, AppConfig, Application,
+    ConfigSource::EnvPrefix,
 };
 use resources::{
     deny_middleware,
@@ -24,7 +25,7 @@ async fn main() {
     std::env::set_var("TEST_SERVER_TLS_KEY_PATH", TLS_KEY_FULL_PATH);
     std::env::set_var("TEST_SERVER_TLS_CERT_PATH", TLS_CERTIFICATE_FULL_PATH);
 
-    let config = bootstrap::<Empty, _>([EnvPrefix("TEST")]).unwrap();
+    let config: AppConfig = bootstrap([EnvPrefix("TEST")]).unwrap();
 
     let grpc_reflection = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
@@ -43,7 +44,7 @@ async fn main() {
 
     let app_router = rest.merge(grpc_router);
 
-    Application::new(&config)
+    Application::new(config)
         .router(app_router)
         .serve_tls()
         .await

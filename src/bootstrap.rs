@@ -1,12 +1,14 @@
-use crate::logging::init_tracing;
+//!This is a shortcut fn to read [`AppConfig`] and call [`init_tracing`] and [`init_metrics`] fn.
+#[cfg(feature = "tokio-metrics")]
+use crate::observability::tokio_metrics::init_tokio_metrics_task;
+use crate::observability::{init_metrics, init_tracing};
 use crate::{error::Result, *};
-use ::tracing::info;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
-/// Reads AppConfig and [`init_tracing`].
-/// Return Error if fails to read [`AppConfig`] or [`init_tracing`].
-/// Return Error if called twice because of internal call to tracing_subscriber::registry().try_init().
+/// Reads AppConfig and calls [`init_tracing`].
+/// Return Error if fails to read [`AppConfig`] or [`init_tracing`] returns error.
+/// Return Error if called twice because of internal call to [`tracing_subscriber::registry().try_init()`].
 ///```no_run
 /// use fregate::*;
 /// use fregate::axum::{Router, routing::get, response::IntoResponse};
@@ -16,13 +18,13 @@ use std::fmt::Debug;
 ///    std::env::set_var("TEST_PORT", "3333");
 ///    std::env::set_var("TEST_NUMBER", "1010");
 ///
-///     let config: AppConfig<Empty> = bootstrap([
+///     let config: AppConfig = bootstrap([
 ///         ConfigSource::File("./examples/configuration/app.yaml"),
 ///         ConfigSource::EnvPrefix("TEST"),
 ///     ])
 ///     .unwrap();
 ///
-///     Application::new(&config)
+///     Application::new(config)
 ///         .router(Router::new().route("/", get(|| async { "Hello World"})))
 ///         .serve()
 ///         .await
@@ -36,7 +38,7 @@ where
 {
     let mut config = AppConfig::<ConfigExt>::load_from(sources)?;
 
-    let LoggerConfig {
+    let ObservabilityConfig {
         log_level,
         version,
         trace_level,
@@ -47,7 +49,7 @@ where
         buffered_lines_limit,
         headers_filter,
         ..
-    } = &config.logger;
+    } = &config.observability_cfg;
 
     let worker_guard = init_tracing(
         log_level,
@@ -65,8 +67,8 @@ where
     init_metrics()?;
 
     #[cfg(feature = "tokio-metrics")]
-    tokio_metrics::init_tokio_metrics_task(config.logger.metrics_update_interval);
+    init_tokio_metrics_task(config.observability_cfg.metrics_update_interval);
 
-    info!("Configuration: `{config:?}`.");
+    tracing::info!("Configuration: `{config:?}`.");
     Ok(config)
 }

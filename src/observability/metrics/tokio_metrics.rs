@@ -10,16 +10,19 @@ use tokio_metrics::{RuntimeMetrics, RuntimeMonitor};
 /// Initialise key [`metrics`](https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMetrics.html) of tokio tasks.\
 /// Example:
 /// ```no_run
-/// use fregate::tokio_metrics::init_tokio_metrics_task;
-/// use fregate::{init_metrics, AppConfig, Application};
+/// use fregate::Application;
+/// use fregate::configuration::AppConfig;
+/// use fregate::observability::init_metrics;
+/// use fregate::observability::tokio_metrics::init_tokio_metrics_task;
 /// use std::time::Duration;
 ///
 /// #[tokio::main]
 /// async fn main() {
-///     init_metrics().expect("Failed to initialise PrometheusRecorder");
+///     
+/// init_metrics().expect("Failed to initialise PrometheusRecorder");
 ///     init_tokio_metrics_task(Duration::from_millis(500));
 ///
-///     Application::new(&AppConfig::default())
+///     Application::new(AppConfig::default())
 ///         .serve()
 ///         .await
 ///         .unwrap()

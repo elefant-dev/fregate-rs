@@ -1,12 +1,12 @@
 pub mod default_headers_ext {
     use fregate::extensions::HeaderFilterExt;
-    use fregate::{bootstrap, Empty};
+    use fregate::{bootstrap, AppConfig};
     use hyper::http::HeaderValue;
     use hyper::{Body, Request};
 
     #[tokio::test]
     async fn default_headers_ext() {
-        let _config = bootstrap::<Empty, _>([]).unwrap();
+        let _config: AppConfig = bootstrap([]).unwrap();
 
         let request = Request::builder()
             .method("GET")

@@ -1,8 +1,0 @@
-[package]
-name = "observability"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-fregate = { path = "../.." }
-tokio = { version = "1.22.0", features = ["rt-multi-thread"] }

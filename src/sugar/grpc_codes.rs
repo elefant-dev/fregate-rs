@@ -1,3 +1,4 @@
+//! Syntax-sugar-like functions for gRPC protocol
 use tonic::Code::{self, *};
 
 /// All gRPC response codes

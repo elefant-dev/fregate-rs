@@ -1,6 +1,6 @@
 use fregate::{
     axum::{routing::get, Router},
-    bootstrap, tokio, Application, Empty,
+    bootstrap, tokio, AppConfig, Application,
 };
 use metrics::counter;
 use std::alloc::{GlobalAlloc, Layout};
@@ -15,9 +15,9 @@ async fn handler() -> &'static str {
 
 #[tokio::main]
 async fn main() {
-    let config = bootstrap::<Empty, _>([]).unwrap();
+    let config: AppConfig = bootstrap([]).unwrap();
 
-    Application::new(&config)
+    Application::new(config)
         .router(Router::new().route("/", get(handler)))
         .metrics_callback(|| {
             counter!("allocations", ALLOC.load(Ordering::Relaxed));

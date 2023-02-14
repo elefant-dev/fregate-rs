@@ -1,4 +1,4 @@
-use fregate::sugar::grpc::{grpc_code_to_num, grpc_code_to_str, GRPC_CODES};
+use fregate::sugar::grpc_codes::{grpc_code_to_num, grpc_code_to_str, GRPC_CODES};
 
 #[test]
 fn test_grpc_code_to_num() {

@@ -1,5 +1,5 @@
 use axum::{middleware::from_fn, routing::get, Router};
-use fregate::{axum, bootstrap, extensions::RouterTonicExt, tokio, Application, Empty};
+use fregate::{axum, bootstrap, extensions::RouterTonicExt, tokio, AppConfig, Application};
 use resources::{
     deny_middleware,
     grpc::{MyEcho, MyHello},
@@ -8,7 +8,7 @@ use resources::{
 
 #[tokio::main]
 async fn main() {
-    let config = bootstrap::<Empty, _>([]).unwrap();
+    let config: AppConfig = bootstrap([]).unwrap();
 
     let echo_service = EchoServer::new(MyEcho);
     let hello_service = HelloServer::new(MyHello);
@@ -22,7 +22,7 @@ async fn main() {
 
     let app_router = rest.merge(grpc);
 
-    Application::new(&config)
+    Application::new(config)
         .router(app_router)
         .serve()
         .await
