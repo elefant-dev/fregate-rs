@@ -42,15 +42,14 @@ pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
 ///```
 #[derive(Default)]
 pub struct TracingFields<'a> {
-    fields: HashMap<&'a str, Field<'a>>,
+    fields: HashMap<&'static str, Field<'a>>,
 }
 
 enum Field<'a> {
     String(String),
-    ValuableRef(ValuableRef<'a>),
+    ValuableRef(&'a (dyn Valuable + Send + Sync)),
+    ValuableOwned(Box<dyn Valuable + Send + Sync>),
 }
-
-type ValuableRef<'a> = &'a (dyn Valuable + Send + Sync);
 
 impl<'a> Debug for TracingFields<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -58,6 +57,7 @@ impl<'a> Debug for TracingFields<'a> {
         for (k, v) in self.fields.iter() {
             let value = match v {
                 Field::String(s) => s.as_value(),
+                Field::ValuableOwned(s) => s.as_value(),
                 Field::ValuableRef(r) => r.as_value(),
             };
 
@@ -81,20 +81,30 @@ impl<'a> TracingFields<'a> {
     }
 
     /// Inserts a key-value pair of references into the map. If key is present value is overwritten.
-    pub fn insert<V: Valuable + Send + Sync>(&mut self, key: &'a str, value: &'a V) {
+    pub fn insert<V: Valuable + Send + Sync>(&mut self, key: &'static str, value: &'a V) {
         self.fields.insert(key, Field::ValuableRef(value));
     }
 
     /// Converts value to [`String`] using [`Display`] implementation before insertion. If key is present value is overwritten.
     /// This makes an allocation.
-    pub fn insert_as_string<V: Display + Sync>(&mut self, key: &'a str, value: &V) {
+    pub fn insert_as_string<V: Display + Sync>(&mut self, key: &'static str, value: &V) {
         self.fields.insert(key, Field::String(value.to_string()));
     }
 
     /// Converts value to [`String`] using [`Debug`] implementation before insertion. If key is present value is overwritten.
     /// This makes an allocation.
-    pub fn insert_as_debug<V: Debug + Sync>(&mut self, key: &'a str, value: &V) {
+    pub fn insert_as_debug<V: Debug + Sync>(&mut self, key: &'static str, value: &V) {
         self.fields.insert(key, Field::String(format!("{value:?}")));
+    }
+
+    /// Inserts a key-value pair where value is owned by [`TracingFields`] into the map. If key is present value is overwritten.
+    pub fn insert_as_owned<V: Valuable + Send + Sync + 'static>(
+        &mut self,
+        key: &'static str,
+        value: V,
+    ) {
+        self.fields
+            .insert(key, Field::ValuableOwned(Box::new(value)));
     }
 
     /// Removes each key from the map.
@@ -108,6 +118,15 @@ impl<'a> TracingFields<'a> {
     pub fn remove_by_key(&mut self, key: &str) {
         self.fields.remove(key);
     }
+
+    /// Merge with other [`TracingFields`] consuming other.
+    pub fn merge<'b: 'a>(&mut self, other: TracingFields<'b>) {
+        self.fields.reserve(other.fields.len());
+
+        other.fields.into_iter().for_each(|(k, v)| {
+            self.fields.insert(k, v);
+        });
+    }
 }
 
 impl<'a> Valuable for TracingFields<'a> {
@@ -119,6 +138,7 @@ impl<'a> Valuable for TracingFields<'a> {
         for (field, value) in self.fields.iter() {
             let value_ref = match value {
                 Field::String(s) => s.as_value(),
+                Field::ValuableOwned(s) => s.as_value(),
                 Field::ValuableRef(r) => r.as_value(),
             };
 
@@ -130,5 +150,29 @@ impl<'a> Valuable for TracingFields<'a> {
 impl<'a> Structable for TracingFields<'a> {
     fn definition(&self) -> StructDef<'_> {
         StructDef::new_dynamic(TRACING_FIELDS_STRUCTURE_NAME, Fields::Named(&[]))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::observability::TracingFields;
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+    #[test]
+    fn test_merge() {
+        let mut val = TracingFields::new();
+        let mut val_2 = TracingFields::new();
+
+        let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080).to_string();
+
+        val.insert("str", &"str");
+        val_2.insert_as_string("display_address", &socket);
+        val.merge(val_2);
+
+        drop(socket);
+
+        assert_eq!(val.fields.len(), 2);
+        assert!(val.fields.contains_key("str"));
+        assert!(val.fields.contains_key("display_address"));
     }
 }
