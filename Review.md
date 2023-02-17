@@ -15,7 +15,7 @@ but some are not public and included by a user
 ```toml
 fregate = { path = "../.." }
 tracing = "0.1.36"
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 prost = "0.11.0"
 tonic = "0.8.0"
 ```
