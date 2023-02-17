@@ -6,4 +6,4 @@ edition = "2021"
 [dependencies]
 fregate = { path = "../..", features = ["tokio-metrics"] }
 metrics = "0.20.1"
-tokio = { version = "1.22.0", features = ["rt-multi-thread"] }
+tokio = { version = "1", features = ["rt-multi-thread"] }

@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 fregate = { path = "../.." }
-tokio = { version = "1.22.0", features = ["rt-multi-thread"] }
+tokio = { version = "1", features = ["rt-multi-thread"] }
