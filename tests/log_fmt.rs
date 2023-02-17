@@ -307,11 +307,11 @@ mod log_fmt_test {
         };
 
         let mut marker = TracingFields::with_capacity(4);
-        marker.insert("number", &test.numnber);
-        marker.insert("string", &test.string);
-        marker.insert("vector", &test.vector);
-        marker.insert("map", &test.map);
-        marker.insert("random_str", &"random_str");
+        marker.insert_ref("number", &test.numnber);
+        marker.insert_ref("string", &test.string);
+        marker.insert_ref("vector", &test.vector);
+        marker.insert_ref("map", &test.map);
+        marker.insert_ref("random_str", &"random_str");
 
         with_default(subscriber, || {
             tracing::info!(marker = marker.as_value(), "marker_test");

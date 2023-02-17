@@ -6,12 +6,14 @@ use valuable::{Fields, NamedField, NamedValues, StructDef, Structable, Valuable,
 pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
     "tracing_fields:fc848aeb-3723-438e-b3c3-35162b737a98";
 
+/// When written in logs this structure has custom behaviour if used in pair with [`crate::observability::EventFormatter`] and unstable [`tracing feature`](https://github.com/tokio-rs/tracing/discussions/1906).
+/// Once feature is stabilised this might change.
+///
 /// Example:
-/// This is how [`TracingFields`] is serialized if used with tracing_unstable feature and [`crate::observability::EventFormatter`]
 ///```rust
-/// use fregate::valuable::Valuable;
-/// use fregate::observability::TracingFields;
 /// use fregate::observability::init_tracing;
+/// use fregate::observability::TracingFields;
+/// use fregate::valuable::Valuable;
 /// use fregate::{tokio, tracing::info};
 /// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 ///
@@ -20,25 +22,24 @@ pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
 ///
 /// #[tokio::main]
 /// async fn main() {
-///    let  _guard = init_tracing("info", "info", "0.0.0", "fregate", "marker", None, None, None, None).unwrap();
-///    let mut marker = TracingFields::with_capacity(10);
+///     let _guard = init_tracing(
+///         "info", "info", "0.0.0", "fregate", "marker", None, None, None, None,
+///     ).unwrap();
 ///
-///    let local_key = "LOCAL_KEY".to_owned();
-///    let local_value = "LOCAL_VALUE".to_owned();
+///     let mut marker = TracingFields::with_capacity(10);
+///     let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
 ///
-///    let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
+///     marker.insert_ref(STATIC_KEY, &STATIC_VALUE);
+///     marker.insert_as_string("address", &socket);
+///     marker.insert_as_debug("address_debug", &socket);
 ///
-///    marker.insert(STATIC_KEY, &local_value);
-///    marker.insert(&local_key, &STATIC_VALUE);
-///    marker.insert_as_string("address", &socket);
-///    marker.insert_as_debug("address_debug", &socket);
-///
-///    info!(marker = marker.as_value(), "message");
+///     info!(marker = marker.as_value(), "message");
 /// }
+///
 /// ```
 /// Output:
 ///```json
-/// {"component":"marker","service":"fregate","version":"0.0.0","msg":"message","LOCAL_KEY":"STATIC_VALUE","STATIC_KEY":"LOCAL_VALUE","address":"127.0.0.1:8080","address_debug":"127.0.0.1:8080","target":"playground","LogLevel":"INFO","time":1667979625296991000,"timestamp":"2022-11-09T07:40:25.297Z"}
+/// {"time":1676630313178421000,"timestamp":"2023-02-17T10:38:33.178Z","LogLevel":"INFO","target":"playground","component":"marker","service":"fregate","version":"0.0.0","msg":"message","STATIC_KEY":"STATIC_VALUE","address":"127.0.0.1:8080","address_debug":"127.0.0.1:8080"}
 ///```
 #[derive(Default)]
 pub struct TracingFields<'a> {
@@ -68,43 +69,37 @@ impl<'a> Debug for TracingFields<'a> {
 }
 
 impl<'a> TracingFields<'a> {
-    /// Creates empty [`TracingFields`].
+    /// Create empty [`TracingFields`].
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Creates empty [`TracingFields`] with specified capacity
+    /// Create empty [`TracingFields`] with specified capacity
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             fields: HashMap::with_capacity(capacity),
         }
     }
 
-    /// Inserts a key-value pair of references into the map. If key is present value is overwritten.
-    pub fn insert<V: Valuable + Send + Sync>(&mut self, key: &'static str, value: &'a V) {
+    /// Wraps value into `[Box>]` prior insertion. Overwrites value if key is present.
+    pub fn insert<V: Valuable + Send + Sync + 'static>(&mut self, key: &'static str, value: V) {
+        self.fields
+            .insert(key, Field::ValuableOwned(Box::new(value)));
+    }
+
+    /// Inserts a key-value pair of references into the map. Overwrites value if key is present.
+    pub fn insert_ref<V: Valuable + Send + Sync>(&mut self, key: &'static str, value: &'a V) {
         self.fields.insert(key, Field::ValuableRef(value));
     }
 
-    /// Converts value to [`String`] using [`Display`] implementation before insertion. If key is present value is overwritten.
-    /// This makes an allocation.
+    /// Converts value to [`String`] using [`Display`] implementation before insertion. Overwrites value if key is present.
     pub fn insert_as_string<V: Display + Sync>(&mut self, key: &'static str, value: &V) {
         self.fields.insert(key, Field::String(value.to_string()));
     }
 
-    /// Converts value to [`String`] using [`Debug`] implementation before insertion. If key is present value is overwritten.
-    /// This makes an allocation.
+    /// Converts value to [`String`] using [`Debug`] implementation before insertion. Overwrites value if key is present.
     pub fn insert_as_debug<V: Debug + Sync>(&mut self, key: &'static str, value: &V) {
         self.fields.insert(key, Field::String(format!("{value:?}")));
-    }
-
-    /// Inserts a key-value pair where value is owned by [`TracingFields`] into the map. If key is present value is overwritten.
-    pub fn insert_as_owned<V: Valuable + Send + Sync + 'static>(
-        &mut self,
-        key: &'static str,
-        value: V,
-    ) {
-        self.fields
-            .insert(key, Field::ValuableOwned(Box::new(value)));
     }
 
     /// Removes each key from the map.
@@ -159,20 +154,37 @@ mod test {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
     #[test]
-    fn test_merge() {
-        let mut val = TracingFields::new();
-        let mut val_2 = TracingFields::new();
+    fn test_merge_with_static() {
+        let mut destination = TracingFields::new();
+        let mut source = TracingFields::new();
 
         let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080).to_string();
 
-        val.insert("str", &"str");
-        val_2.insert_as_string("display_address", &socket);
-        val.merge(val_2);
+        destination.insert_ref("static", &"static");
+        source.insert_ref("socket", &socket);
 
-        drop(socket);
+        destination.merge(source);
 
-        assert_eq!(val.fields.len(), 2);
-        assert!(val.fields.contains_key("str"));
-        assert!(val.fields.contains_key("display_address"));
+        assert_eq!(destination.fields.len(), 2);
+        assert!(destination.fields.contains_key("static"));
+        assert!(destination.fields.contains_key("socket"));
+    }
+
+    #[test]
+    fn test_merge_with_local() {
+        let mut destination = TracingFields::new();
+        let mut source = TracingFields::new();
+
+        let first = "first".to_owned();
+        let second = "second".to_owned();
+
+        destination.insert_ref("first", &first);
+        source.insert_ref("second", &second);
+
+        destination.merge(source);
+
+        assert_eq!(destination.fields.len(), 2);
+        assert!(destination.fields.contains_key("first"));
+        assert!(destination.fields.contains_key("second"));
     }
 }
