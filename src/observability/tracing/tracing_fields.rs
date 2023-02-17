@@ -81,7 +81,7 @@ impl<'a> TracingFields<'a> {
         }
     }
 
-    /// Wraps value into `[Box>]` prior insertion. Overwrites value if key is present.
+    /// Wraps value into [`Box`] and insert key-value pair into the map. Overwrites value if key is present.
     pub fn insert<V: Valuable + Send + Sync + 'static>(&mut self, key: &'static str, value: V) {
         self.fields
             .insert(key, Field::ValuableOwned(Box::new(value)));
@@ -109,7 +109,7 @@ impl<'a> TracingFields<'a> {
         }
     }
 
-    /// Removes a key from the map.
+    /// Removes key from the map.
     pub fn remove_by_key(&mut self, key: &str) {
         self.fields.remove(key);
     }
