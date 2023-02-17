@@ -1,11 +1,7 @@
-//! Since Rust will panic on this:
-//! ```no_run
-//! let a = "안녕하세요";
-//! let b = &[0..1];
-//! ```
-//! It might be useful to find char boundaries and avoid looping over each element of string.
+//! Since Rust will panic on attempt to get slice on invalid char boundaries
+//! It might be useful to find valid char boundaries and avoid looping over each element of string.
 
-/// This is a copy of floor_char_boundary fn which is [`unstable`](https://github.com/rust-lang/rust/issues/93743) now.
+/// This is a copy of floor_char_boundary fn which is [`unstable`](https://github.com/rust-lang/rust/issues/93743).
 /// Once it is stabilised this will be removed from fregate.
 pub fn floor_char_boundary(val: &str, index: usize) -> usize {
     if index >= val.len() {
