@@ -52,6 +52,7 @@ pub(in crate::application) async fn run_service(
     Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
 }
 
+#[allow(clippy::useless_conversion)]
 async fn bind_tls_stream(
     socket: &SocketAddr,
     acceptor: TlsAcceptor,
@@ -71,7 +72,8 @@ async fn bind_tls_stream(
                     tasks.push(tokio::task::spawn(async move {
                         let ret = timeout(tls_handshake_timeout, acceptor.accept(tcp_stream))
                             .await
-                            .map_err(|_| Error::TlsHandshakeTimeout)??;
+                            .map_err(|_| Error::TlsHandshakeTimeout)??
+                            .into();
                         Ok::<_, Error>(ret)
                     }));
                 },
