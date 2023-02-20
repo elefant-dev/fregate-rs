@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Restructure crate. Now everything connected to tracing/metrics is in [`observability`](https://github.com/elefant-dev/fregate-rs/tree/main/src/observability) mod.([#159](https://github.com/elefant-dev/fregate-rs/pull/159))
 - `TracingFields::insert() --> TracingFields::insert_ref()`. ([#161](https://github.com/elefant-dev/fregate-rs/pull/161))
 - `TracingFields::insert()` now takes value. ([#161](https://github.com/elefant-dev/fregate-rs/pull/161))
+- `TracingFields` now takes only `&'static str` as a key. ([#161](https://github.com/elefant-dev/fregate-rs/pull/161))
 - `LoggerConfig --> ObservabilityConfig`. ([#159](https://github.com/elefant-dev/fregate-rs/pull/159))
 - `floor_char_boundary` public now. ([#159](https://github.com/elefant-dev/fregate-rs/pull/159))
 
