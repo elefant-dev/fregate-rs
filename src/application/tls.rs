@@ -71,8 +71,7 @@ async fn bind_tls_stream(
                     tasks.push(tokio::task::spawn(async move {
                         let ret = timeout(tls_handshake_timeout, acceptor.accept(tcp_stream))
                             .await
-                            .map_err(|_| Error::TlsHandshakeTimeout)??
-                            .into();
+                            .map_err(|_| Error::TlsHandshakeTimeout)??;
                         Ok::<_, Error>(ret)
                     }));
                 },
