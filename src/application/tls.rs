@@ -52,6 +52,7 @@ pub(in crate::application) async fn run_service(
     Ok(server.with_graceful_shutdown(shutdown_signal()).await?)
 }
 
+#[allow(clippy::useless_conversion)]
 async fn bind_tls_stream(
     socket: &SocketAddr,
     acceptor: TlsAcceptor,
