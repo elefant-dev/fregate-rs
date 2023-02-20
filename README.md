@@ -1,6 +1,6 @@
 # fregate-rs
 
-Set of instruments to simplify http server set-up.\
+Set of instruments to simplify http server set-up.
 
 ## Work in progress 
 This project is in progress and might change a lot from version to version.

@@ -4,6 +4,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.9.0] - 2023-02-20
+### Added
+- `TracingFields::merge()`. ([#161](https://github.com/elefant-dev/fregate-rs/pull/161))
+
+### Removed
+- Proxy handler ([#159](https://github.com/elefant-dev/fregate-rs/pull/159))
+- `RouterOptionalExt` trait ([#159](https://github.com/elefant-dev/fregate-rs/pull/159))
+
+### Changed
+- Restructure crate. Now everything connected to tracing/metrics is in [`observability`](https://github.com/elefant-dev/fregate-rs/tree/main/src/observability) mod.([#159](https://github.com/elefant-dev/fregate-rs/pull/159))
+- `TracingFields::insert() --> TracingFields::insert_ref()`. ([#161](https://github.com/elefant-dev/fregate-rs/pull/161))
+- `TracingFields::insert()` now takes value. ([#161](https://github.com/elefant-dev/fregate-rs/pull/161))
+- `LoggerConfig --> ObservabilityConfig`. ([#159](https://github.com/elefant-dev/fregate-rs/pull/159))
+- `floor_char_boundary` public now. ([#159](https://github.com/elefant-dev/fregate-rs/pull/159))
+
 ## [0.8.1] - 2023-02-08
 ### Changed
 - make AppConfig worker_guard field to be public([#157](https://github.com/elefant-dev/fregate-rs/pull/157))

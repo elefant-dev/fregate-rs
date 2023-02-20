@@ -6,7 +6,7 @@ use valuable::{Fields, NamedField, NamedValues, StructDef, Structable, Valuable,
 pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
     "tracing_fields:fc848aeb-3723-438e-b3c3-35162b737a98";
 
-/// When written in logs this structure has custom behaviour if used in pair with [`crate::observability::EventFormatter`] and unstable [`tracing feature`](https://github.com/tokio-rs/tracing/discussions/1906).
+/// If used in pair with [`crate::observability::EventFormatter`] and unstable [`tracing feature`](https://github.com/tokio-rs/tracing/discussions/1906) this has custom logging behaviour. See in example below:\
 /// Once feature is stabilised this might change.
 ///
 /// Example:
