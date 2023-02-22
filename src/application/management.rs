@@ -1,47 +1,46 @@
 use crate::application::health::Health;
 use crate::observability::render_metrics;
-use crate::sugar::yaml_response::yaml;
+use crate::ManagementConfig;
 use axum::{routing::get, Extension, Router};
 use std::sync::Arc;
 
-const OPENAPI_PATH: &str = "/openapi";
-const HEALTH_PATH: &str = "/health";
-const LIVE_PATH: &str = "/live";
-const READY_PATH: &str = "/ready";
-const METRICS_PATH: &str = "/metrics";
-
-// TODO consider: https://github.com/pyrossh/rust-embed/blob/master/examples/axum.rs#L64
-const OPENAPI: &str = include_str!("../resources/openapi.yaml");
-
 pub(crate) fn build_management_router<H: Health>(
+    management_cfg: &ManagementConfig,
     health_indicator: H,
     callback: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
 ) -> Router {
     Router::new()
-        .route(OPENAPI_PATH, get(|| yaml(OPENAPI)))
-        .merge(build_health_router(health_indicator))
-        .merge(build_metrics_router(callback))
+        .merge(build_health_router(management_cfg, health_indicator))
+        .merge(build_metrics_router(management_cfg, callback))
 }
 
-fn build_health_router<H: Health>(health_indicator: H) -> Router {
+fn build_health_router<H: Health>(
+    management_cfg: &ManagementConfig,
+    health_indicator: H,
+) -> Router {
+    // TODO: separate health and alive handlers
     let alive_handler = |health: Extension<H>| async move { health.alive().await };
     let ready_handler = |health: Extension<H>| async move { health.ready().await };
 
     Router::new()
-        .route(HEALTH_PATH, get(alive_handler))
-        .route(LIVE_PATH, get(alive_handler))
-        .route(READY_PATH, get(ready_handler))
+        .route(management_cfg.endpoints.health.as_ref(), get(alive_handler))
+        .route(management_cfg.endpoints.live.as_ref(), get(alive_handler))
+        .route(management_cfg.endpoints.ready.as_ref(), get(ready_handler))
         .layer(Extension(health_indicator))
 }
 
-fn build_metrics_router(callback: Option<Arc<dyn Fn() + Send + Sync + 'static>>) -> Router {
+fn build_metrics_router(
+    management_cfg: &ManagementConfig,
+    callback: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
+) -> Router {
     Router::new().route(
-        METRICS_PATH,
+        management_cfg.endpoints.metrics.as_ref(),
         get(move || std::future::ready(render_metrics(callback.as_deref()))),
     )
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod management_test {
     use super::*;
     use crate::application::health::HealthResponse;
@@ -64,7 +63,8 @@ mod management_test {
 
     #[tokio::test]
     async fn health_test() {
-        let router = build_management_router(CustomHealth, None);
+        let mngmt_cfg = ManagementConfig::default();
+        let router = build_management_router(&mngmt_cfg, CustomHealth, None);
         let request = Request::builder()
             .uri("http://0.0.0.0/health")
             .method("GET")
@@ -81,7 +81,8 @@ mod management_test {
 
     #[tokio::test]
     async fn live_test() {
-        let router = build_management_router(CustomHealth, None);
+        let mngmt_cfg = ManagementConfig::default();
+        let router = build_management_router(&mngmt_cfg, CustomHealth, None);
         let request = Request::builder()
             .uri("http://0.0.0.0/live")
             .method("GET")
@@ -98,7 +99,8 @@ mod management_test {
 
     #[tokio::test]
     async fn ready_test() {
-        let router = build_management_router(CustomHealth, None);
+        let mngmt_cfg = ManagementConfig::default();
+        let router = build_management_router(&mngmt_cfg, CustomHealth, None);
         let request = Request::builder()
             .uri("http://0.0.0.0/ready")
             .method("GET")

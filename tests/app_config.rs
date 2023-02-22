@@ -18,6 +18,7 @@ mod app_config_tests {
         assert_eq!(config.private, Empty {});
 
         let logger = config.observability_cfg;
+        let mngmnt = config.management_cfg;
 
         assert_eq!(logger.traces_endpoint, None);
         assert_eq!(logger.buffered_lines_limit, None);
@@ -27,6 +28,10 @@ mod app_config_tests {
         assert_eq!(logger.trace_level, "info".to_owned());
         assert_eq!(logger.log_level, "info".to_owned());
         assert_eq!(logger.msg_length, Some(8192));
+        assert_eq!(mngmnt.endpoints.health.as_ref(), "/health");
+        assert_eq!(mngmnt.endpoints.ready.as_ref(), "/ready");
+        assert_eq!(mngmnt.endpoints.live.as_ref(), "/live");
+        assert_eq!(mngmnt.endpoints.metrics.as_ref(), "/metrics");
     }
 
     #[test]

@@ -1,6 +1,6 @@
 use crate::configuration::observability::ObservabilityConfig;
 use crate::configuration::source::ConfigSource;
-use crate::{error::Result, extensions::DeserializeExt};
+use crate::{error::Result, extensions::DeserializeExt, ManagementConfig};
 use config::{builder::DefaultState, ConfigBuilder, Environment, File, FileFormat};
 use serde::{
     de::{DeserializeOwned, Error},
@@ -16,6 +16,7 @@ use crate::configuration::tls::TlsConfigurationVariables;
 
 const HOST_PTR: &str = "/host";
 const PORT_PTR: &str = "/port";
+const MANAGEMENT_PTR: &str = "/management";
 
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
 const DEFAULT_SEPARATOR: &str = "_";
@@ -33,6 +34,8 @@ pub struct AppConfig<ConfigExt = Empty> {
     pub port: u16,
     /// configuration for logs and traces
     pub observability_cfg: ObservabilityConfig,
+    /// configures management endpoints
+    pub management_cfg: ManagementConfig,
     /// TLS configuration parameters
     #[cfg(feature = "tls")]
     pub tls: TlsConfigurationVariables,
@@ -52,6 +55,7 @@ where
             host: self.host,
             port: self.port,
             observability_cfg: self.observability_cfg.clone(),
+            management_cfg: self.management_cfg.clone(),
             #[cfg(feature = "tls")]
             tls: self.tls.clone(),
             private: self.private.clone(),
@@ -72,7 +76,10 @@ where
 
         let host = config.pointer_and_deserialize(HOST_PTR)?;
         let port = config.pointer_and_deserialize(PORT_PTR)?;
-        let logger = ObservabilityConfig::deserialize(&config).map_err(Error::custom)?;
+        let management_cfg = config
+            .pointer_and_deserialize::<_, D::Error>(MANAGEMENT_PTR)
+            .unwrap_or_default();
+        let observability_cfg = ObservabilityConfig::deserialize(&config).map_err(Error::custom)?;
         #[cfg(feature = "tls")]
         let tls = TlsConfigurationVariables::deserialize(&config).map_err(Error::custom)?;
         let private = ConfigExt::deserialize(config).map_err(Error::custom)?;
@@ -80,7 +87,8 @@ where
         Ok(AppConfig::<ConfigExt> {
             host,
             port,
-            observability_cfg: logger,
+            observability_cfg,
+            management_cfg,
             #[cfg(feature = "tls")]
             tls,
             private,
