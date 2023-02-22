@@ -4,7 +4,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-## [0.9.1] - 2023-02-20
+## [0.10.0] - 2023-02-20
 ### Added
 - [`ManagementConfig`](https://github.com/elefant-dev/fregate-rs/blob/main/src/configuration/management.rs). ([#165](https://github.com/elefant-dev/fregate-rs/pull/165))
 
