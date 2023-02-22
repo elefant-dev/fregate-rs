@@ -204,8 +204,12 @@ impl<'a, H, T> Application<'a, H, T> {
             })
             .unwrap_or_default();
 
-        let router =
-            build_management_router(self.health_indicator, self.metrics_callback).merge(app_router);
+        let router = build_management_router(
+            &self.config.management_cfg,
+            self.health_indicator,
+            self.metrics_callback,
+        )
+        .merge(app_router);
 
         let application_socket = SocketAddr::new(self.config.host, self.config.port);
         (router, application_socket)

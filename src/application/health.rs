@@ -5,10 +5,12 @@ use axum::response::{IntoResponse, Response};
 /// Trait to implement custom health check which will be used to respond to health check requests
 #[axum::async_trait]
 pub trait Health: Send + Sync + 'static + Clone {
-    /// return [`HealthResponse`] on /health/alive endpoint
+    /// returns [`HealthResponse`] in response to configured endpoint. By default /health.
+    /// For more information see [`crate::configuration::ManagementConfig`]
     async fn alive(&self) -> HealthResponse;
 
-    /// return [`HealthResponse`] on /health/ready endpoint
+    /// returns [`HealthResponse`] in response to configured endpoint. By default /ready.
+    /// For more information see [`crate::configuration::ManagementConfig`]
     async fn ready(&self) -> HealthResponse;
 }
 
