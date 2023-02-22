@@ -1,5 +1,5 @@
 mod app_config_from_env {
-    use fregate::{AppConfig, ConfigSource};
+    use fregate::{bootstrap, AppConfig, ConfigSource};
     use serde::Deserialize;
     use std::net::{IpAddr, Ipv6Addr};
 
@@ -66,5 +66,23 @@ mod app_config_from_env {
             .expect("Failed to build AppConfig");
 
         assert_eq!(config.observability_cfg.msg_length, None);
+    }
+
+    #[tokio::test]
+    async fn test_management_config_from_env() {
+        std::env::set_var("MNGM_MANAGEMENT_ENDPOINTS_METRICS", "/probe/metrics");
+        std::env::set_var("MNGM_MANAGEMENT_ENDPOINTS_HEALTH", "///valid");
+        std::env::set_var("MNGM_MANAGEMENT_ENDPOINTS_LIVE", "invalid");
+        std::env::set_var("MNGM_MANAGEMENT_ENDPOINTS_READY", "");
+
+        let config: AppConfig =
+            bootstrap([ConfigSource::EnvPrefix("MNGM")]).expect("Failed to build AppConfig");
+
+        let management_cfg = config.management_cfg;
+
+        assert_eq!(management_cfg.endpoints.metrics.as_ref(), "/probe/metrics");
+        assert_eq!(management_cfg.endpoints.health.as_ref(), "///valid");
+        assert_eq!(management_cfg.endpoints.live.as_ref(), "/live");
+        assert_eq!(management_cfg.endpoints.ready.as_ref(), "/ready");
     }
 }
