@@ -119,10 +119,10 @@ impl Endpoint {
     /// Creates new [`Endpoint`].
     /// Returns error if str does not start with '/' symbol.
     pub fn new(path: &str) -> Result<Endpoint, &'static str> {
-        if !path.starts_with('/') {
-            Err("Endpoint must start with a `/`")
-        } else {
+        if path.starts_with('/') {
             Ok(Endpoint(path.to_owned()))
+        } else {
+            Err("Endpoint must start with a `/`")
         }
     }
 }
