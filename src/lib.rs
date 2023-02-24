@@ -52,6 +52,7 @@
 //! Examples can be found [`here`](https://github.com/elefant-dev/fregate-rs/tree/main/examples).
 
 mod application;
+mod static_assert;
 
 pub mod bootstrap;
 pub mod configuration;
@@ -67,6 +68,7 @@ pub use application::*;
 pub use bootstrap::*;
 #[doc(inline)]
 pub use configuration::*;
+pub use static_assert::*;
 
 pub use axum;
 pub use config;

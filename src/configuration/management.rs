@@ -1,4 +1,5 @@
 use crate::extensions::DeserializeExt;
+use crate::static_assert;
 use serde::de::{Error, Unexpected};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
@@ -75,20 +76,25 @@ impl<'de> Deserialize<'de> for Endpoints {
     where
         D: Deserializer<'de>,
     {
+        static_assert!(HEALTH_ENDPOINT.as_bytes()[0] == b'/');
+        static_assert!(LIVE_ENDPOINT.as_bytes()[0] == b'/');
+        static_assert!(READY_ENDPOINT.as_bytes()[0] == b'/');
+        static_assert!(METRICS_ENDPOINT.as_bytes()[0] == b'/');
+
         let value = Value::deserialize(deserializer)?;
 
         let health = value
             .pointer_and_deserialize::<_, D::Error>(HEALTH_PTR)
-            .unwrap_or(Endpoint::new(HEALTH_ENDPOINT).expect("default should never panic"));
+            .unwrap_or_else(|_| Endpoint(HEALTH_ENDPOINT.to_owned()));
         let live = value
             .pointer_and_deserialize::<_, D::Error>(LIVE_PTR)
-            .unwrap_or(Endpoint::new(LIVE_ENDPOINT).expect("default should never panic"));
+            .unwrap_or_else(|_| Endpoint(LIVE_ENDPOINT.to_owned()));
         let ready = value
             .pointer_and_deserialize::<_, D::Error>(READY_PTR)
-            .unwrap_or(Endpoint::new(READY_ENDPOINT).expect("default should never panic"));
+            .unwrap_or_else(|_| Endpoint(READY_ENDPOINT.to_owned()));
         let metrics = value
             .pointer_and_deserialize::<_, D::Error>(METRICS_PTR)
-            .unwrap_or(Endpoint::new(METRICS_ENDPOINT).expect("default should never panic"));
+            .unwrap_or_else(|_| Endpoint(METRICS_ENDPOINT.to_owned()));
 
         Ok(Endpoints {
             health,
@@ -102,11 +108,16 @@ impl<'de> Deserialize<'de> for Endpoints {
 #[allow(clippy::unwrap_used)]
 impl Default for Endpoints {
     fn default() -> Self {
+        static_assert!(HEALTH_ENDPOINT.as_bytes()[0] == b'/');
+        static_assert!(LIVE_ENDPOINT.as_bytes()[0] == b'/');
+        static_assert!(READY_ENDPOINT.as_bytes()[0] == b'/');
+        static_assert!(METRICS_ENDPOINT.as_bytes()[0] == b'/');
+
         Self {
-            health: Endpoint::new(HEALTH_ENDPOINT).unwrap(),
-            live: Endpoint::new(LIVE_ENDPOINT).unwrap(),
-            ready: Endpoint::new(READY_ENDPOINT).unwrap(),
-            metrics: Endpoint::new(METRICS_ENDPOINT).unwrap(),
+            health: Endpoint(HEALTH_ENDPOINT.to_owned()),
+            live: Endpoint(LIVE_ENDPOINT.to_owned()),
+            ready: Endpoint(READY_ENDPOINT.to_owned()),
+            metrics: Endpoint(METRICS_ENDPOINT.to_owned()),
         }
     }
 }
@@ -118,7 +129,7 @@ pub struct Endpoint(String);
 impl Endpoint {
     /// Creates new [`Endpoint`].
     /// Returns error if str does not start with '/' symbol.
-    pub fn new(path: &str) -> Result<Endpoint, &'static str> {
+    pub fn new(path: &str) -> Result<Self, &'static str> {
         if path.starts_with('/') {
             Ok(Endpoint(path.to_owned()))
         } else {
