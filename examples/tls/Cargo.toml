@@ -30,4 +30,4 @@ hyper-tls = { version = "0.5.0", optional = true }
 hyper-rustls = { version = "0.23.0", optional = true }
 rustls = { version = "0.20.7", optional = true, features = ["tls12", "dangerous_configuration"] }
 
-tonic-reflection = "0.5.0"
+tonic-reflection = "0.6.0"

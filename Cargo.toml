@@ -1,6 +1,6 @@
 [package]
 name = "fregate"
-version = "0.10.0"
+version = "0.10.1"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/elefant-dev/fregate-rs"
@@ -66,7 +66,7 @@ time = "0.3.14"
 tokio = { version = "1", features = ["signal"] }
 tonic = "0.8.0"
 tower = { version = "0.4" }
-tower-http = "0.3"
+tower-http = { version = "0.4.*", features = ["util"] }
 tracing = { version = "0.1.37", features = ["valuable"] }
 tracing-appender = { version = "0.2.2" }
 tracing-subscriber = { version = "0.3.11", features = ["env-filter", "fmt", "time", "registry"] }
