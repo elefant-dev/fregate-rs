@@ -4,7 +4,7 @@ use opentelemetry::trace::{SpanId, TraceContextExt};
 use serde::{ser::SerializeMap, Serialize, Serializer};
 use serde_json::Value;
 use std::borrow::Cow;
-use std::{collections::BTreeMap, fmt, mem, num::NonZeroU8};
+use std::{collections::BTreeMap, fmt, num::NonZeroU8};
 use time::format_description::well_known::iso8601::{Config, Iso8601, TimePrecision};
 use tracing::{field::Field, Event, Subscriber};
 use tracing_opentelemetry::OtelData;
@@ -257,6 +257,7 @@ impl<'a> JsonVisitor<'a> {
         }
     }
 
+    #[cfg(tracing_unstable)]
     fn insert_owned<T: Serialize>(&mut self, key: String, value: T) {
         let value = serde_json::json!(value);
         self.storage.insert(Cow::Owned(key), value);
@@ -280,7 +281,7 @@ impl<'a> tracing::field::Visit for JsonVisitor<'a> {
             if definition.name() == TRACING_FIELDS_STRUCTURE_NAME {
                 match serde_value.as_object_mut() {
                     Some(value) => {
-                        let value = mem::take(value);
+                        let value = std::mem::take(value);
                         value.into_iter().for_each(|(k, v)| {
                             self.insert_owned(k, v);
                         });
