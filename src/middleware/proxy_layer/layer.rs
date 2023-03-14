@@ -113,6 +113,7 @@ impl<
     >
 {
     /// Creates new [`ProxyLayer`].
+    /// Returns Error if destination does not have [`hyper::http::uri::Scheme`] or [`hyper::http::uri::Authority`]
     pub fn new(
         client: TClient,
         destination: impl Into<String>,
@@ -165,7 +166,8 @@ impl<
 
     /// Creates new [`ProxyLayer`] with set [`TExtension`].
     /// Mostly this is needed to remove a need for extracting [`TExtension`] in every callback
-    /// so it is extracted once and passed as reference to each callback.
+    /// so it is extracted once and passed as reference to each callback.\
+    /// Returns Error if destination does not have [`hyper::http::uri::Scheme`] or [`hyper::http::uri::Authority`]
     pub fn new_with_ext<TExtension>(
         client: TClient,
         destination: impl Into<String>,

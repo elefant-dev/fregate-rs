@@ -1,4 +1,4 @@
-//!Errors [`crate::middleware::proxy_layer::ProxyLayer`] may return un runtime.
+//!Errors [`crate::middleware::proxy_layer::ProxyLayer`] may return in runtime.
 
 use hyper::http;
 use std::error::Error;
