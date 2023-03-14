@@ -4,6 +4,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.10.3] - 2023-03-14
+### Added
+- Reversed proxy middleware ([#170](https://github.com/elefant-dev/fregate-rs/pull/170))
+
+## [0.10.2] - 2023-03-06
+### Changed
+- Add feature `map-response-body` to tower-http crate. ([#169](https://github.com/elefant-dev/fregate-rs/pull/169))
+
+## [0.10.1] - 2023-02-28
+### Changed
+- Add feature `util` to tower-http crate.([#168](https://github.com/elefant-dev/fregate-rs/pull/168))
+
 ## [0.10.0] - 2023-02-20
 ### Added
 - [`ManagementConfig`](https://github.com/elefant-dev/fregate-rs/blob/main/src/configuration/management.rs). ([#165](https://github.com/elefant-dev/fregate-rs/pull/165))
