@@ -70,7 +70,7 @@ pub struct Endpoints {
     pub metrics: Endpoint,
 }
 
-#[allow(clippy::expect_used)]
+#[allow(clippy::indexing_slicing)]
 impl<'de> Deserialize<'de> for Endpoints {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -105,7 +105,7 @@ impl<'de> Deserialize<'de> for Endpoints {
     }
 }
 
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::indexing_slicing)]
 impl Default for Endpoints {
     fn default() -> Self {
         static_assert!(HEALTH_ENDPOINT.as_bytes()[0] == b'/');
