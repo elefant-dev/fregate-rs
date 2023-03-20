@@ -1,7 +1,7 @@
 //!Errors [`crate::middleware::proxy_layer::ProxyLayer`] may return in runtime.
 
 use hyper::http;
-use std::error::Error;
+use tower_http::BoxError;
 
 #[derive(thiserror::Error, Debug)]
 ///Errors enum.
@@ -11,7 +11,7 @@ pub enum ProxyError {
     UriBuilder(http::Error),
     #[error("`{0}`")]
     /// Returned on any other error while sending [`hyper::Request`]
-    SendRequest(Box<dyn Error + Send + Sync>),
+    SendRequest(BoxError),
 }
 
 /// Result Alias
