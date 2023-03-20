@@ -1,21 +1,19 @@
-use crate::middleware::proxy_layer::error::ProxyError;
-use axum::body::{Bytes, HttpBody};
-use axum::response::{IntoResponse, Response as AxumResponse};
+use crate::middleware::ProxyError;
+use axum::response::IntoResponse;
+use bytes::Bytes;
 use core::any::type_name;
+use hyper::body::HttpBody;
 use hyper::http::uri::PathAndQuery;
-use hyper::Request;
-use hyper::Response;
-use hyper::Uri;
+use hyper::service::Service;
+use hyper::{Request, Response, Uri};
 use std::error::Error;
 use std::fmt::{Debug, Formatter};
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::str::FromStr;
-use tower::{Service, ServiceExt};
 
 pub(crate) struct Shared<
-    TClient,
     TBody,
     TRespBody,
     ShouldProxyCallback,
@@ -24,17 +22,15 @@ pub(crate) struct Shared<
     OnProxyResponseCallback,
     TExtension = (),
 > {
-    client: TClient,
-    destination: Uri,
-    should_proxy: ShouldProxyCallback,
-    on_proxy_error: OnProxyErrorCallback,
-    on_proxy_request: OnProxyRequestCallback,
-    on_proxy_response: OnProxyResponseCallback,
-    phantom: PhantomData<(TExtension, TBody, TRespBody)>,
+    pub(crate) destination: Uri,
+    pub(crate) should_proxy: ShouldProxyCallback,
+    pub(crate) on_proxy_error: OnProxyErrorCallback,
+    pub(crate) on_proxy_request: OnProxyRequestCallback,
+    pub(crate) on_proxy_response: OnProxyResponseCallback,
+    pub(crate) phantom: PhantomData<(TExtension, TBody, TRespBody)>,
 }
 
 impl<
-        TClient,
         TBody,
         TRespBody,
         ShouldProxyCallback,
@@ -44,7 +40,6 @@ impl<
         TExtension,
     > Debug
     for Shared<
-        TClient,
         TBody,
         TRespBody,
         ShouldProxyCallback,
@@ -56,7 +51,6 @@ impl<
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Shared")
-            .field("client", &format_args!("{}", type_name::<TClient>()))
             .field("destination", &self.destination)
             .field(
                 "on_proxy_error",
@@ -77,7 +71,6 @@ impl<
 
 #[allow(clippy::type_complexity)]
 impl<
-        TClient,
         TBody,
         TRespBody,
         ShouldProxyCallback,
@@ -86,7 +79,6 @@ impl<
         OnProxyResponseCallback,
     >
     Shared<
-        TClient,
         TBody,
         TRespBody,
         ShouldProxyCallback,
@@ -96,7 +88,6 @@ impl<
     >
 {
     pub(crate) fn new_with_ext<TExtension>(
-        client: TClient,
         destination: impl Into<String>,
         should_proxy: ShouldProxyCallback,
         on_proxy_error: OnProxyErrorCallback,
@@ -104,7 +95,6 @@ impl<
         on_proxy_response: OnProxyResponseCallback,
     ) -> Result<
         Shared<
-            TClient,
             TBody,
             TRespBody,
             ShouldProxyCallback,
@@ -114,27 +104,7 @@ impl<
             TExtension,
         >,
         String,
-    >
-    where
-        TClient: Service<Request<TBody>, Response = Response<TRespBody>>,
-        TClient: Clone + Send + Sync + 'static,
-        <TClient as Service<Request<TBody>>>::Future: Send + 'static,
-        <TClient as Service<Request<TBody>>>::Error: Into<Box<(dyn Error + Send + Sync + 'static)>>,
-        TExtension: Default + Clone + Send + Sync + 'static,
-        ShouldProxyCallback: for<'any> Fn(
-                &'any Request<TBody>,
-                &'any TExtension,
-            ) -> Pin<Box<dyn Future<Output = bool> + Send + 'any>>
-            + Send
-            + Sync
-            + 'static,
-        OnProxyErrorCallback: Fn(ProxyError, &TExtension) -> AxumResponse + Send + Sync + 'static,
-        OnProxyRequestCallback: Fn(&Request<TBody>, &TExtension) + Send + Sync + 'static,
-        OnProxyResponseCallback: Fn(&Response<TRespBody>, &TExtension) + Send + Sync + 'static,
-        TBody: Sync + Send + 'static,
-        TRespBody: HttpBody<Data = Bytes> + Sync + Send + 'static,
-        TRespBody::Error: Into<Box<(dyn Error + Send + Sync + 'static)>>,
-    {
+    > {
         let destination = Uri::from_str(&destination.into()).map_err(|err| err.to_string())?;
 
         let _ = destination
@@ -144,8 +114,7 @@ impl<
             .authority()
             .ok_or("destination Uri has no authority!".to_string())?;
 
-        let layer = Shared::<
-            TClient,
+        let shared = Shared::<
             TBody,
             TRespBody,
             ShouldProxyCallback,
@@ -154,7 +123,6 @@ impl<
             OnProxyResponseCallback,
             TExtension,
         > {
-            client,
             destination,
             should_proxy,
             on_proxy_error,
@@ -163,12 +131,11 @@ impl<
             phantom: PhantomData::default(),
         };
 
-        Ok(layer)
+        Ok(shared)
     }
 }
 
 impl<
-        TClient,
         TBody,
         TRespBody,
         ShouldProxyCallback,
@@ -178,7 +145,6 @@ impl<
         TExtension,
     >
     Shared<
-        TClient,
         TBody,
         TRespBody,
         ShouldProxyCallback,
@@ -188,10 +154,6 @@ impl<
         TExtension,
     >
 where
-    TClient: Service<Request<TBody>, Response = Response<TRespBody>>,
-    TClient: Clone + Send + Sync + 'static,
-    <TClient as Service<Request<TBody>>>::Future: Send + 'static,
-    <TClient as Service<Request<TBody>>>::Error: Into<Box<(dyn Error + Send + Sync + 'static)>>,
     TExtension: Default + Clone + Send + Sync + 'static,
     ShouldProxyCallback: for<'any> Fn(
             &'any Request<TBody>,
@@ -200,18 +162,32 @@ where
         + Send
         + Sync
         + 'static,
-    OnProxyErrorCallback: Fn(ProxyError, &TExtension) -> AxumResponse + Send + Sync + 'static,
+    OnProxyErrorCallback:
+        Fn(ProxyError, &TExtension) -> axum::response::Response + Send + Sync + 'static,
     OnProxyRequestCallback: Fn(&Request<TBody>, &TExtension) + Send + Sync + 'static,
     OnProxyResponseCallback: Fn(&Response<TRespBody>, &TExtension) + Send + Sync + 'static,
     TBody: Sync + Send + 'static,
     TRespBody: HttpBody<Data = Bytes> + Sync + Send + 'static,
     TRespBody::Error: Into<Box<(dyn Error + Send + Sync + 'static)>>,
 {
-    pub(crate) async fn proxy(
+    pub(crate) async fn proxy<TClient>(
         &self,
         mut req: Request<TBody>,
+        client: TClient,
         extension: TExtension,
-    ) -> AxumResponse {
+        poll_error: Option<Box<(dyn Error + Send + Sync + 'static)>>,
+    ) -> axum::response::Response
+    where
+        TClient: Service<Request<TBody>, Response = Response<TRespBody>>,
+        TClient: Clone + Send + Sync + 'static,
+        <TClient as Service<Request<TBody>>>::Future: Send + 'static,
+        <TClient as Service<Request<TBody>>>::Error:
+            Into<Box<(dyn Error + Send + Sync + 'static)>> + Send,
+    {
+        if let Some(err) = poll_error {
+            return (self.on_proxy_error)(ProxyError::SendRequest(err), &extension);
+        }
+
         let build_uri = |req: &Request<TBody>| {
             let p_and_q = req
                 .uri()
@@ -245,8 +221,7 @@ where
                 *req.uri_mut() = new_uri;
 
                 (self.on_proxy_request)(&req, &extension);
-                let client = self.client.clone();
-                let result = Self::send_reqeust(client, req).await;
+                let result = send_request(client, req).await;
 
                 match result {
                     Ok(response) => {
@@ -259,35 +234,33 @@ where
             Err(err) => (self.on_proxy_error)(err, &extension),
         }
     }
+}
 
-    pub(crate) async fn should_proxy(
-        &self,
-        request: &Request<TBody>,
-        extension: &TExtension,
-    ) -> bool {
-        (self.should_proxy)(request, extension).await
-    }
+pub(crate) fn get_extension<TBody, TExtension>(request: &Request<TBody>) -> TExtension
+where
+    TExtension: Default + Clone + Send + Sync + 'static,
+{
+    request
+        .extensions()
+        .get::<TExtension>()
+        .cloned()
+        .unwrap_or_default()
+}
 
-    pub(crate) fn get_extension(&self, request: &Request<TBody>) -> TExtension {
-        request
-            .extensions()
-            .get::<TExtension>()
-            .cloned()
-            .unwrap_or_default()
-    }
-
-    async fn send_reqeust(
-        mut service: TClient,
-        request: Request<TBody>,
-    ) -> Result<Response<TRespBody>, ProxyError> {
-        let ready_svc = service.ready().await;
-
-        match ready_svc {
-            Ok(client) => Ok(client
-                .call(request)
-                .await
-                .map_err(|err| ProxyError::SendRequest(err.into()))?),
-            Err(err) => Err(ProxyError::SendRequest(err.into())),
-        }
-    }
+#[allow(clippy::needless_question_mark)]
+async fn send_request<TClient, TBody, TRespBody>(
+    mut service: TClient,
+    request: Request<TBody>,
+) -> Result<Response<TRespBody>, ProxyError>
+where
+    TClient: Service<Request<TBody>, Response = Response<TRespBody>>,
+    TClient: Clone + Send + Sync + 'static,
+    <TClient as Service<Request<TBody>>>::Future: Send + 'static,
+    <TClient as Service<Request<TBody>>>::Error:
+        Into<Box<(dyn Error + Send + Sync + 'static)>> + Send,
+{
+    Ok(service
+        .call(request)
+        .await
+        .map_err(|err| ProxyError::SendRequest(err.into()))?)
 }

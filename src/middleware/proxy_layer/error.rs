@@ -11,7 +11,7 @@ pub enum ProxyError {
     UriBuilder(http::Error),
     #[error("`{0}`")]
     /// Returned on any other error while sending [`hyper::Request`]
-    SendRequest(Box<dyn Error + Send + Sync>),
+    SendRequest(Box<(dyn Error + Send + Sync + 'static)>),
 }
 
 /// Result Alias

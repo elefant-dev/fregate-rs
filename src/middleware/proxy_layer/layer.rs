@@ -7,6 +7,7 @@ use axum::body::{Bytes, HttpBody};
 use axum::response::Response as AxumResponse;
 use hyper::Request;
 use hyper::Response;
+use std::any::type_name;
 use std::error::Error;
 use std::fmt::{Debug, Formatter};
 use std::future::Future;
@@ -25,10 +26,10 @@ pub struct ProxyLayer<
     OnProxyRequestCallback,
     OnProxyResponseCallback,
     TExtension = (),
->(
-    Arc<
+> {
+    client: TClient,
+    shared: Arc<
         Shared<
-            TClient,
             TBody,
             TRespBody,
             ShouldProxyCallback,
@@ -38,8 +39,7 @@ pub struct ProxyLayer<
             TExtension,
         >,
     >,
-);
-
+}
 impl<
         TClient,
         TBody,
@@ -62,7 +62,10 @@ impl<
     >
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("ProxyLayer").field(self.0.as_ref()).finish()
+        f.debug_struct("ProxyLayer")
+            .field("client", &format_args!("{}", type_name::<TClient>()))
+            .field("shared", &self.shared)
+            .finish()
     }
 }
 
@@ -86,9 +89,14 @@ impl<
         OnProxyResponseCallback,
         TExtension,
     >
+where
+    TClient: Clone,
 {
     fn clone(&self) -> Self {
-        Self(Arc::clone(&self.0))
+        Self {
+            client: self.client.clone(),
+            shared: Arc::clone(&self.shared),
+        }
     }
 }
 
@@ -153,7 +161,6 @@ impl<
         TRespBody::Error: Into<Box<(dyn Error + Send + Sync + 'static)>>,
     {
         let shared = Shared::new_with_ext(
-            client,
             destination,
             should_proxy,
             on_proxy_error,
@@ -161,7 +168,10 @@ impl<
             on_proxy_response,
         )?;
 
-        Ok(Self(Arc::new(shared)))
+        Ok(Self {
+            shared: Arc::new(shared),
+            client,
+        })
     }
 
     /// Creates new [`ProxyLayer`] with set [`TExtension`].
@@ -209,7 +219,6 @@ impl<
         TRespBody::Error: Into<Box<(dyn Error + Send + Sync + 'static)>>,
     {
         let shared = Shared::new_with_ext(
-            client,
             destination,
             should_proxy,
             on_proxy_error,
@@ -217,7 +226,10 @@ impl<
             on_proxy_response,
         )?;
 
-        Ok(ProxyLayer(Arc::new(shared)))
+        Ok(ProxyLayer {
+            shared: Arc::new(shared),
+            client,
+        })
     }
 }
 
@@ -242,6 +254,8 @@ impl<
         OnProxyResponseCallback,
         TExtension,
     >
+where
+    TClient: Clone,
 {
     type Service = ProxyService<
         TClient,
@@ -257,8 +271,10 @@ impl<
 
     fn layer(&self, inner: S) -> Self::Service {
         ProxyService {
-            shared: Arc::clone(&self.0),
+            shared: Arc::clone(&self.shared),
+            client: self.client.clone(),
             inner,
+            poll_error: None,
         }
     }
 }
