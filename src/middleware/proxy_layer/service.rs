@@ -15,7 +15,6 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use tower::Service;
-use tower_http::BoxError;
 
 #[allow(clippy::type_complexity)]
 /// Middleware that runs [`ShouldProxyCallback`] and on `true` proxy [`Request`] to a new destination otherwise pass [`Request`] to next handler.
@@ -43,7 +42,7 @@ pub struct ProxyService<
     >,
     pub(crate) client: TClient,
     pub(crate) inner: TService,
-    pub(crate) poll_error: Option<BoxError>,
+    pub(crate) poll_error: Option<Box<(dyn Error + Send + Sync + 'static)>>,
 }
 
 impl<
@@ -142,7 +141,8 @@ where
     TClient: Service<Request<TBody>, Response = Response<TRespBody>>,
     TClient: Clone + Send + Sync + 'static,
     <TClient as Service<Request<TBody>>>::Future: Send + 'static,
-    <TClient as Service<Request<TBody>>>::Error: Into<BoxError> + Send,
+    <TClient as Service<Request<TBody>>>::Error:
+        Into<Box<(dyn Error + Send + Sync + 'static)>> + Send,
     TExtension: Default + Clone + Send + Sync + 'static,
     ShouldProxyCallback: for<'any> Fn(
             &'any Request<TBody>,

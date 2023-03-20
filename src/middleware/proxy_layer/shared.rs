@@ -6,12 +6,12 @@ use hyper::body::HttpBody;
 use hyper::http::uri::PathAndQuery;
 use hyper::service::Service;
 use hyper::{Request, Response, Uri};
+use std::error::Error;
 use std::fmt::{Debug, Formatter};
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::str::FromStr;
-use tower_http::BoxError;
 
 pub(crate) struct Shared<
     TBody,
@@ -168,20 +168,21 @@ where
     OnProxyResponseCallback: Fn(&Response<TRespBody>, &TExtension) + Send + Sync + 'static,
     TBody: Sync + Send + 'static,
     TRespBody: HttpBody<Data = Bytes> + Sync + Send + 'static,
-    TRespBody::Error: Into<BoxError>,
+    TRespBody::Error: Into<Box<(dyn Error + Send + Sync + 'static)>>,
 {
     pub(crate) async fn proxy<TClient>(
         &self,
         mut req: Request<TBody>,
         client: TClient,
         extension: TExtension,
-        poll_error: Option<BoxError>,
+        poll_error: Option<Box<(dyn Error + Send + Sync + 'static)>>,
     ) -> axum::response::Response
     where
         TClient: Service<Request<TBody>, Response = Response<TRespBody>>,
         TClient: Clone + Send + Sync + 'static,
         <TClient as Service<Request<TBody>>>::Future: Send + 'static,
-        <TClient as Service<Request<TBody>>>::Error: Into<BoxError> + Send,
+        <TClient as Service<Request<TBody>>>::Error:
+            Into<Box<(dyn Error + Send + Sync + 'static)>> + Send,
     {
         if let Some(err) = poll_error {
             return (self.on_proxy_error)(ProxyError::SendRequest(err), &extension);
@@ -255,7 +256,8 @@ where
     TClient: Service<Request<TBody>, Response = Response<TRespBody>>,
     TClient: Clone + Send + Sync + 'static,
     <TClient as Service<Request<TBody>>>::Future: Send + 'static,
-    <TClient as Service<Request<TBody>>>::Error: Into<BoxError> + Send,
+    <TClient as Service<Request<TBody>>>::Error:
+        Into<Box<(dyn Error + Send + Sync + 'static)>> + Send,
 {
     Ok(service
         .call(request)
