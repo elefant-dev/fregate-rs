@@ -46,6 +46,11 @@ use_rustls_tls12 = [
 ]
 
 [dependencies]
+# TODO: FIXME:
+# https://github.com/rust-lang/regex/issues/982
+# https://github.com/tokio-rs/tracing/issues/2565
+regex = { version = "1.6.0", default-features = false, features = ["unicode-case", "unicode-perl"] }
+
 ahash = { version = "0.8.2", optional = true }
 axum = { version = "0.6.1", features = ["headers", "http1", "http2", "json", "matched-path", "original-uri", "ws"] }
 bytes = "1"
