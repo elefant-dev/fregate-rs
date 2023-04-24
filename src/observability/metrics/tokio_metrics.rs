@@ -177,7 +177,10 @@ pub(crate) fn register_metrics() {
             "min_local_queue_depth",
             "The minimum number of tasks currently scheduled any worker's local queue.",
         ),
-        ("total_steal_operations", ""),
+        (
+            "total_steal_operations",
+            "The number of times worker threads stole tasks from another worker thread.",
+        ),
         (
             "injection_queue_depth",
             "The number of tasks currently scheduled in the runtime's injection queue.",
