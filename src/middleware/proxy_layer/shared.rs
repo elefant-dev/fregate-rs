@@ -1,8 +1,7 @@
 use crate::middleware::ProxyError;
 use axum::response::IntoResponse;
-use bytes::Bytes;
 use core::any::type_name;
-use hyper::body::HttpBody;
+use hyper::body::{Bytes, HttpBody};
 use hyper::http::uri::PathAndQuery;
 use hyper::service::Service;
 use hyper::{Request, Response, Uri};

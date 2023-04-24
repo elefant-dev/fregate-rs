@@ -46,62 +46,60 @@ use_rustls_tls12 = [
 ]
 
 [dependencies]
-# TODO: FIXME:
-# https://github.com/rust-lang/regex/issues/982
-# https://github.com/tokio-rs/tracing/issues/2565
-regex = { version = "1.6.0", default-features = false, features = ["unicode-case", "unicode-perl"] }
-
-ahash = { version = "0.8.2", optional = true }
-axum = { version = "0.6.1", features = ["headers", "http1", "http2", "json", "matched-path", "original-uri", "ws"] }
-bytes = "1"
-config = "0.13.1"
-reqwest = { version = "0.11", default-features = false, optional = true }
-http-body = "0.4.4"
-hyper = { version = "0.14", features = ["full"] }
-thiserror = "1.0.31"
-once_cell = "1.13.0"
-metrics = "0.20.1"
-metrics-exporter-prometheus = "0.11.0"
-pin-project-lite = "0.2.9"
-sealed = "0.4.0"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-prost = "0.11.0"
-time = "0.3.14"
+ahash = { version = "0.8.*", optional = true }
+axum = { version = "0.6.*", features = ["headers", "http1", "http2", "json", "matched-path", "original-uri", "ws"] }
+config = "0.13.*"
+hyper = { version = "0.14.*", features = ["full"] }
+metrics = "0.21.*"
+metrics-exporter-prometheus = "0.12.*"
+once_cell = "1.17.*"
+# TODO: FIXME: https://github.com/tokio-rs/tracing-opentelemetry/pull/12
+opentelemetry = { version = "0.18.*", features = ["rt-tokio"] }
+# TODO: 0.8.* use opentelemetry_api 0.19, wait #12
+opentelemetry-http = "0.7.*"
+# TODO: 0.12.* use opentelemetry 0.19, wait #12
+opentelemetry-otlp = { version = "0.11.*" }
+pin-project-lite = "0.2.*"
+prost = "0.11.*"
+reqwest = { version = "0.11.*", default-features = false, optional = true }
+sealed = "0.5.*"
+serde = { version = "1.0.*", features = ["derive"] }
+serde_json = "1.0.*"
+thiserror = "1.0.*"
+time = "0.3.*"
 tokio = { version = "1", features = ["signal"] }
-tonic = "0.8.0"
-tower = { version = "0.4" }
+tonic = "0.9.*"
+tower = { version = "0.4.*" }
 tower-http = { version = "0.4.*", features = ["util", "map-response-body"] }
-tracing = { version = "0.1.37", features = ["valuable"] }
-tracing-appender = { version = "0.2.2" }
-tracing-subscriber = { version = "0.3.11", features = ["env-filter", "fmt", "time", "registry"] }
-tracing-opentelemetry = "0.18.0"
-opentelemetry = { version = "0.18.0", features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.11.0" }
-opentelemetry-http = "0.7.0"
-valuable = "0.1.0"
-valuable-serde = "0.1.0"
+tracing = { version = "0.1.*", features = ["valuable"] }
+tracing-appender = { version = "0.2.*" }
+tracing-opentelemetry = "0.18.*"
+tracing-subscriber = { version = "0.3.*", features = ["env-filter", "fmt", "time", "registry"] }
+valuable = "0.1.*"
+valuable-serde = "0.1.*"
 
-tokio-metrics = { version = "0.1.0", optional = true }
+tokio-metrics = { version = "0.2.*", optional = true }
 
 # common deps for tls
-async-stream = { version = "0.3.3", optional = true }
-futures-util = { version = "0.3.25", optional = true }
-tokio-stream = { version = "0.1.11", optional = true, features = ["net"] }
+async-stream = { version = "0.3.*", optional = true }
+futures-util = { version = "0.3.*", optional = true }
+tokio-stream = { version = "0.1.*", optional = true, features = ["net"] }
+
 # native-tls deps
-native-tls = { version = "0.2.10", optional = true, features = ["alpn"] }
-tokio-native-tls = { version = "0.3.0", optional = true }
+native-tls = { version = "0.2.*", optional = true, features = ["alpn"] }
+tokio-native-tls = { version = "0.3.*", optional = true }
+
 # rustls deps
-rustls-pemfile = { version = "1.0.1", optional = true }
-tokio-rustls = { version = "0.23.4", optional = true, default-features = false, features = ["logging"] }
+rustls-pemfile = { version = "1.0.*", optional = true }
+tokio-rustls = { version = "0.24.*", optional = true, default-features = false, features = ["logging"] }
 
 [dev-dependencies]
-tracing-subscriber = { version = "0.3.11", features = ["env-filter", "json", "time"] }
-valuable-derive = "0.1.0"
-rustls = { version = "0.20.7", features = ["tls12", "dangerous_configuration"] }
-hyper-rustls = { version = "0.23.0", default-features = false, features = ["native-tokio", "http1", "tls12"] }
+criterion = "0.*"
+hyper-rustls = { version = "0.24.*", default-features = false, features = ["native-tokio", "http1", "tls12"] }
+rustls = { version = "0.21.*", features = ["tls12", "dangerous_configuration"] }
 tokio = { version = "1", features = ["rt-multi-thread"] }
-criterion = "0.4"
+tracing-subscriber = { version = "0.3.*", features = ["env-filter", "json", "time"] }
+valuable-derive = "0.1.*"
 
 [[bench]]
 name = "log_fmt"
