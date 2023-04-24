@@ -44,6 +44,9 @@ pub fn init_tokio_metrics_task(metrics_update_interval: Duration) {
             total_steal_count,
             max_steal_count,
             min_steal_count,
+            total_steal_operations,
+            max_steal_operations,
+            min_steal_operations,
             num_remote_schedules,
             total_local_schedule_count,
             max_local_schedule_count,
@@ -62,6 +65,8 @@ pub fn init_tokio_metrics_task(metrics_update_interval: Duration) {
             max_local_queue_depth,
             min_local_queue_depth,
             elapsed,
+            budget_forced_yield_count,
+            io_driver_ready_count,
             ..
         } in runtime_monitor.intervals()
         {
@@ -78,6 +83,8 @@ pub fn init_tokio_metrics_task(metrics_update_interval: Duration) {
             absolute_counter!("total_steal_count", total_steal_count);
             absolute_counter!("max_steal_count", max_steal_count);
             absolute_counter!("min_steal_count", min_steal_count);
+            absolute_counter!("max_steal_operations", max_steal_operations);
+            absolute_counter!("min_steal_operations", min_steal_operations);
             absolute_counter!("num_remote_schedules", num_remote_schedules);
             absolute_counter!("total_local_schedule_count", total_local_schedule_count);
             absolute_counter!("max_local_schedule_count", max_local_schedule_count);
@@ -91,6 +98,10 @@ pub fn init_tokio_metrics_task(metrics_update_interval: Duration) {
             absolute_counter!("total_busy_duration", total_busy_duration.as_secs());
             absolute_counter!("max_busy_duration", max_busy_duration.as_secs());
             absolute_counter!("min_busy_duration", min_busy_duration.as_secs());
+            gauge!(
+                "total_steal_operations",
+                usize_to_f64_saturated(total_steal_operations.try_into().unwrap_or(usize::MAX))
+            );
             gauge!(
                 "injection_queue_depth",
                 usize_to_f64_saturated(injection_queue_depth)
@@ -108,6 +119,9 @@ pub fn init_tokio_metrics_task(metrics_update_interval: Duration) {
                 usize_to_f64_saturated(min_local_queue_depth)
             );
             absolute_counter!("elapsed", elapsed.as_secs());
+            absolute_counter!("budget_forced_yield_count", budget_forced_yield_count);
+            absolute_counter!("io_driver_ready_count", io_driver_ready_count);
+
             tokio::time::sleep(metrics_update_interval).await;
         }
     });
@@ -131,6 +145,8 @@ pub(crate) fn register_metrics() {
         ("total_steal_count", "The number of times worker threads stole tasks from another worker thread."),
         ("max_steal_count", "The maximum number of times any worker thread stole tasks from another worker thread."),
         ("min_steal_count", "The minimum number of times any worker thread stole tasks from another worker thread."),
+        ("max_steal_operations", "The maximum number of times any worker thread stole tasks from another worker thread."),
+        ("min_steal_operations", "The minimum number of times any worker thread stole tasks from another worker thread."),
         ("num_remote_schedules", "The number of tasks scheduled from outside of the runtime."),
         ("total_local_schedule_count", "The number of tasks scheduled from worker threads."),
         ("max_local_schedule_count", "The maximum number of tasks scheduled from any one worker thread."),
@@ -145,6 +161,8 @@ pub(crate) fn register_metrics() {
         ("max_busy_duration", "The maximum amount of time (in seconds) a worker thread was busy."),
         ("min_busy_duration", "The minimum amount of time (in seconds) a worker thread was busy."),
         ("elapsed", "Total amount of time (in seconds) elapsed since observing runtime metrics."),
+        ("budget_forced_yield_count", "Returns the number of times that tasks have been forced to yield back to the scheduler after exhausting their task budgets."),
+        ("io_driver_ready_count", "Returns the number of ready events processed by the runtime’s I/O driver."),
     ] {
         describe_counter!(name, describe);
         register_counter!(name);
@@ -158,6 +176,10 @@ pub(crate) fn register_metrics() {
         (
             "min_local_queue_depth",
             "The minimum number of tasks currently scheduled any worker's local queue.",
+        ),
+        (
+            "total_steal_operations",
+            "The number of times worker threads stole tasks from another worker thread.",
         ),
         (
             "injection_queue_depth",

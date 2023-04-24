@@ -4,6 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.10.5] - 2023-04-24
+### Added
+- Add new metrics from tokio-metrics 0.2.
+
+### Changed
+- Upgrade dependencies.
+
 ## [0.10.4] - 2023-04-21
 ### Fixed
 - Runtime error in `tracing-subscriber` because of `regex 1.8`:
