@@ -1,5 +1,4 @@
 use crate::middleware::extract_remote_address;
-use axum::extract::MatchedPath;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
 use hyper::Request;
@@ -30,9 +29,9 @@ pub async fn trace_http_request<B>(
     }
 
     let url = request
-        .extensions()
-        .get::<MatchedPath>()
-        .map_or_else(|| request.uri().path(), MatchedPath::as_str)
+        .uri()
+        .path_and_query()
+        .map_or_else(|| request.uri().path(), |p| p.as_str())
         .to_owned();
 
     tracing::info!(
