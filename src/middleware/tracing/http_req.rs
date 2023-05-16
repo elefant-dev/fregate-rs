@@ -1,5 +1,4 @@
 use crate::middleware::extract_remote_address;
-use axum::extract::MatchedPath;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
 use hyper::Request;
