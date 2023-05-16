@@ -4,6 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.10.6] - 2023-05-16
+### Added
+- Add Field::Str to TracingFields. ([#176](https://github.com/elefant-dev/fregate-rs/pull/176))
+
+### Changed
+- Do not use MatchedPath for logging request path in tracing layer([#177](https://github.com/elefant-dev/fregate-rs/pull/177))
+
 ## [0.10.5] - 2023-04-24
 ### Added
 - Add new metrics from tokio-metrics 0.2.
