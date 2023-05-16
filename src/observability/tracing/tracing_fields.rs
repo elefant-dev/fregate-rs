@@ -47,6 +47,7 @@ pub struct TracingFields<'a> {
 }
 
 enum Field<'a> {
+    Str(&'a str),
     String(String),
     ValuableRef(&'a (dyn Valuable + Send + Sync)),
     ValuableOwned(Box<dyn Valuable + Send + Sync>),
@@ -57,6 +58,7 @@ impl<'a> Debug for TracingFields<'a> {
         let mut f = f.debug_struct("TracingFields");
         for (k, v) in self.fields.iter() {
             let value = match v {
+                Field::Str(s) => s.as_value(),
                 Field::String(s) => s.as_value(),
                 Field::ValuableOwned(s) => s.as_value(),
                 Field::ValuableRef(r) => r.as_value(),
@@ -90,6 +92,11 @@ impl<'a> TracingFields<'a> {
     /// Inserts a key-value pair of references into the map. Overwrites value if key is present.
     pub fn insert_ref<V: Valuable + Send + Sync>(&mut self, key: &'static str, value: &'a V) {
         self.fields.insert(key, Field::ValuableRef(value));
+    }
+
+    /// Inserts a key-value pair of references into the map. Overwrites value if key is present.
+    pub fn insert_str(&mut self, key: &'static str, value: &'a str) {
+        self.fields.insert(key, Field::Str(value));
     }
 
     /// Converts value to [`String`] using [`Display`] implementation before insertion. Overwrites value if key is present.
@@ -132,6 +139,7 @@ impl<'a> Valuable for TracingFields<'a> {
     fn visit(&self, visit: &mut dyn Visit) {
         for (field, value) in self.fields.iter() {
             let value_ref = match value {
+                Field::Str(s) => s.as_value(),
                 Field::String(s) => s.as_value(),
                 Field::ValuableOwned(s) => s.as_value(),
                 Field::ValuableRef(r) => r.as_value(),
