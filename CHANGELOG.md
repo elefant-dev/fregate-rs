@@ -4,6 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.11.0]
+### Changed
+- Upgrade `opentelemetry` to 0.19.
+- Upgrade `opentelemetry-http` to 0.8.
+- Upgrade `opentelemetry-otlp` to 0.12.
+- Upgrade `tracing-opentelemetry` to 0.19.
+
 ## [0.10.6] - 2023-05-16
 ### Added
 - Add Field::Str to TracingFields. ([#176](https://github.com/elefant-dev/fregate-rs/pull/176))
