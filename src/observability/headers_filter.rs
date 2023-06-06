@@ -1,9 +1,9 @@
 //! [`HeadersFilter`] definition
 use crate::extensions::DeserializeExt;
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use std::collections::HashSet;
+use std::sync::OnceLock;
 
 const SANITIZE_PTR: &str = "/sanitize";
 const INCLUDE_PTR: &str = "/include";
@@ -20,7 +20,7 @@ const EXCLUDE_PTR: &str = "/exclude";
 /// ```
 /// In [`crate::extensions::HeaderFilterExt`] trait implementation will have next behaviour:
 /// Include all headers except for "authorization" and sanitize "password,login,client_id" headers.
-pub static HEADERS_FILTER: OnceCell<HeadersFilter> = OnceCell::new();
+pub static HEADERS_FILTER: OnceLock<HeadersFilter> = OnceLock::new();
 
 /// Headers filter options
 #[derive(Debug, Clone)]

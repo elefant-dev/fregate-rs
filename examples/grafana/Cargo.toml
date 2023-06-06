@@ -15,7 +15,7 @@ path = "src/client.rs"
 fregate = { path = "../..", features = ["reqwest", "tokio-metrics"] }
 resources = { path = "../examples_resources" }
 
-opentelemetry = { version = "0.18.*", features = ["rt-tokio", "trace"]}
+opentelemetry = { version = "0.19.*", features = ["rt-tokio", "trace"]}
 reqwest = "0.11.*"
 tokio = { version = "1", features = ["rt-multi-thread"] }
-tracing-opentelemetry = "0.18.*"
+tracing-opentelemetry = "0.19.*"
