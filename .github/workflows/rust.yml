@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.70.0
+          toolchain: stable
           components: rustfmt
       - uses: arduino/setup-protoc@v1
         with:
@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.70.0
+          toolchain: stable
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.70.0
+          toolchain: stable
           components: clippy
       - uses: arduino/setup-protoc@v1
         with:
