@@ -53,16 +53,22 @@ enum Field<'a> {
     ValuableOwned(Box<dyn Valuable + Send + Sync>),
 }
 
+impl<'a> Field<'a> {
+    fn as_value(&self) -> Value<'_> {
+        match self {
+            Field::Str(s) => s.as_value(),
+            Field::String(s) => s.as_value(),
+            Field::ValuableOwned(s) => s.as_value(),
+            Field::ValuableRef(r) => r.as_value(),
+        }
+    }
+}
+
 impl<'a> Debug for TracingFields<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut f = f.debug_struct("TracingFields");
         for (k, v) in self.fields.iter() {
-            let value = match v {
-                Field::Str(s) => s.as_value(),
-                Field::String(s) => s.as_value(),
-                Field::ValuableOwned(s) => s.as_value(),
-                Field::ValuableRef(r) => r.as_value(),
-            };
+            let value = v.as_value();
 
             f.field(k, &value as _);
         }
@@ -138,12 +144,7 @@ impl<'a> Valuable for TracingFields<'a> {
 
     fn visit(&self, visit: &mut dyn Visit) {
         for (field, value) in self.fields.iter() {
-            let value_ref = match value {
-                Field::Str(s) => s.as_value(),
-                Field::String(s) => s.as_value(),
-                Field::ValuableOwned(s) => s.as_value(),
-                Field::ValuableRef(r) => r.as_value(),
-            };
+            let value_ref = value.as_value();
 
             visit.visit_named_fields(&NamedValues::new(&[NamedField::new(field)], &[value_ref]));
         }

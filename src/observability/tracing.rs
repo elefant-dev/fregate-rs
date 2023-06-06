@@ -13,8 +13,8 @@ pub use tracing_fields::*;
 
 use crate::error::Result;
 use crate::observability::{HeadersFilter, HEADERS_FILTER};
-use once_cell::sync::OnceCell;
 use opentelemetry::global::set_error_handler;
+use std::sync::OnceLock;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::layer::Layered;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -28,12 +28,12 @@ pub const SANITIZED_VALUE: &str = "*****";
 /// This by default uninitialised unless you call [`crate::bootstrap()`] or [`init_tracing`] functions.
 /// Used to change log level filter
 /// See in [`example`](https://github.com/elefant-dev/fregate-rs/tree/main/examples/log-level-change) how it might be used.
-pub static LOG_LAYER_HANDLE: OnceCell<LogLayerHandle> = OnceCell::new();
+pub static LOG_LAYER_HANDLE: OnceLock<LogLayerHandle> = OnceLock::new();
 
 /// This by default uninitialised unless you call [`crate::bootstrap()`] or [`init_tracing`] functions.
 /// Used to change trace level filter
 /// See in [`example`](https://github.com/elefant-dev/fregate-rs/tree/main/examples/log-level-change) how it might be used.
-pub static OTLP_LAYER_HANDLE: OnceCell<TraceLayerHandle> = OnceCell::new();
+pub static OTLP_LAYER_HANDLE: OnceLock<TraceLayerHandle> = OnceLock::new();
 
 /// Alias for [`Handle<EnvFilter, Layered<Option<Box<dyn Layer<Registry> + Send + Sync>>, Registry>>`]
 pub type LogLayerHandle =
