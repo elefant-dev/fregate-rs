@@ -164,7 +164,7 @@ where
     OnProxyErrorCallback:
         Fn(ProxyError, &TExtension) -> axum::response::Response + Send + Sync + 'static,
     OnProxyRequestCallback: Fn(&Request<TBody>, &TExtension) + Send + Sync + 'static,
-    OnProxyResponseCallback: Fn(&Response<TRespBody>, &TExtension) + Send + Sync + 'static,
+    OnProxyResponseCallback: Fn(&mut Response<TRespBody>, &TExtension) + Send + Sync + 'static,
     TBody: Sync + Send + 'static,
     TRespBody: HttpBody<Data = Bytes> + Sync + Send + 'static,
     TRespBody::Error: Into<Box<(dyn Error + Send + Sync + 'static)>>,
@@ -223,8 +223,8 @@ where
                 let result = send_request(client, req).await;
 
                 match result {
-                    Ok(response) => {
-                        (self.on_proxy_response)(&response, &extension);
+                    Ok(mut response) => {
+                        (self.on_proxy_response)(&mut response, &extension);
                         response.into_response()
                     }
                     Err(err) => (self.on_proxy_error)(err, &extension),

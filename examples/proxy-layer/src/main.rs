@@ -12,7 +12,7 @@ fn on_proxy_request<TBody>(request: &Request<TBody>, _ext: &()) {
     tracing::info!("Proxy sends request to: {}", request.uri());
 }
 
-fn on_proxy_response(response: &Response<Body>, _ext: &()) {
+fn on_proxy_response(response: &mut Response<Body>, _ext: &()) {
     tracing::info!("Proxy response status code: {}", response.status());
 }
 

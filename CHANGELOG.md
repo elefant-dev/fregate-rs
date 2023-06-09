@@ -4,7 +4,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-## [0.11.0]
+## [0.12.0] - 2023-06-09
+### Changed
+- Make take mut reference to Response in on_response callback in proxy layer. ([#181](https://github.com/elefant-dev/fregate-rs/pull/181))
+
+## [0.11.0] - 2023-06-06
 ### Changed
 - Upgrade `opentelemetry` to 0.19.
 - Upgrade `opentelemetry-http` to 0.8.
