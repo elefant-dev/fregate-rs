@@ -153,7 +153,7 @@ where
         + 'static,
     OnProxyErrorCallback: Fn(ProxyError, &TExtension) -> AxumResponse + Send + Sync + 'static,
     OnProxyRequestCallback: Fn(&Request<TBody>, &TExtension) + Send + Sync + 'static,
-    OnProxyResponseCallback: Fn(&Response<TRespBody>, &TExtension) + Send + Sync + 'static,
+    OnProxyResponseCallback: Fn(&mut Response<TRespBody>, &TExtension) + Send + Sync + 'static,
     TBody: Sync + Send + 'static,
     TRespBody: HttpBody<Data = Bytes> + Sync + Send + 'static,
     TRespBody::Error: Into<Box<(dyn Error + Send + Sync + 'static)>>,
