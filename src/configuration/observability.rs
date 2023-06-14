@@ -42,6 +42,24 @@ pub struct ObservabilityConfig {
     pub headers_filter: Option<HeadersFilter>,
 }
 
+impl Default for ObservabilityConfig {
+    fn default() -> Self {
+        Self {
+            log_level: "info".to_owned(),
+            msg_length: Some(8192),
+            buffered_lines_limit: None,
+            trace_level: "".to_owned(),
+            service_name: "default".to_owned(),
+            component_name: "default".to_owned(),
+            version: "default".to_owned(),
+            traces_endpoint: None,
+            headers_filter: None,
+            #[cfg(feature = "tokio-metrics")]
+            metrics_update_interval: std::time::Duration::default(),
+        }
+    }
+}
+
 impl<'de> Deserialize<'de> for ObservabilityConfig {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

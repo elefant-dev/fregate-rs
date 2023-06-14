@@ -8,11 +8,14 @@ const HEALTH_ENDPOINT: &str = "/health";
 const LIVE_ENDPOINT: &str = "/live";
 const READY_ENDPOINT: &str = "/ready";
 const METRICS_ENDPOINT: &str = "/metrics";
+const VERSION_ENDPOINT: &str = "/version";
 
 const HEALTH_PTR: &str = "/health";
 const LIVE_PTR: &str = "/live";
 const READY_PTR: &str = "/ready";
 const METRICS_PTR: &str = "/metrics";
+const VERSION_PTR: &str = "/version";
+const COMPONENT_NAME_PTR: &str = "/include/component/name";
 
 #[derive(Debug, Default, Clone, Deserialize)]
 /// [`Management`](https://github.com/elefant-dev/fregate-rs/blob/main/src/application/management.rs) configuration. Currently only endpoints configuration is supported.
@@ -27,6 +30,7 @@ pub struct ManagementConfig {
 /// const LIVE_ENDPOINT: &str = "/live";
 /// const READY_ENDPOINT: &str = "/ready";
 /// const METRICS_ENDPOINT: &str = "/metrics";
+/// const VERSION_ENDPOINT: &str = "/{component_name}/version";
 /// ```
 /// You might want to change those:\
 /// Example:
@@ -68,6 +72,10 @@ pub struct Endpoints {
     pub ready: Endpoint,
     /// metrics endpoint
     pub metrics: Endpoint,
+    /// version endpoint
+    pub version: Endpoint,
+    /// if `true` will create /<component_name>/<version> endpoint in application, if `false` /<version> will be created.
+    pub include_component_name: bool,
 }
 
 #[allow(clippy::indexing_slicing)]
@@ -80,6 +88,7 @@ impl<'de> Deserialize<'de> for Endpoints {
         static_assert!(LIVE_ENDPOINT.as_bytes()[0] == b'/');
         static_assert!(READY_ENDPOINT.as_bytes()[0] == b'/');
         static_assert!(METRICS_ENDPOINT.as_bytes()[0] == b'/');
+        static_assert!(VERSION_ENDPOINT.as_bytes()[0] == b'/');
 
         let value = Value::deserialize(deserializer)?;
 
@@ -95,12 +104,20 @@ impl<'de> Deserialize<'de> for Endpoints {
         let metrics = value
             .pointer_and_deserialize::<_, D::Error>(METRICS_PTR)
             .unwrap_or_else(|_| Endpoint(METRICS_ENDPOINT.to_owned()));
+        let version = value
+            .pointer_and_deserialize::<_, D::Error>(VERSION_PTR)
+            .unwrap_or_else(|_| Endpoint(VERSION_ENDPOINT.to_owned()));
+        let include_component_name = value
+            .pointer_and_deserialize::<_, D::Error>(COMPONENT_NAME_PTR)
+            .unwrap_or_default();
 
         Ok(Endpoints {
             health,
             live,
             ready,
             metrics,
+            version,
+            include_component_name,
         })
     }
 }
@@ -112,12 +129,15 @@ impl Default for Endpoints {
         static_assert!(LIVE_ENDPOINT.as_bytes()[0] == b'/');
         static_assert!(READY_ENDPOINT.as_bytes()[0] == b'/');
         static_assert!(METRICS_ENDPOINT.as_bytes()[0] == b'/');
+        static_assert!(VERSION_ENDPOINT.as_bytes()[0] == b'/');
 
         Self {
             health: Endpoint(HEALTH_ENDPOINT.to_owned()),
             live: Endpoint(LIVE_ENDPOINT.to_owned()),
             ready: Endpoint(READY_ENDPOINT.to_owned()),
             metrics: Endpoint(METRICS_ENDPOINT.to_owned()),
+            version: Endpoint(VERSION_ENDPOINT.to_owned()),
+            include_component_name: false,
         }
     }
 }

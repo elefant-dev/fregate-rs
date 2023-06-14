@@ -206,6 +206,7 @@ impl<'a, H, T> Application<'a, H, T> {
 
         let router = build_management_router(
             &self.config.management_cfg,
+            &self.config.observability_cfg,
             self.health_indicator,
             self.metrics_callback,
         )
