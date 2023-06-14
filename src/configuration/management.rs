@@ -15,7 +15,6 @@ const LIVE_PTR: &str = "/live";
 const READY_PTR: &str = "/ready";
 const METRICS_PTR: &str = "/metrics";
 const VERSION_PTR: &str = "/version";
-const COMPONENT_NAME_PTR: &str = "/include/component/name";
 
 #[derive(Debug, Default, Clone, Deserialize)]
 /// [`Management`](https://github.com/elefant-dev/fregate-rs/blob/main/src/application/management.rs) configuration. Currently only endpoints configuration is supported.
@@ -74,8 +73,6 @@ pub struct Endpoints {
     pub metrics: Endpoint,
     /// version endpoint
     pub version: Endpoint,
-    /// if `true` will create /<component_name>/<version> endpoint in application, if `false` /<version> will be created.
-    pub include_component_name: bool,
 }
 
 #[allow(clippy::indexing_slicing)]
@@ -107,9 +104,6 @@ impl<'de> Deserialize<'de> for Endpoints {
         let version = value
             .pointer_and_deserialize::<_, D::Error>(VERSION_PTR)
             .unwrap_or_else(|_| Endpoint(VERSION_ENDPOINT.to_owned()));
-        let include_component_name = value
-            .pointer_and_deserialize::<_, D::Error>(COMPONENT_NAME_PTR)
-            .unwrap_or_default();
 
         Ok(Endpoints {
             health,
@@ -117,7 +111,6 @@ impl<'de> Deserialize<'de> for Endpoints {
             ready,
             metrics,
             version,
-            include_component_name,
         })
     }
 }
@@ -137,7 +130,6 @@ impl Default for Endpoints {
             ready: Endpoint(READY_ENDPOINT.to_owned()),
             metrics: Endpoint(METRICS_ENDPOINT.to_owned()),
             version: Endpoint(VERSION_ENDPOINT.to_owned()),
-            include_component_name: false,
         }
     }
 }

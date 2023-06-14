@@ -17,7 +17,7 @@ const TRACES_ENDPOINT_PTR: &str = "/exporter/otlp/traces/endpoint";
 const HEADERS_PTR: &str = "/headers";
 
 /// configuration for logs and traces
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ObservabilityConfig {
     /// log level read to string and later parsed into EnvFilter
     pub log_level: String,
@@ -40,24 +40,6 @@ pub struct ObservabilityConfig {
     pub traces_endpoint: Option<String>,
     /// initialize [`crate::observability::HEADERS_FILTER`] static variable in [`crate::bootstrap()`] or [`crate::observability::init_tracing()`] fn.
     pub headers_filter: Option<HeadersFilter>,
-}
-
-impl Default for ObservabilityConfig {
-    fn default() -> Self {
-        Self {
-            log_level: "info".to_owned(),
-            msg_length: Some(8192),
-            buffered_lines_limit: None,
-            trace_level: "".to_owned(),
-            service_name: "default".to_owned(),
-            component_name: "default".to_owned(),
-            version: "default".to_owned(),
-            traces_endpoint: None,
-            headers_filter: None,
-            #[cfg(feature = "tokio-metrics")]
-            metrics_update_interval: std::time::Duration::default(),
-        }
-    }
 }
 
 impl<'de> Deserialize<'de> for ObservabilityConfig {
