@@ -21,6 +21,7 @@ async fn main() {
     std::env::set_var("TEST_LOG_LEVEL", "debug");
     std::env::set_var("TEST_TRACE_LEVEL", "debug");
     std::env::set_var("TEST_COMPONENT_NAME", "configuration");
+    std::env::set_var("TEST_MANAGEMENT_ENDPOINTS_VERSION", "/give/me/version");
     std::env::set_var("TEST_COMPONENT_VERSION", "0.0.0");
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
     std::env::set_var("OTEL_SERVICE_NAME", "CONFIGURATION");
