@@ -16,11 +16,11 @@ length = 8192 #in bytes
 level = "info"
 
 [service]
-name = "fregate"
+name = "default"
 
 [component]
-name = "example"
-version = "0.1.0"
+name = "default"
+version = "default"
 
 [private]
 

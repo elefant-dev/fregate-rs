@@ -21,6 +21,7 @@ async fn main() {
     std::env::set_var("TEST_LOG_LEVEL", "debug");
     std::env::set_var("TEST_TRACE_LEVEL", "debug");
     std::env::set_var("TEST_COMPONENT_NAME", "configuration");
+    std::env::set_var("TEST_MANAGEMENT_ENDPOINTS_VERSION", "/give/me/version");
     std::env::set_var("TEST_COMPONENT_VERSION", "0.0.0");
     std::env::set_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://0.0.0.0:4317");
     std::env::set_var("OTEL_SERVICE_NAME", "CONFIGURATION");
@@ -28,7 +29,7 @@ async fn main() {
     // There are multiple ways to read AppConfig:
 
     // This will read AppConfig and call init_tracing() with arguments read in AppConfig
-    let _conf: AppConfig = bootstrap([
+    let conf_0: AppConfig = bootstrap([
         ConfigSource::File("./examples/configuration/app.yaml"),
         ConfigSource::EnvPrefix("TEST"),
     ])
@@ -50,9 +51,12 @@ async fn main() {
     let _conf: AppConfig<Custom> =
         AppConfig::default_with("./examples/configuration/app.yaml", "TEST").unwrap();
 
-    Application::new(&AppConfig::default())
+    Application::new(&conf_0)
         .router(Router::new().route("/", get(handler)))
         .serve()
         .await
         .unwrap();
 }
+
+// Check version with:
+// curl http://localhost:3333/configuration/give/me/version

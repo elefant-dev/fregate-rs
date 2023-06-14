@@ -4,6 +4,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.13.0] - 2023-06-14
+### Changed
+- Make `default for component_name,service_name,version in observability config. ([#182](https://github.com/elefant-dev/fregate-rs/pull/182))
+- Add configurable endpoint to return version of component. ([#182](https://github.com/elefant-dev/fregate-rs/pull/182))
+
+
 ## [0.12.0] - 2023-06-09
 ### Changed
 - Make take mut reference to Response in on_response callback in proxy layer. ([#181](https://github.com/elefant-dev/fregate-rs/pull/181))

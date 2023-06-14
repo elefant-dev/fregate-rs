@@ -17,7 +17,7 @@ const TRACES_ENDPOINT_PTR: &str = "/exporter/otlp/traces/endpoint";
 const HEADERS_PTR: &str = "/headers";
 
 /// configuration for logs and traces
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ObservabilityConfig {
     /// log level read to string and later parsed into EnvFilter
     pub log_level: String,

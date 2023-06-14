@@ -22,9 +22,9 @@ mod app_config_tests {
 
         assert_eq!(logger.traces_endpoint, None);
         assert_eq!(logger.buffered_lines_limit, None);
-        assert_eq!(logger.service_name, "fregate".to_owned());
-        assert_eq!(logger.version, "0.1.0".to_owned());
-        assert_eq!(logger.component_name, "example".to_owned());
+        assert_eq!(logger.service_name, "default".to_owned());
+        assert_eq!(logger.version, "default".to_owned());
+        assert_eq!(logger.component_name, "default".to_owned());
         assert_eq!(logger.trace_level, "info".to_owned());
         assert_eq!(logger.log_level, "info".to_owned());
         assert_eq!(logger.msg_length, Some(8192));
@@ -32,6 +32,7 @@ mod app_config_tests {
         assert_eq!(mngmnt.endpoints.ready.as_ref(), "/ready");
         assert_eq!(mngmnt.endpoints.live.as_ref(), "/live");
         assert_eq!(mngmnt.endpoints.metrics.as_ref(), "/metrics");
+        assert_eq!(mngmnt.endpoints.version.as_ref(), "/version");
     }
 
     #[test]
@@ -53,9 +54,9 @@ mod app_config_tests {
         let logger = config.observability_cfg;
 
         assert_eq!(logger.traces_endpoint, None);
-        assert_eq!(logger.service_name, "fregate".to_owned());
-        assert_eq!(logger.version, "0.1.0".to_owned());
-        assert_eq!(logger.component_name, "example".to_owned());
+        assert_eq!(logger.service_name, "default".to_owned());
+        assert_eq!(logger.version, "default".to_owned());
+        assert_eq!(logger.component_name, "default".to_owned());
         assert_eq!(logger.trace_level, "info".to_owned());
         assert_eq!(logger.log_level, "info".to_owned());
     }
@@ -79,8 +80,8 @@ mod app_config_tests {
 
         assert_eq!(logger.traces_endpoint, None);
         assert_eq!(logger.service_name, "Test".to_owned());
-        assert_eq!(logger.version, "0.1.0".to_owned());
-        assert_eq!(logger.component_name, "example".to_owned());
+        assert_eq!(logger.version, "default".to_owned());
+        assert_eq!(logger.component_name, "default".to_owned());
         assert_eq!(logger.trace_level, "debug".to_owned());
         assert_eq!(logger.log_level, "trace".to_owned());
     }
@@ -102,8 +103,8 @@ mod app_config_tests {
 
         assert_eq!(logger.traces_endpoint, None);
         assert_eq!(logger.service_name, "Test".to_owned());
-        assert_eq!(logger.version, "0.1.0".to_owned());
-        assert_eq!(logger.component_name, "example".to_owned());
+        assert_eq!(logger.version, "default".to_owned());
+        assert_eq!(logger.component_name, "default".to_owned());
         assert_eq!(logger.trace_level, "debug".to_owned());
         assert_eq!(logger.log_level, "trace".to_owned());
     }
