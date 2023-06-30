@@ -1,11 +1,14 @@
 use crate::error::Result;
-use crate::observability::tracing::{event_formatter::EventFormatter, COMPONENT, SERVICE, VERSION};
+use crate::observability::tracing::{
+    event_formatter::EventFormatter, COMPONENT, INSTANCE_ID, SERVICE, VERSION,
+};
 use std::str::FromStr;
 use tracing::Subscriber;
 use tracing_appender::non_blocking::{WorkerGuard, DEFAULT_BUFFERED_LINES_LIMIT};
 use tracing_subscriber::{
     filter::EnvFilter, filter::Filtered, registry::LookupSpan, reload, reload::Handle, Layer,
 };
+use uuid;
 
 /// Returns [`Layer`] with custom event formatter [`EventFormatter`]
 /// Configured with non-blocking writer [`tracing_appender::non_blocking::NonBlocking`] to [`std::io::stdout()`]
@@ -30,6 +33,7 @@ where
     formatter.add_default_field_to_events(VERSION, version)?;
     formatter.add_default_field_to_events(SERVICE, service_name)?;
     formatter.add_default_field_to_events(COMPONENT, component_name)?;
+    formatter.add_default_field_to_events(INSTANCE_ID, uuid::Uuid::new_v4().to_string())?;
 
     let buffered_lines_limit = buffered_lines_limit.unwrap_or(DEFAULT_BUFFERED_LINES_LIMIT);
 
