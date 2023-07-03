@@ -31,6 +31,7 @@ pub(crate) const TIME: &str = "time";
 pub(crate) const TIMESTAMP: &str = "timestamp";
 pub(crate) const TRACE_ID: &str = "traceId";
 pub(crate) const SPAN_ID: &str = "spanId";
+pub(crate) const INSTANCE_ID: &str = "instanceId";
 
 const DEFAULT_FIELDS: [&str; 11] = [
     VERSION, SERVICE, COMPONENT, TARGET, MSG, LOG_LEVEL, TIME, TIMESTAMP, MESSAGE, TRACE_ID,
