@@ -25,6 +25,6 @@ impl Health for AlwaysReadyAndAlive {
     }
 
     async fn ready(&self) -> Response {
-        (StatusCode::SERVICE_UNAVAILABLE, "UNAVAILABLE").into_response()
+        (StatusCode::OK, "OK").into_response()
     }
 }
