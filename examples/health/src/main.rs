@@ -1,8 +1,6 @@
-use fregate::{
-    axum, bootstrap,
-    health::{Health, HealthResponse},
-    Application,
-};
+use fregate::axum::response::IntoResponse;
+use fregate::hyper::StatusCode;
+use fregate::{axum, bootstrap, health::Health, Application};
 use fregate::{tokio, AppConfig};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
@@ -14,17 +12,14 @@ pub struct CustomHealth {
 
 #[axum::async_trait]
 impl Health for CustomHealth {
-    async fn alive(&self) -> HealthResponse {
-        match self.status.fetch_add(1, Ordering::SeqCst) {
-            0..=2 => HealthResponse::OK,
-            _ => HealthResponse::UNAVAILABLE,
-        }
+    async fn alive(&self) -> axum::response::Response {
+        (StatusCode::OK, "OK").into_response()
     }
 
-    async fn ready(&self) -> HealthResponse {
-        match self.status.load(Ordering::SeqCst) {
-            0..=3 => HealthResponse::OK,
-            _ => HealthResponse::UNAVAILABLE,
+    async fn ready(&self) -> axum::response::Response {
+        match self.status.fetch_add(1, Ordering::SeqCst) {
+            0..=2 => (StatusCode::SERVICE_UNAVAILABLE, "UNAVAILABLE").into_response(),
+            _ => (StatusCode::OK, "OK").into_response(),
         }
     }
 }
