@@ -71,12 +71,15 @@ mod management_test {
 
     #[axum::async_trait]
     impl Health for CustomHealth {
-        async fn alive(&self) -> axum::response::Response {
-            (StatusCode::OK, "OK").into_response()
+        type HealthResponse = (StatusCode, &'static str);
+        type ReadyResponse = (StatusCode, &'static str);
+
+        async fn alive(&self) -> Self::HealthResponse {
+            (StatusCode::OK, "OK")
         }
 
-        async fn ready(&self) -> axum::response::Response {
-            (StatusCode::SERVICE_UNAVAILABLE, "UNAVAILABLE").into_response()
+        async fn ready(&self) -> Self::ReadyResponse {
+            (StatusCode::SERVICE_UNAVAILABLE, "UNAVAILABLE")
         }
     }
 

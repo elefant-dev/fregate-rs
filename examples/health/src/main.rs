@@ -1,4 +1,3 @@
-use fregate::axum::response::IntoResponse;
 use fregate::hyper::StatusCode;
 use fregate::{axum, bootstrap, health::Health, Application};
 use fregate::{tokio, AppConfig};
@@ -12,14 +11,17 @@ pub struct CustomHealth {
 
 #[axum::async_trait]
 impl Health for CustomHealth {
-    async fn alive(&self) -> axum::response::Response {
-        (StatusCode::OK, "OK").into_response()
+    type HealthResponse = (StatusCode, &'static str);
+    type ReadyResponse = StatusCode;
+
+    async fn alive(&self) -> Self::HealthResponse {
+        (StatusCode::OK, "OK")
     }
 
-    async fn ready(&self) -> axum::response::Response {
+    async fn ready(&self) -> Self::ReadyResponse {
         match self.status.fetch_add(1, Ordering::SeqCst) {
-            0..=2 => (StatusCode::SERVICE_UNAVAILABLE, "UNAVAILABLE").into_response(),
-            _ => (StatusCode::OK, "OK").into_response(),
+            0..=2 => StatusCode::SERVICE_UNAVAILABLE,
+            _ => StatusCode::OK,
         }
     }
 }
