@@ -63,7 +63,6 @@ fn build_version_router(
 #[allow(clippy::unwrap_used)]
 mod management_test {
     use super::*;
-    use crate::application::health::HealthResponse;
     use axum::http::{Request, StatusCode};
     use tower::ServiceExt;
 
@@ -72,12 +71,15 @@ mod management_test {
 
     #[axum::async_trait]
     impl Health for CustomHealth {
-        async fn alive(&self) -> HealthResponse {
-            HealthResponse::OK
+        type HealthResponse = (StatusCode, &'static str);
+        type ReadyResponse = (StatusCode, &'static str);
+
+        async fn alive(&self) -> Self::HealthResponse {
+            (StatusCode::OK, "OK")
         }
 
-        async fn ready(&self) -> HealthResponse {
-            HealthResponse::UNAVAILABLE
+        async fn ready(&self) -> Self::ReadyResponse {
+            (StatusCode::SERVICE_UNAVAILABLE, "UNAVAILABLE")
         }
     }
 
