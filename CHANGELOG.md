@@ -4,9 +4,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.14.0] - 2023-07-11
+### Added
+- `InstanceId` log field for fregate `EventFormatter` . ([#180](https://github.com/elefant-dev/fregate-rs/pull/184))
+
+### Changed
+- Remove once_cell dependency. ([#180](https://github.com/elefant-dev/fregate-rs/pull/180))
+- Make `Health` trait uses associate types instead of fixed response. ([#185](https://github.com/elefant-dev/fregate-rs/pull/185))
+
 ## [0.13.0] - 2023-06-14
 ### Changed
-- Make `default for component_name,service_name,version in observability config. ([#182](https://github.com/elefant-dev/fregate-rs/pull/182))
+- Make `default` for component_name,service_name,version in observability config. ([#182](https://github.com/elefant-dev/fregate-rs/pull/182))
 - Add configurable endpoint to return version of component. ([#182](https://github.com/elefant-dev/fregate-rs/pull/182))
 
 
