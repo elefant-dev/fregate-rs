@@ -154,7 +154,7 @@ impl<
             + Sync
             + 'static,
         OnProxyErrorCallback: Fn(ProxyError, &()) -> AxumResponse + Send + Sync + 'static,
-        OnProxyRequestCallback: Fn(&Request<TBody>, &()) + Send + Sync + 'static,
+        OnProxyRequestCallback: Fn(&mut Request<TBody>, &()) + Send + Sync + 'static,
         OnProxyResponseCallback: Fn(&mut Response<TRespBody>, &()) + Send + Sync + 'static,
         TBody: Sync + Send + 'static,
         TRespBody: HttpBody<Data = Bytes> + Sync + Send + 'static,
@@ -212,7 +212,7 @@ impl<
             + Sync
             + 'static,
         OnProxyErrorCallback: Fn(ProxyError, &TExtension) -> AxumResponse + Send + Sync + 'static,
-        OnProxyRequestCallback: Fn(&Request<TBody>, &TExtension) + Send + Sync + 'static,
+        OnProxyRequestCallback: Fn(&mut Request<TBody>, &TExtension) + Send + Sync + 'static,
         OnProxyResponseCallback: Fn(&mut Response<TRespBody>, &TExtension) + Send + Sync + 'static,
         TBody: Sync + Send + 'static,
         TRespBody: HttpBody<Data = Bytes> + Sync + Send + 'static,

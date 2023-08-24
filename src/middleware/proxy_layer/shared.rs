@@ -127,7 +127,7 @@ impl<
             on_proxy_error,
             on_proxy_request,
             on_proxy_response,
-            phantom: PhantomData::default(),
+            phantom: PhantomData,
         };
 
         Ok(shared)
@@ -163,7 +163,7 @@ where
         + 'static,
     OnProxyErrorCallback:
         Fn(ProxyError, &TExtension) -> axum::response::Response + Send + Sync + 'static,
-    OnProxyRequestCallback: Fn(&Request<TBody>, &TExtension) + Send + Sync + 'static,
+    OnProxyRequestCallback: Fn(&mut Request<TBody>, &TExtension) + Send + Sync + 'static,
     OnProxyResponseCallback: Fn(&mut Response<TRespBody>, &TExtension) + Send + Sync + 'static,
     TBody: Sync + Send + 'static,
     TRespBody: HttpBody<Data = Bytes> + Sync + Send + 'static,
@@ -219,7 +219,7 @@ where
             Ok(new_uri) => {
                 *req.uri_mut() = new_uri;
 
-                (self.on_proxy_request)(&req, &extension);
+                (self.on_proxy_request)(&mut req, &extension);
                 let result = send_request(client, req).await;
 
                 match result {

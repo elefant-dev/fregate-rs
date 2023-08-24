@@ -1,14 +1,16 @@
 use fregate::axum::response::IntoResponse;
 use fregate::axum::routing::get;
-use fregate::axum::Router;
-use fregate::hyper::{Body, Request, Response, StatusCode};
+use fregate::axum::{Json, Router};
+use fregate::hyper::{Body, HeaderMap, Request, Response, StatusCode};
 use fregate::middleware::{ProxyError, ProxyLayer};
 use fregate::ConfigSource::EnvPrefix;
 use fregate::{axum, bootstrap, hyper, tracing, AppConfig, Application};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-fn on_proxy_request<TBody>(request: &Request<TBody>, _ext: &()) {
+fn on_proxy_request<TBody>(request: &mut Request<TBody>, _ext: &()) {
+    let headers = request.headers_mut();
+    headers.insert("CallbackHeader", "true".parse().unwrap());
     tracing::info!("Proxy sends request to: {}", request.uri());
 }
 
@@ -57,7 +59,7 @@ async fn main() {
     .unwrap();
 
     let local_handler = Router::new()
-        .route("/local", get(|| async { "Hello, Local Handler!" }))
+        .route("/local", get(|| async { Json("Hello, Local Handler!") }))
         .layer(proxy_layer);
 
     Application::new(&conf)
@@ -68,8 +70,15 @@ async fn main() {
         .unwrap();
 }
 
+async fn remote_handler(headers: HeaderMap) -> impl IntoResponse {
+    let is_callback_header_found = headers.get("CallbackHeader").is_some();
+    Json(format!(
+        "Hello, Remote Handler!. Found header: {is_callback_header_found}"
+    ))
+}
+
 fn start_server() {
-    let remote_handler = Router::new().route("/local", get(|| async { "Hello, Remote Handler!" }));
+    let remote_handler = Router::new().route("/local", get(remote_handler));
 
     // This will start server on 8000 port by default
     tokio::task::spawn(async {
