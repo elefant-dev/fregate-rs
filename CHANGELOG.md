@@ -4,9 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.15.0] - 2023-08-24
+### Changed
+- Take `&mut Request` in on_request callback in proxy layer. ([#188](https://github.com/elefant-dev/fregate-rs/pull/181))
+
 ## [0.14.0] - 2023-07-11
 ### Added
-- `InstanceId` log field for fregate `EventFormatter` . ([#180](https://github.com/elefant-dev/fregate-rs/pull/184))
+- `InstanceId` log field for fregate `EventFormatter` . ([#184](https://github.com/elefant-dev/fregate-rs/pull/184))
 
 ### Changed
 - Remove once_cell dependency. ([#180](https://github.com/elefant-dev/fregate-rs/pull/180))

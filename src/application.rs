@@ -58,7 +58,7 @@ impl<'a, T> Application<'a, T> {
     pub fn new(config: &'a AppConfig<T>) -> Application<'a, AlwaysReadyAndAlive, T> {
         Application::<'a, AlwaysReadyAndAlive, T> {
             config,
-            health_indicator: AlwaysReadyAndAlive::default(),
+            health_indicator: AlwaysReadyAndAlive,
             router: None,
             metrics_callback: None,
             use_default_trace_layer: true,
