@@ -46,15 +46,10 @@ fn build_version_router(
     management_cfg: &ManagementConfig,
     observability_cfg: &ObservabilityConfig,
 ) -> Router {
-    let path = format!(
-        "/{}{}",
-        observability_cfg.component_name,
-        management_cfg.endpoints.version.as_ref()
-    );
     let version = observability_cfg.version.clone();
 
     Router::new().route(
-        path.as_str(),
+        management_cfg.endpoints.version.as_ref(),
         get(|| async move { version.into_response() }),
     )
 }
@@ -152,7 +147,7 @@ mod management_test {
 
         let router = build_management_router(&mngmt_cfg, &obs_cfg, CustomHealth, None);
         let request = Request::builder()
-            .uri("http://0.0.0.0//version")
+            .uri("http://0.0.0.0/version")
             .method("GET")
             .body(hyper::Body::empty())
             .unwrap();

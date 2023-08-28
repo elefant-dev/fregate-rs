@@ -29,7 +29,7 @@ pub struct ManagementConfig {
 /// const LIVE_ENDPOINT: &str = "/live";
 /// const READY_ENDPOINT: &str = "/ready";
 /// const METRICS_ENDPOINT: &str = "/metrics";
-/// const VERSION_ENDPOINT: &str = "/{component_name}/version";
+/// const VERSION_ENDPOINT: &str = "/version";
 /// ```
 /// You might want to change those:\
 /// Example:
