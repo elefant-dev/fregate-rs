@@ -68,7 +68,7 @@ impl<'de> Deserialize<'de> for HeadersFilter {
 }
 
 fn from_str_to_filter(str: Option<String>) -> Filter {
-    str.map(|str| {
+    str.map_or(Filter::Set(HashSet::default()), |str| {
         let str = str.trim();
 
         if str == "*" {
@@ -81,5 +81,4 @@ fn from_str_to_filter(str: Option<String>) -> Filter {
             )
         }
     })
-    .unwrap_or(Filter::Set(HashSet::default()))
 }
