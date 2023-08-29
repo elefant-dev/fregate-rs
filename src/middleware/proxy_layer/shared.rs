@@ -157,8 +157,9 @@ where
     ShouldProxyCallback: for<'any> Fn(
             &'any Request<TBody>,
             &'any TExtension,
-        ) -> Pin<Box<dyn Future<Output = bool> + Send + 'any>>
-        + Send
+        ) -> Pin<
+            Box<dyn Future<Output = Result<bool, axum::response::Response>> + Send + 'any>,
+        > + Send
         + Sync
         + 'static,
     OnProxyErrorCallback:
