@@ -33,7 +33,7 @@ fn benchmark(c: &mut Criterion) {
         BenchmarkId::new("Fregate None", i),
         &(i, &data),
         |b, (i, data)| {
-            let subscriber = subscriber(EventFormatter::new_with_limits(None));
+            let subscriber = subscriber(EventFormatter::new_with_limit(None));
 
             with_default(subscriber, || {
                 b.iter(|| {
@@ -48,7 +48,7 @@ fn benchmark(c: &mut Criterion) {
         BenchmarkId::new("Fregate Some(256)", i),
         &(i, &data),
         |b, (i, data)| {
-            let subscriber = subscriber(EventFormatter::new_with_limits(Some(256)));
+            let subscriber = subscriber(EventFormatter::new_with_limit(Some(256)));
 
             with_default(subscriber, || {
                 b.iter(|| {
