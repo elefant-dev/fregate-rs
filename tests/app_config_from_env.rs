@@ -1,5 +1,5 @@
 mod app_config_from_env {
-    use fregate::{bootstrap, AppConfig, ConfigSource};
+    use fregate::{bootstrap, AppConfig, ConfigSource, Empty};
     use serde::Deserialize;
     use std::net::{IpAddr, Ipv6Addr};
 
@@ -49,23 +49,18 @@ mod app_config_from_env {
     }
 
     #[test]
-    #[should_panic]
     fn negative_msg_length() {
-        std::env::set_var("WRONG_LOG_MSG_LENGTH", "-123");
-        let config = AppConfig::<TestStruct>::load_from([ConfigSource::EnvPrefix("WRONG")])
-            .expect("Failed to build AppConfig");
-
-        assert_eq!(config.observability_cfg.msg_length, None);
+        std::env::set_var("WRONG_NEGATIVE_LOG_MSG_LENGTH", "-123");
+        let config =
+            AppConfig::<Empty>::load_from([ConfigSource::EnvPrefix("WRONG_NEGATIVE")]).unwrap();
+        assert!(config.observability_cfg.msg_length.is_none());
     }
 
     #[test]
-    #[should_panic]
     fn wrong_msg_length() {
-        std::env::set_var("WRONG_LOG_MSG_LENGTH", "1a123");
-        let config = AppConfig::<TestStruct>::load_from([ConfigSource::EnvPrefix("WRONG")])
-            .expect("Failed to build AppConfig");
-
-        assert_eq!(config.observability_cfg.msg_length, None);
+        std::env::set_var("WRONG_STR_LOG_MSG_LENGTH", "1a123");
+        let config = AppConfig::<Empty>::load_from([ConfigSource::EnvPrefix("WRONG_STR")]).unwrap();
+        assert!(config.observability_cfg.msg_length.is_none());
     }
 
     #[tokio::test]
@@ -84,5 +79,36 @@ mod app_config_from_env {
         assert_eq!(management_cfg.endpoints.health.as_ref(), "///valid");
         assert_eq!(management_cfg.endpoints.live.as_ref(), "/live");
         assert_eq!(management_cfg.endpoints.ready.as_ref(), "/ready");
+    }
+
+    #[test]
+    fn test_server_port_priority() {
+        std::env::set_var("PLACEHOLDER_0_PORT", "1234");
+        std::env::set_var("PLACEHOLDER_0_SERVER_PORT", "5678");
+
+        let config = AppConfig::<Empty>::load_from([ConfigSource::EnvPrefix("PLACEHOLDER_0")])
+            .expect("Failed to build AppConfig");
+
+        assert_eq!(config.port, 5678);
+    }
+
+    #[test]
+    fn test_server_port() {
+        std::env::set_var("PLACEHOLDER_1_SERVER_PORT", "5678");
+
+        let config = AppConfig::<Empty>::load_from([ConfigSource::EnvPrefix("PLACEHOLDER_1")])
+            .expect("Failed to build AppConfig");
+
+        assert_eq!(config.port, 5678);
+    }
+
+    #[test]
+    fn test_port() {
+        std::env::set_var("PLACEHOLDER_2_PORT", "5678");
+
+        let config = AppConfig::<Empty>::load_from([ConfigSource::EnvPrefix("PLACEHOLDER_2")])
+            .expect("Failed to build AppConfig");
+
+        assert_eq!(config.port, 5678);
     }
 }

@@ -16,6 +16,7 @@ use crate::configuration::tls::TlsConfigurationVariables;
 
 const HOST_PTR: &str = "/host";
 const PORT_PTR: &str = "/port";
+const PORT_SERVER_PTR: &str = "/server/port";
 const MANAGEMENT_PTR: &str = "/management";
 
 const DEFAULT_CONFIG: &str = include_str!("../resources/default_conf.toml");
@@ -30,7 +31,8 @@ pub struct Empty {}
 pub struct AppConfig<ConfigExt = Empty> {
     /// host address where to start Application
     pub host: IpAddr,
-    /// port
+    /// When serialized uses `<PREFIX>`_PORT or `<PREFIX>`_SERVER_PORT names.
+    /// `<PREFIX>`_SERVER_PORT has higher priority.
     pub port: u16,
     /// configuration for logs and traces
     pub observability_cfg: ObservabilityConfig,
@@ -73,9 +75,11 @@ where
         D: Deserializer<'de>,
     {
         let config = Value::deserialize(deserializer)?;
-
         let host = config.pointer_and_deserialize(HOST_PTR)?;
-        let port = config.pointer_and_deserialize(PORT_PTR)?;
+        let port = config
+            .pointer_and_deserialize(PORT_SERVER_PTR)
+            .or_else(|_err: D::Error| config.pointer_and_deserialize(PORT_PTR))?;
+
         let management_cfg = config
             .pointer_and_deserialize::<_, D::Error>(MANAGEMENT_PTR)
             .unwrap_or_default();
