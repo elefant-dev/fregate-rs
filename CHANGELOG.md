@@ -4,9 +4,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.16.0] - 2023-09-05
+### Added
+- `port` configuration might be set through `<PREFIX>_SERVER_PORT` and `<PREFIX>_PORT` environmnent variables. ([#194](https://github.com/elefant-dev/fregate-rs/pull/194))
+
+### Changed
+- `should_proxy` callback should return `Result<bool, Error>`. ([#196](https://github.com/elefant-dev/fregate-rs/pull/196))
+- make `/version` endpoint fully configurable. ([#191](https://github.com/elefant-dev/fregate-rs/pull/191))
+
 ## [0.15.0] - 2023-08-24
 ### Changed
-- Take `&mut Request` in on_request callback in proxy layer. ([#188](https://github.com/elefant-dev/fregate-rs/pull/181))
+- Take `&mut Request` in on_request callback in proxy layer. ([#188](https://github.com/elefant-dev/fregate-rs/pull/188))
 
 ## [0.14.0] - 2023-07-11
 ### Added
