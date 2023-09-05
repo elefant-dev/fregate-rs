@@ -19,13 +19,25 @@ fn on_proxy_response(response: &mut Response<Body>, _ext: &()) {
 }
 
 fn on_proxy_error(err: ProxyError, _ext: &()) -> axum::response::Response {
-    tracing::info!("Proxy error: {}", err);
+    tracing::info!("Proxy error: {:?}", err);
     StatusCode::INTERNAL_SERVER_ERROR.into_response()
 }
 
 // Proxy every second request.
-async fn should_proxy(counter: Arc<AtomicUsize>) -> bool {
-    counter.fetch_add(1, Ordering::Acquire) % 2 == 0
+async fn should_proxy(counter: Arc<AtomicUsize>) -> Result<bool, axum::response::Response> {
+    let cnt = counter.fetch_add(1, Ordering::Acquire);
+
+    if cnt % 3 == 0 {
+        Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Early return from should proxy fn",
+        )
+            .into_response())
+    } else if cnt % 2 == 0 {
+        Ok(true)
+    } else {
+        Ok(false)
+    }
 }
 
 #[tokio::main]
@@ -36,7 +48,6 @@ async fn main() {
     start_server();
 
     let counter = Arc::new(AtomicUsize::new(0));
-
     let http_client = hyper::Client::new();
 
     // You might want apply additional layers to Client.

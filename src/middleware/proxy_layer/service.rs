@@ -147,7 +147,8 @@ where
     ShouldProxyCallback: for<'any> Fn(
             &'any Request<TBody>,
             &'any TExtension,
-        ) -> Pin<Box<dyn Future<Output = bool> + Send + 'any>>
+        )
+            -> Pin<Box<dyn Future<Output = Result<bool, AxumResponse>> + Send + 'any>>
         + Send
         + Sync
         + 'static,
@@ -193,16 +194,16 @@ where
         let future = async move {
             let extension = get_extension(&request);
 
-            if (shared.should_proxy)(&request, &extension).await {
-                Ok(shared
+            match (shared.should_proxy)(&request, &extension).await {
+                Ok(true) => Ok(shared
                     .proxy(request, ready_client, extension, poll_error)
                     .await
-                    .into_response())
-            } else {
-                match ready_inner_clone.call(request).await {
+                    .into_response()),
+                Ok(false) => match ready_inner_clone.call(request).await {
                     Ok(resp) => Ok(resp),
                     Err(err) => Err(err),
-                }
+                },
+                Err(err) => Ok(err),
             }
         };
 

@@ -149,7 +149,8 @@ impl<
         ShouldProxyCallback: for<'any> Fn(
                 &'any Request<TBody>,
                 &'any (),
-            ) -> Pin<Box<dyn Future<Output = bool> + Send + 'any>>
+            )
+                -> Pin<Box<dyn Future<Output = Result<bool, AxumResponse>> + Send + 'any>>
             + Send
             + Sync
             + 'static,
@@ -207,7 +208,8 @@ impl<
         ShouldProxyCallback: for<'any> Fn(
                 &'any Request<TBody>,
                 &'any TExtension,
-            ) -> Pin<Box<dyn Future<Output = bool> + Send + 'any>>
+            )
+                -> Pin<Box<dyn Future<Output = Result<bool, AxumResponse>> + Send + 'any>>
             + Send
             + Sync
             + 'static,
