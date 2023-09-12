@@ -4,6 +4,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.17.0] - 2023-09-12
+### Changed
+- Revert opentelemetry lib updates. ([#199](https://github.com/elefant-dev/fregate-rs/pull/199))
+
 ## [0.16.0] - 2023-09-05
 ### Added
 - `port` configuration might be set through `<PREFIX>_SERVER_PORT` and `<PREFIX>_PORT` environmnent variables. ([#194](https://github.com/elefant-dev/fregate-rs/pull/194))
