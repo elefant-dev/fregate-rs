@@ -4,9 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-## [0.17.0] - 2023-09-12
+## [0.17.0] - 2023-10-09
+### Added
+- Rename `VersionExt` trait customize `/version` response ([#200](https://github.com/elefant-dev/fregate-rs/pull/200))
+- 
 ### Changed
 - Revert opentelemetry lib updates. ([#199](https://github.com/elefant-dev/fregate-rs/pull/199))
+- Rename `Health` trait to `HealthExt` ([#200](https://github.com/elefant-dev/fregate-rs/pull/200))
 
 ## [0.16.0] - 2023-09-05
 ### Added
