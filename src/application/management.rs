@@ -70,11 +70,12 @@ mod management_test {
     use super::*;
     use crate::version::DefaultVersion;
     use crate::Empty;
-    use axum::http::{HeaderValue, Request, StatusCode};
+    use axum::http::{Request, StatusCode};
     use axum::Json;
+    use serde::Deserialize;
     use tower::ServiceExt;
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Deserialize, Clone)]
     pub struct Config {
         pub version: String,
     }
@@ -156,7 +157,7 @@ mod management_test {
 
     #[tokio::test]
     async fn ready_test() {
-        let app_cfg = Arc::new(AppConfig::<Empty>::default());
+        let app_cfg = Arc::new(AppConfig::default());
 
         let router = build_management_router(&app_cfg, CustomHealth, DefaultVersion, None);
         let request = Request::builder()
@@ -173,13 +174,24 @@ mod management_test {
         assert_eq!(&body[..], b"UNAVAILABLE");
     }
 
+    #[cfg(not(feature = "tls"))]
     #[tokio::test]
     async fn version_test() {
-        let app_cfg = Arc::new(AppConfig::<Config>::default());
+        use axum::http::HeaderValue;
+        use std::net::{IpAddr, Ipv4Addr};
+
+        let app_cfg = Arc::new(AppConfig {
+            host: IpAddr::V4(Ipv4Addr::LOCALHOST),
+            port: 8000,
+            observability_cfg: Default::default(),
+            management_cfg: Default::default(),
+            private: Config::default(),
+            worker_guard: None,
+        });
 
         let router = build_management_router(&app_cfg, CustomHealth, CustomVersion, None);
         let request = Request::builder()
-            .uri("http://0.0.0.0/version")
+            .uri("http://0.0.0.0:8000/version")
             .method("GET")
             .body(hyper::Body::empty())
             .unwrap();
@@ -190,7 +202,10 @@ mod management_test {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
 
         assert_eq!(StatusCode::OK, status);
-        assert_eq!(content_type, Some(HeaderValue::from_static("json")));
-        assert_eq!(&body[..], b"123.220.0");
+        assert_eq!(
+            content_type,
+            Some(HeaderValue::from_static("application/json"))
+        );
+        assert_eq!(&body[..], b"\"123.220.0\"");
     }
 }

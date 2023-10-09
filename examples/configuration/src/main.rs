@@ -36,7 +36,7 @@ async fn main() {
     .unwrap();
 
     // Read default AppConfig
-    let _conf = AppConfig::<Empty>::default();
+    let _conf = AppConfig::default();
 
     // Set up AppConfig through builder, nothing added by default
     let _conf = AppConfig::<Empty>::builder()

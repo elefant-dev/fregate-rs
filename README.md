@@ -20,7 +20,7 @@ async fn handler() -> &'static str {
 async fn main() {
     let config: AppConfig = bootstrap([]).unwrap();
 
-    Application::new(&config)
+    Application::new(config)
         .router(Router::new().route("/", get(handler)))
         .serve()
         .await
