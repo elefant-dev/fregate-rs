@@ -69,6 +69,7 @@ where
 mod management_test {
     use super::*;
     use crate::version::DefaultVersion;
+    use crate::Empty;
     use axum::http::{HeaderValue, Request, StatusCode};
     use axum::Json;
     use tower::ServiceExt;
@@ -117,7 +118,7 @@ mod management_test {
 
     #[tokio::test]
     async fn health_test() {
-        let app_cfg = Arc::new(AppConfig::default());
+        let app_cfg = Arc::new(AppConfig::<Empty>::default());
 
         let router = build_management_router(&app_cfg, CustomHealth, DefaultVersion, None);
         let request = Request::builder()
@@ -136,7 +137,7 @@ mod management_test {
 
     #[tokio::test]
     async fn live_test() {
-        let app_cfg = Arc::new(AppConfig::default());
+        let app_cfg = Arc::new(AppConfig::<Empty>::default());
 
         let router = build_management_router(&app_cfg, CustomHealth, DefaultVersion, None);
         let request = Request::builder()
@@ -155,7 +156,7 @@ mod management_test {
 
     #[tokio::test]
     async fn ready_test() {
-        let app_cfg = Arc::new(AppConfig::default());
+        let app_cfg = Arc::new(AppConfig::<Empty>::default());
 
         let router = build_management_router(&app_cfg, CustomHealth, DefaultVersion, None);
         let request = Request::builder()

@@ -15,7 +15,7 @@ mod app_config_tls {
 
     #[tokio::test]
     async fn tls_paths() {
-        let config = AppConfig::default();
+        let config = AppConfig::<Empty>::default();
 
         assert!(config.tls.key_path.is_none());
         assert!(config.tls.cert_path.is_none());
