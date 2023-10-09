@@ -1,6 +1,6 @@
 [package]
 name = "fregate"
-version = "0.16.0"
+version = "0.17.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/elefant-dev/fregate-rs"
@@ -52,9 +52,9 @@ config = "0.13.*"
 hyper = { version = "0.14.*", features = ["full"] }
 metrics = "0.21.*"
 metrics-exporter-prometheus = "0.12.*"
-opentelemetry = { version = "0.20.*", features = ["rt-tokio"] }
-opentelemetry-http = "0.9.*"
-opentelemetry-otlp = "0.13.*"
+opentelemetry = { version = "0.19.*", features = ["rt-tokio"] }
+opentelemetry-http = "0.8.*"
+opentelemetry-otlp = "0.12.*"
 pin-project-lite = "0.2.*"
 prost = "0.11.*"
 reqwest = { version = "0.11.*", default-features = false, optional = true }
@@ -69,7 +69,7 @@ tower = { version = "0.4.*" }
 tower-http = { version = "0.4.*", features = ["util", "map-response-body"] }
 tracing = { version = "0.1.*", features = ["valuable"] }
 tracing-appender = { version = "0.2.*" }
-tracing-opentelemetry = "0.20.*"
+tracing-opentelemetry = "0.19.*"
 tracing-subscriber = { version = "0.3.*", features = ["env-filter", "fmt", "time", "registry"] }
 valuable = "0.1.*"
 valuable-serde = "0.1.*"
