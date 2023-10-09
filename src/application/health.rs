@@ -4,7 +4,7 @@ use axum::response::IntoResponse;
 
 /// Trait to implement custom health check which will be used to respond to health check requests
 #[axum::async_trait]
-pub trait Health: Send + Sync + 'static + Clone {
+pub trait HealthExt: Send + Sync + 'static + Clone {
     /// return type for health check
     type HealthResponse: IntoResponse;
     /// return type for ready check
@@ -24,7 +24,7 @@ pub trait Health: Send + Sync + 'static + Clone {
 pub struct AlwaysReadyAndAlive;
 
 #[axum::async_trait]
-impl Health for AlwaysReadyAndAlive {
+impl HealthExt for AlwaysReadyAndAlive {
     type HealthResponse = (StatusCode, &'static str);
     type ReadyResponse = (StatusCode, &'static str);
 

@@ -4,7 +4,7 @@ use fregate::axum::{Json, Router};
 use fregate::hyper::{Body, HeaderMap, Request, Response, StatusCode};
 use fregate::middleware::{ProxyError, ProxyLayer};
 use fregate::ConfigSource::EnvPrefix;
-use fregate::{axum, bootstrap, hyper, tracing, AppConfig, Application};
+use fregate::{axum, bootstrap, hyper, tracing, AppConfig, Application, Empty};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -73,7 +73,7 @@ async fn main() {
         .route("/local", get(|| async { Json("Hello, Local Handler!") }))
         .layer(proxy_layer);
 
-    Application::new(&conf)
+    Application::new(conf)
         .router(local_handler)
         .use_default_tracing_layer(false)
         .serve()
@@ -93,7 +93,7 @@ fn start_server() {
 
     // This will start server on 8000 port by default
     tokio::task::spawn(async {
-        Application::new(&AppConfig::default())
+        Application::new(AppConfig::<Empty>::default())
             .router(remote_handler)
             .use_default_tracing_layer(false)
             .serve()

@@ -5,13 +5,13 @@ mod app_config_tests {
 
     #[test]
     fn multiple_config() {
-        let _config = AppConfig::default();
-        let _config = AppConfig::default();
+        let _config = AppConfig::<Empty>::default();
+        let _config = AppConfig::<Empty>::default();
     }
 
     #[test]
     fn default() {
-        let config = AppConfig::default();
+        let config = AppConfig::<Empty>::default();
 
         assert_eq!(config.port, 8000);
         assert_eq!(config.host, IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)));

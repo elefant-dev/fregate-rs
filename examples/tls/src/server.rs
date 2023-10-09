@@ -44,7 +44,7 @@ async fn main() {
 
     let app_router = rest.merge(grpc_router);
 
-    Application::new(&config)
+    Application::new(config)
         .router(app_router)
         .serve_tls()
         .await

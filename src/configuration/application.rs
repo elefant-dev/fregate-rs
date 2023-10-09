@@ -112,6 +112,27 @@ impl Default for AppConfig {
     }
 }
 
+impl<T> Default for AppConfig<T>
+where
+    T: Default,
+{
+    #[allow(clippy::expect_used)]
+    fn default() -> AppConfig<T> {
+        let cfg = AppConfig::<Empty>::default();
+
+        AppConfig::<T> {
+            host: cfg.host,
+            port: cfg.port,
+            observability_cfg: cfg.observability_cfg,
+            #[cfg(feature = "tls")]
+            tls: cfg.tls,
+            management_cfg: cfg.management_cfg,
+            private: T::default(),
+            worker_guard: cfg.worker_guard,
+        }
+    }
+}
+
 impl<ConfigExt> AppConfig<ConfigExt> {
     /// Creates [`AppConfigBuilder`] to add different sources to config
     pub fn builder() -> AppConfigBuilder<ConfigExt> {
