@@ -17,7 +17,7 @@ async fn main() {
 
     let router = grpc.merge(rest);
 
-    Application::new(&config)
+    Application::new(config)
         .router(router)
         .serve()
         .await

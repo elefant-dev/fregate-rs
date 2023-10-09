@@ -1,5 +1,5 @@
 use fregate::hyper::StatusCode;
-use fregate::{axum, bootstrap, health::Health, Application};
+use fregate::{axum, bootstrap, health::HealthExt, Application};
 use fregate::{tokio, AppConfig};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
@@ -10,7 +10,7 @@ pub struct CustomHealth {
 }
 
 #[axum::async_trait]
-impl Health for CustomHealth {
+impl HealthExt for CustomHealth {
     type HealthResponse = (StatusCode, &'static str);
     type ReadyResponse = StatusCode;
 
@@ -30,7 +30,7 @@ impl Health for CustomHealth {
 async fn main() {
     let config: AppConfig = bootstrap([]).unwrap();
 
-    Application::new(&config)
+    Application::new(config)
         .health_indicator(CustomHealth::default())
         .serve()
         .await

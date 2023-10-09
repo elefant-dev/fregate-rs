@@ -3,8 +3,10 @@ pub(crate) mod management;
 
 #[cfg(feature = "tls")]
 pub(crate) mod tls;
+pub mod version;
 
-use crate::application::health::{AlwaysReadyAndAlive, Health};
+use crate::application::health::{AlwaysReadyAndAlive, HealthExt};
+use crate::application::version::{DefaultVersion, VersionExt};
 use crate::configuration::{AppConfig, Empty};
 use crate::error::Result;
 use crate::management::build_management_router;
@@ -19,15 +21,16 @@ use tokio::signal;
 use tracing::info;
 
 /// Application to set up HTTP server with given config [`AppConfig`]
-pub struct Application<'a, H = AlwaysReadyAndAlive, T = Empty> {
-    config: &'a AppConfig<T>,
+pub struct Application<H = AlwaysReadyAndAlive, T = Empty, V = DefaultVersion> {
+    config: Arc<AppConfig<T>>,
     health_indicator: H,
+    version: V,
     router: Option<Router>,
     metrics_callback: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
     use_default_trace_layer: bool,
 }
 
-impl<'a, H: Debug, T: Debug> Debug for Application<'a, H, T> {
+impl<H: Debug, T: Debug, V: Debug> Debug for Application<H, T, V> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let Self {
             config,
@@ -35,10 +38,12 @@ impl<'a, H: Debug, T: Debug> Debug for Application<'a, H, T> {
             router,
             metrics_callback,
             use_default_trace_layer,
+            version,
         } = self;
         f.debug_struct("Application")
             .field("config", config)
             .field("health_indicator", health_indicator)
+            .field("version", version)
             .field("router", router)
             .field("use_default_trace_layer", use_default_trace_layer)
             .field(
@@ -53,12 +58,27 @@ impl<'a, H: Debug, T: Debug> Debug for Application<'a, H, T> {
     }
 }
 
-impl<'a, T> Application<'a, T> {
+impl<T> Application<T> {
     /// Creates new Application with health checks always returning [200 OK]
-    pub fn new(config: &'a AppConfig<T>) -> Application<'a, AlwaysReadyAndAlive, T> {
-        Application::<'a, AlwaysReadyAndAlive, T> {
+    pub fn new(config: AppConfig<T>) -> Application<AlwaysReadyAndAlive, T, DefaultVersion> {
+        Application::<AlwaysReadyAndAlive, T, DefaultVersion> {
+            config: Arc::new(config),
+            health_indicator: AlwaysReadyAndAlive,
+            version: DefaultVersion,
+            router: None,
+            metrics_callback: None,
+            use_default_trace_layer: true,
+        }
+    }
+
+    /// Creates new Application with health checks always returning [200 OK]
+    pub fn new_from_arced(
+        config: Arc<AppConfig<T>>,
+    ) -> Application<AlwaysReadyAndAlive, T, DefaultVersion> {
+        Application::<AlwaysReadyAndAlive, T, DefaultVersion> {
             config,
             health_indicator: AlwaysReadyAndAlive,
+            version: DefaultVersion,
             router: None,
             metrics_callback: None,
             use_default_trace_layer: true,
@@ -66,23 +86,46 @@ impl<'a, T> Application<'a, T> {
     }
 }
 
-impl<'a, H, T> Application<'a, H, T> {
+impl<H, T, V> Application<H, T, V> {
     /// Set up new health indicator
-    pub fn health_indicator<Hh: Health>(self, health: Hh) -> Application<'a, Hh, T> {
+    pub fn health_indicator<Hh: HealthExt>(self, health: Hh) -> Application<Hh, T, V> {
         let Self {
             config,
             health_indicator: _,
             router,
             metrics_callback,
             use_default_trace_layer,
+            version,
         } = self;
 
-        Application::<'a, Hh, T> {
+        Application::<Hh, T, V> {
             config,
             health_indicator: health,
             router,
             metrics_callback,
             use_default_trace_layer,
+            version,
+        }
+    }
+
+    /// Set up new version struct
+    pub fn version<Vv: VersionExt<T>>(self, version: Vv) -> Application<H, T, Vv> {
+        let Self {
+            config,
+            health_indicator,
+            router,
+            metrics_callback,
+            use_default_trace_layer,
+            version: _,
+        } = self;
+
+        Application::<H, T, Vv> {
+            config,
+            health_indicator,
+            router,
+            metrics_callback,
+            use_default_trace_layer,
+            version,
         }
     }
 
@@ -111,7 +154,7 @@ impl<'a, H, T> Application<'a, H, T> {
     ///
     ///    #[tokio::main]
     ///   async fn main() {
-    ///        Application::new(&AppConfig::default())
+    ///        Application::new(AppConfig::default())
     ///            .use_default_tracing_layer(false)
     ///            .serve()
     ///            .await
@@ -129,7 +172,9 @@ impl<'a, H, T> Application<'a, H, T> {
     /// Start serving at specified host and port in [AppConfig] accepting both HTTP1 and HTTP2
     pub async fn serve(self) -> Result<()>
     where
-        H: Health,
+        H: HealthExt,
+        V: VersionExt<T>,
+        T: Send + Sync + 'static,
     {
         let (router, application_socket) = self.prepare_router();
         run_service(&application_socket, router).await
@@ -139,7 +184,9 @@ impl<'a, H, T> Application<'a, H, T> {
     #[cfg(feature = "tls")]
     pub async fn serve_tls(self) -> Result<()>
     where
-        H: Health,
+        H: HealthExt,
+        V: VersionExt<T>,
+        T: Send + Sync + 'static,
     {
         use crate::error::Error;
         use futures_util::TryFutureExt;
@@ -185,7 +232,9 @@ impl<'a, H, T> Application<'a, H, T> {
 
     fn prepare_router(self) -> (Router, SocketAddr)
     where
-        H: Health,
+        H: HealthExt,
+        V: VersionExt<T>,
+        T: Send + Sync + 'static,
     {
         let app_router = self
             .router
@@ -205,9 +254,9 @@ impl<'a, H, T> Application<'a, H, T> {
             .unwrap_or_default();
 
         let router = build_management_router(
-            &self.config.management_cfg,
-            &self.config.observability_cfg,
+            &self.config,
             self.health_indicator,
+            self.version,
             self.metrics_callback,
         )
         .merge(app_router);

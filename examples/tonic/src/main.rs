@@ -22,7 +22,7 @@ async fn main() {
 
     let app_router = rest.merge(grpc);
 
-    Application::new(&config)
+    Application::new(config)
         .router(app_router)
         .serve()
         .await

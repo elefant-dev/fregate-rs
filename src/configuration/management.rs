@@ -54,7 +54,7 @@ pub struct ManagementConfig {
 ///
 ///     let config: AppConfig = bootstrap([ConfigSource::EnvPrefix("TEST")]).unwrap();
 ///
-///     Application::new(&config)
+///     Application::new(config)
 ///         .router(Router::new().route("/", get(handler)))
 ///         .serve()
 ///         .await
