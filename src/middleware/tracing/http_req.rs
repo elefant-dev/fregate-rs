@@ -1,3 +1,4 @@
+use crate::extensions::HttpReqExt;
 use crate::middleware::extract_remote_address;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
@@ -41,7 +42,7 @@ pub async fn trace_http_request<B>(
     );
 
     let duration = Instant::now();
-    let response = next.run(request).await;
+    let mut response = next.run(request).await;
     let elapsed = duration.elapsed();
 
     let duration = elapsed.as_millis();
@@ -57,6 +58,7 @@ pub async fn trace_http_request<B>(
         "[Response] <<< [{req_method}] [{url}] [{PROTOCOL_HTTP}] [{status}] in [{duration}ms]"
     );
 
+    response.headers_mut().inject_from_current_span();
     response
 }
 

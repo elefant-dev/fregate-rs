@@ -27,3 +27,16 @@ impl<B> HttpReqExt for http::Request<B> {
         });
     }
 }
+
+#[sealed]
+impl HttpReqExt for http::HeaderMap {
+    fn inject_from_current_span(&mut self) {
+        self.inject_from_span(&Span::current())
+    }
+
+    fn inject_from_span(&mut self, span: &Span) {
+        get_text_map_propagator(|propagator| {
+            propagator.inject_context(&span.context(), &mut HeaderInjector(self))
+        });
+    }
+}
