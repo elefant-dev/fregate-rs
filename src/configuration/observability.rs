@@ -4,7 +4,6 @@ use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use serde_json::{from_value, Value};
 
-#[cfg(feature = "tokio-metrics")]
 const SERVER_METRICS_UPDATE_INTERVAL_PTR: &str = "/server/metrics/update_interval";
 const LOG_LEVEL_PTR: &str = "/log/level";
 const LOG_MSG_LENGTH_PTR: &str = "/log/msg/length";
@@ -33,8 +32,7 @@ pub struct ObservabilityConfig {
     pub component_name: String,
     /// component version
     pub version: String,
-    /// Tokio metrics update interval
-    #[cfg(feature = "tokio-metrics")]
+    /// metrics update interval
     pub metrics_update_interval: std::time::Duration,
     /// configures [`tracing_opentelemetry::layer`] endpoint for sending traces.
     pub traces_endpoint: Option<String>,
@@ -60,7 +58,6 @@ impl<'de> Deserialize<'de> for ObservabilityConfig {
             .map(from_value::<String>)
             .transpose()
             .map_err(D::Error::custom)?;
-        #[cfg(feature = "tokio-metrics")]
         let metrics_update_interval =
             config.pointer_and_deserialize::<u64, D::Error>(SERVER_METRICS_UPDATE_INTERVAL_PTR)?;
         let msg_length = config
@@ -83,7 +80,6 @@ impl<'de> Deserialize<'de> for ObservabilityConfig {
             traces_endpoint,
             buffered_lines_limit,
             headers_filter,
-            #[cfg(feature = "tokio-metrics")]
             metrics_update_interval: std::time::Duration::from_millis(metrics_update_interval),
         })
     }

@@ -1,4 +1,5 @@
 pub(crate) mod recorder;
+pub(crate) mod sys_info;
 #[cfg(feature = "tokio-metrics")]
 pub mod tokio_metrics;
 
@@ -22,6 +23,8 @@ pub fn init_metrics() -> Result<()> {
 
     #[cfg(feature = "tokio-metrics")]
     tokio_metrics::register_metrics();
+
+    sys_info::register_sys_metrics();
 
     Ok(())
 }

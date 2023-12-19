@@ -1,4 +1,5 @@
 //!This is a shortcut fn to read [`AppConfig`] and call [`init_tracing`] and [`init_metrics`] fn.
+use crate::observability::sys_info::init_sys_metrics;
 #[cfg(feature = "tokio-metrics")]
 use crate::observability::tokio_metrics::init_tokio_metrics_task;
 use crate::observability::{init_metrics, init_tracing};
@@ -68,6 +69,7 @@ where
 
     #[cfg(feature = "tokio-metrics")]
     init_tokio_metrics_task(config.observability_cfg.metrics_update_interval);
+    init_sys_metrics(config.observability_cfg.metrics_update_interval);
 
     tracing::info!("Configuration: `{config:?}`.");
     Ok(config)

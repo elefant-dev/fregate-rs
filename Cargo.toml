@@ -52,6 +52,7 @@ config = "0.13.*"
 hyper = { version = "0.14.*", features = ["full"] }
 metrics = "0.21.*"
 metrics-exporter-prometheus = "0.12.*"
+num_cpus = "1.16.*"
 opentelemetry = { version = "0.19.*", features = ["rt-tokio"] }
 opentelemetry-http = "0.8.*"
 opentelemetry-otlp = "0.12.*"
@@ -61,6 +62,7 @@ reqwest = { version = "0.11.*", default-features = false, optional = true }
 sealed = "0.5.*"
 serde = { version = "1.0.*", features = ["derive"] }
 serde_json = "1.0.*"
+sysinfo = "0.29.*"
 thiserror = "1.0.*"
 time = "0.3.*"
 tokio = { version = "1", features = ["signal"] }
