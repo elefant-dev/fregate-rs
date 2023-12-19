@@ -15,6 +15,8 @@ pub fn init_sys_metrics(metrics_update_ms: Duration) {
                 let sys = SYSTEM.get_or_init(|| Mutex::new(System::new()));
                 let mut sys = sys.lock().unwrap_or_else(PoisonError::into_inner);
 
+                sys.refresh_cpu();
+                sys.refresh_memory();
                 sys.refresh_process(pid);
                 let process = sys.process(pid);
 
