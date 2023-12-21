@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 ## [0.18.0] - 2023-19-12
 ### Added
-- Expose sys metrics ([#204](https://github.com/elefant-dev/fregate-rs/pull/204)) 
+- Expose proc/cgroup metrics ([#204](https://github.com/elefant-dev/fregate-rs/pull/204)) 
 
 ## [0.17.1] - 2023-11-16
 ### Added
