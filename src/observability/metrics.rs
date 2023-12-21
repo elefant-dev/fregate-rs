@@ -1,3 +1,4 @@
+pub(crate) mod cgroupv2;
 pub(crate) mod recorder;
 pub(crate) mod sys_info;
 #[cfg(feature = "tokio-metrics")]
