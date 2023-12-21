@@ -238,7 +238,7 @@ pub(crate) fn register_cgroup_metrics() {
             "cpu.max.period",
             "Returns the period in which group may consume `cpu.max.max` of cpu bandwidth.",
         ),
-        ("cpu.weight", "."),
+        ("cpu.weight", "Returns set cpu weight"),
     ] {
         describe_gauge!(name, describe);
         register_gauge!(name);

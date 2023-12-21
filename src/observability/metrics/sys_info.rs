@@ -1,7 +1,6 @@
 use metrics::{describe_gauge, gauge, register_gauge};
-use std::sync::{Mutex, OnceLock, PoisonError};
 use std::time::Duration;
-use sysinfo::{CpuExt, Pid, ProcessExt, System, SystemExt};
+use sysinfo::{Pid, ProcessExt, System, SystemExt};
 
 pub(crate) fn init_sys_metrics(metrics_update_ms: Duration) {
     let pid = Pid::from(std::process::id() as usize);
@@ -20,6 +19,7 @@ pub(crate) fn init_sys_metrics(metrics_update_ms: Duration) {
                     gauge!("cpu_used", process.cpu_usage() as f64);
                 }
 
+                println!("{}", num_cpus::get());
                 gauge!("num_cpus", num_cpus::get() as f64);
                 gauge!("memory_available", system.total_memory() as f64);
             }

@@ -19,7 +19,7 @@ use tokio_metrics::{RuntimeMetrics, RuntimeMonitor};
 /// #[tokio::main]
 /// async fn main() {
 ///     
-/// init_metrics().expect("Failed to initialise PrometheusRecorder");
+/// init_metrics(false).expect("Failed to initialise PrometheusRecorder");
 ///     init_tokio_metrics_task(Duration::from_millis(500));
 ///
 ///     Application::new(AppConfig::default())

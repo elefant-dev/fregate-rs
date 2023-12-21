@@ -13,6 +13,7 @@ const SERVICE_NAME_PTR: &str = "/service/name";
 const COMPONENT_NAME_PTR: &str = "/component/name";
 const COMPONENT_VERSION_PTR: &str = "/component/version";
 const TRACES_ENDPOINT_PTR: &str = "/exporter/otlp/traces/endpoint";
+const CGROUP_METRICS_PTR: &str = "/cgroup/metrics";
 const HEADERS_PTR: &str = "/headers";
 
 /// configuration for logs and traces
@@ -32,6 +33,8 @@ pub struct ObservabilityConfig {
     pub component_name: String,
     /// component version
     pub version: String,
+    /// if it set true then metrics will be supplied from cgroup v2.
+    pub cgroup_metrics: bool,
     /// metrics update interval
     pub metrics_update_interval: std::time::Duration,
     /// configures [`tracing_opentelemetry::layer`] endpoint for sending traces.
@@ -51,6 +54,9 @@ impl<'de> Deserialize<'de> for ObservabilityConfig {
         let trace_level = config.pointer_and_deserialize(TRACE_LEVEL_PTR)?;
         let service_name = config.pointer_and_deserialize(SERVICE_NAME_PTR)?;
         let component_name = config.pointer_and_deserialize(COMPONENT_NAME_PTR)?;
+        let cgroup_metrics = config
+            .pointer_and_deserialize::<_, D::Error>(CGROUP_METRICS_PTR)
+            .unwrap_or_default();
         let version = config.pointer_and_deserialize(COMPONENT_VERSION_PTR)?;
         let traces_endpoint = config
             .pointer_mut(TRACES_ENDPOINT_PTR)
@@ -81,6 +87,7 @@ impl<'de> Deserialize<'de> for ObservabilityConfig {
             buffered_lines_limit,
             headers_filter,
             metrics_update_interval: std::time::Duration::from_millis(metrics_update_interval),
+            cgroup_metrics,
         })
     }
 }

@@ -19,13 +19,17 @@ pub fn render_metrics(callback: Option<&(dyn Fn() + Send + Sync + 'static)>) -> 
 }
 
 /// Initialise PrometheusRecorder
-pub fn init_metrics() -> Result<()> {
+pub fn init_metrics(cgroup_metrics: bool) -> Result<()> {
     metrics::set_recorder(get_recorder())?;
 
     #[cfg(feature = "tokio-metrics")]
     tokio_metrics::register_metrics();
 
-    sys_info::register_sys_metrics();
+    if cgroup_metrics {
+        sys_info::register_sys_metrics();
+    } else {
+        cgroupv2::register_cgroup_metrics();
+    }
 
     Ok(())
 }
