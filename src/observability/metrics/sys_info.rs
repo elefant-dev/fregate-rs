@@ -19,7 +19,6 @@ pub(crate) fn init_sys_metrics(metrics_update_ms: Duration) {
                     gauge!("cpu_used", process.cpu_usage() as f64);
                 }
 
-                println!("{}", num_cpus::get());
                 gauge!("num_cpus", num_cpus::get() as f64);
                 gauge!("memory_available", system.total_memory() as f64);
             }
