@@ -13,9 +13,9 @@ pub(crate) fn init_sys_metrics(metrics_update_ms: Duration) {
             {
                 #[cfg(target_os = "linux")]
                 {
-                    use crate::observability::proc_limits::{read_limits, UnlimitedValue};
+                    use crate::observability::proc_limits::{read_process_limits, UnlimitedValue};
 
-                    match read_limits(u32_pid) {
+                    match read_process_limits(u32_pid) {
                         Ok(limits) => match limits.max_cpu_limit.soft_limit {
                             Some(UnlimitedValue::Unlimited) => gauge!("max_cpu_time", -1_f64),
                             Some(UnlimitedValue::Value(v)) => gauge!("max_cpu_time", v as f64),
