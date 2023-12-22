@@ -3,13 +3,30 @@ use std::time::Duration;
 use sysinfo::{Pid, ProcessExt, System, SystemExt};
 
 pub(crate) fn init_sys_metrics(metrics_update_ms: Duration) {
-    let pid = Pid::from(std::process::id() as usize);
+    let u32_pid = std::process::id();
+    let pid = Pid::from(u32_pid as usize);
 
     tokio::task::spawn(async move {
         let mut system = System::new();
 
         loop {
             {
+                #[cfg(target_os = "linux")]
+                {
+                    use crate::observability::proc_limits::{read_limits, UnlimitedValue};
+
+                    match read_limits(u32_pid) {
+                        Ok(limits) => match limits.max_cpu_limit.soft_limit {
+                            Some(UnlimitedValue::Unlimited) => gauge!("max_cpu_time", -1_f64),
+                            Some(UnlimitedValue::Value(v)) => gauge!("max_cpu_time", v as f64),
+                            _ => {}
+                        },
+                        Err(err) => {
+                            tracing::error!("Could not update limits: {err}");
+                        }
+                    }
+                }
+
                 system.refresh_memory();
                 system.refresh_process(pid);
                 let process = system.process(pid);
@@ -43,5 +60,14 @@ pub(crate) fn register_sys_metrics() {
     ] {
         describe_gauge!(name, describe);
         register_gauge!(name);
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        describe_gauge!(
+            "max_cpu_time",
+            "Returns max cpu time soft limit in seconds. `-1` means `unlimited`"
+        );
+        register_gauge!("max_cpu_time");
     }
 }

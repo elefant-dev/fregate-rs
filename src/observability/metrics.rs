@@ -1,4 +1,6 @@
 pub(crate) mod cgroupv2;
+#[cfg(target_os = "linux")]
+pub(crate) mod proc_limits;
 pub(crate) mod recorder;
 pub(crate) mod sys_info;
 #[cfg(feature = "tokio-metrics")]
@@ -26,9 +28,9 @@ pub fn init_metrics(cgroup_metrics: bool) -> Result<()> {
     tokio_metrics::register_metrics();
 
     if cgroup_metrics {
-        sys_info::register_sys_metrics();
-    } else {
         cgroupv2::register_cgroup_metrics();
+    } else {
+        sys_info::register_sys_metrics();
     }
 
     Ok(())
