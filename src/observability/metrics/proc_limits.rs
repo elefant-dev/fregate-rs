@@ -40,7 +40,7 @@ fn read_limits(limits: String) -> Result<Limits, Box<dyn Error>> {
         }
     }
 
-    Err(format!("Could not find `Max cpu time` soft limit").into())
+    Err("Could not find `Max cpu time` soft limit".into())
 }
 
 #[cfg(test)]
