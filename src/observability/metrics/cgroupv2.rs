@@ -17,7 +17,7 @@ impl FromStr for MaxValue {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.trim();
-        if s.trim().eq_ignore_ascii_case("max") {
+        if s.eq_ignore_ascii_case("max") {
             Ok(MaxValue::Max)
         } else {
             Ok(MaxValue::Value(u64::from_str(s)?))
@@ -38,7 +38,7 @@ impl FromStr for CpuMax {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.trim();
 
-        match s.trim().split_once(' ') {
+        match s.split_once(' ') {
             Some((max, period)) => {
                 let period = u64::from_str(period.trim()).ok();
                 let max = MaxValue::from_str(max).ok();
