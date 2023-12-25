@@ -1,4 +1,6 @@
 //!This is a shortcut fn to read [`AppConfig`] and call [`init_tracing`] and [`init_metrics`] fn.
+use crate::observability::cgroupv2::init_cgroup_metrics;
+use crate::observability::sys_info::init_sys_metrics;
 #[cfg(feature = "tokio-metrics")]
 use crate::observability::tokio_metrics::init_tokio_metrics_task;
 use crate::observability::{init_metrics, init_tracing};
@@ -44,11 +46,12 @@ where
         trace_level,
         service_name,
         component_name,
+        cgroup_metrics,
+        metrics_update_interval,
         traces_endpoint,
         msg_length,
         buffered_lines_limit,
         headers_filter,
-        ..
     } = &config.observability_cfg;
 
     let worker_guard = init_tracing(
@@ -64,10 +67,16 @@ where
     )?;
 
     config.worker_guard.replace(worker_guard);
-    init_metrics()?;
+    init_metrics(*cgroup_metrics)?;
 
     #[cfg(feature = "tokio-metrics")]
-    init_tokio_metrics_task(config.observability_cfg.metrics_update_interval);
+    init_tokio_metrics_task(*metrics_update_interval);
+
+    if *cgroup_metrics {
+        init_cgroup_metrics(*metrics_update_interval)
+    } else {
+        init_sys_metrics(*metrics_update_interval);
+    }
 
     tracing::info!("Configuration: `{config:?}`.");
     Ok(config)

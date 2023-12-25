@@ -11,6 +11,7 @@ mod app_config_from_env {
     #[test]
     fn test_load_from() {
         std::env::set_var("TEST_HOST", "::1");
+        std::env::set_var("TEST_CGROUP_METRICS", "true");
         std::env::set_var("TEST_PORT", "1234");
         std::env::set_var("TEST_SERVICE_NAME", "TEST");
         std::env::set_var("TEST_COMPONENT_NAME", "COMPONENT_TEST");
@@ -46,6 +47,7 @@ mod app_config_from_env {
         assert_eq!(logger.log_level, "trace".to_owned());
         assert_eq!(logger.msg_length, Some(0));
         assert_eq!(logger.buffered_lines_limit, Some(999));
+        assert!(logger.cgroup_metrics);
     }
 
     #[test]

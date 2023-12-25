@@ -1,4 +1,8 @@
+pub(crate) mod cgroupv2;
+#[cfg(target_os = "linux")]
+pub(crate) mod proc_limits;
 pub(crate) mod recorder;
+pub(crate) mod sys_info;
 #[cfg(feature = "tokio-metrics")]
 pub mod tokio_metrics;
 
@@ -17,11 +21,17 @@ pub fn render_metrics(callback: Option<&(dyn Fn() + Send + Sync + 'static)>) -> 
 }
 
 /// Initialise PrometheusRecorder
-pub fn init_metrics() -> Result<()> {
+pub fn init_metrics(cgroup_metrics: bool) -> Result<()> {
     metrics::set_recorder(get_recorder())?;
 
     #[cfg(feature = "tokio-metrics")]
     tokio_metrics::register_metrics();
+
+    if cgroup_metrics {
+        cgroupv2::register_cgroup_metrics();
+    } else {
+        sys_info::register_sys_metrics();
+    }
 
     Ok(())
 }
