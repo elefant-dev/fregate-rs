@@ -32,6 +32,7 @@ impl HashBuilder {
     /// let num0_ref_hash = hash_builder.calculate_hash(&num0);
     /// assert_eq!(num0_hash, num0_ref_hash);
     /// ```
+    #[allow(clippy::manual_hash_one)]
     pub fn calculate_hash<T: Hash>(&self, value: T) -> HashId {
         let mut s = self.0.build_hasher();
         value.hash(&mut s);

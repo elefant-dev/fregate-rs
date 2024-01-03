@@ -68,6 +68,7 @@ pub use application::*;
 pub use bootstrap::*;
 #[doc(inline)]
 pub use configuration::*;
+#[allow(unused_imports)]
 pub use static_assert::*;
 
 pub use axum;
