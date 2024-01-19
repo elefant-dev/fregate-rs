@@ -38,7 +38,7 @@ where
     let buffered_lines_limit = buffered_lines_limit.unwrap_or(DEFAULT_BUFFERED_LINES_LIMIT);
 
     let (writer, guard) = tracing_appender::non_blocking::NonBlockingBuilder::default()
-        .lossy(false)
+        .lossy(true)
         .buffered_lines_limit(buffered_lines_limit)
         .finish(std::io::stdout());
 
