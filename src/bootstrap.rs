@@ -38,10 +38,54 @@ where
     S: IntoIterator<Item = ConfigSource<'a>>,
     ConfigExt: Debug + DeserializeOwned,
 {
-    let mut config = AppConfig::<ConfigExt>::load_from(sources)?;
+    bootstrap_with_callback(sources, |_s| {})
+}
 
+/// This has same functionalilty as [`bootstrap`] function, but calls `callback` before setting
+/// logging, tracing and metrics allowing to modify some of the variables.
+/// Example:
+///```no_run
+/// use fregate::*;
+/// use fregate::axum::{Router, routing::get, response::IntoResponse};
+///
+/// #[tokio::main]
+/// async fn main() {
+///    std::env::set_var("TEST_PORT", "3333");
+///    std::env::set_var("TEST_NUMBER", "1010");
+///
+///     let config: AppConfig = bootstrap_with_callback([
+///         ConfigSource::File("./examples/configuration/app.yaml"),
+///         ConfigSource::EnvPrefix("TEST")
+///     ],
+///     |cfg| {
+///        // version is used for logging and tracing and you might want to set it from compile time env var.
+///        if let Some(build_version) = option_env!("BUILD_VERSION") {
+///           cfg.observability_cfg.version = build_version.to_owned();
+///        }  
+///     })
+///     .unwrap();
+///
+///     Application::new(config)
+///         .router(Router::new().route("/", get(|| async { "Hello World"})))
+///         .serve()
+///         .await
+///         .unwrap();
+/// }
+/// ```
+pub fn bootstrap_with_callback<'a, ConfigExt, S>(
+    sources: S,
+    callback: impl FnOnce(&mut AppConfig<ConfigExt>),
+) -> Result<AppConfig<ConfigExt>>
+where
+    S: IntoIterator<Item = ConfigSource<'a>>,
+    ConfigExt: Debug + DeserializeOwned,
+{
+    let mut config = AppConfig::<ConfigExt>::load_from(sources)?;
+    callback(&mut config);
     let ObservabilityConfig {
         log_level,
+        logging_path,
+        logging_file,
         version,
         trace_level,
         service_name,
@@ -64,6 +108,8 @@ where
         *msg_length,
         *buffered_lines_limit,
         headers_filter.clone(),
+        logging_path.as_deref(),
+        logging_file.as_deref(),
     )?;
 
     config.worker_guard.replace(worker_guard);

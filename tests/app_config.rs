@@ -28,6 +28,9 @@ mod app_config_tests {
         assert_eq!(logger.trace_level, "info".to_owned());
         assert_eq!(logger.log_level, "info".to_owned());
         assert_eq!(logger.msg_length, Some(8192));
+        assert_eq!(logger.logging_file, None);
+        assert_eq!(logger.logging_path, None);
+        assert_eq!(logger.msg_length, Some(8192));
         assert_eq!(logger.cgroup_metrics, false);
         assert_eq!(mngmnt.endpoints.health.as_ref(), "/health");
         assert_eq!(mngmnt.endpoints.ready.as_ref(), "/ready");

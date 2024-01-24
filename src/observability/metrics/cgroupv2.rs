@@ -127,7 +127,7 @@ fn get_cgroup_path() -> Result<String, Box<dyn std::error::Error>> {
     }
 }
 
-pub(crate) fn init_cgroup_metrics(metrics_update_ms: Duration) {
+pub fn init_cgroup_metrics(metrics_update_ms: Duration) {
     let cgroup_path = match get_cgroup_path() {
         Ok(path) => path,
         Err(err) => {

@@ -2,7 +2,7 @@ use metrics::{describe_gauge, gauge, register_gauge};
 use std::time::Duration;
 use sysinfo::{Pid, ProcessExt, System, SystemExt};
 
-pub(crate) fn init_sys_metrics(metrics_update_ms: Duration) {
+pub fn init_sys_metrics(metrics_update_ms: Duration) {
     let u32_pid = std::process::id();
     let pid = Pid::from(u32_pid as usize);
 

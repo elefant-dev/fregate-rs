@@ -60,6 +60,8 @@ pub fn init_tracing(
     log_msg_length: Option<usize>,
     buffered_lines_limit: Option<usize>,
     headers_filter: Option<HeadersFilter>,
+    logging_path: Option<&str>,
+    logging_file: Option<&str>,
 ) -> Result<WorkerGuard> {
     let (log_layer, log_reload, worker) = log_layer(
         log_level,
@@ -68,6 +70,8 @@ pub fn init_tracing(
         component_name,
         log_msg_length,
         buffered_lines_limit,
+        logging_path,
+        logging_file,
     )?;
     let (otlp_layer, otlp_reload) = otlp_layer(trace_level, component_name, traces_endpoint)?;
     registry().with(otlp_layer).with(log_layer).try_init()?;
