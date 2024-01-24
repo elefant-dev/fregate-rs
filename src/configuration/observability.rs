@@ -7,6 +7,8 @@ use serde_json::{from_value, Value};
 const SERVER_METRICS_UPDATE_INTERVAL_PTR: &str = "/server/metrics/update_interval";
 const LOG_LEVEL_PTR: &str = "/log/level";
 const LOG_MSG_LENGTH_PTR: &str = "/log/msg/length";
+const LOGGING_FILE_PTR: &str = "/logging/file";
+const LOGGING_PATH_PTR: &str = "/logging/path";
 const BUFFERED_LINES_LIMIT_PTR: &str = "/buffered/lines/limit";
 const TRACE_LEVEL_PTR: &str = "/trace/level";
 const SERVICE_NAME_PTR: &str = "/service/name";
@@ -21,6 +23,11 @@ const HEADERS_PTR: &str = "/headers";
 pub struct ObservabilityConfig {
     /// log level read to string and later parsed into EnvFilter
     pub log_level: String,
+    /// path where to write logs, if set logs will be written to file
+    pub logging_path: Option<String>,
+    /// log file prefix, if written to file all log files will be with this prefix.\
+    /// by default `component_name` is used
+    pub logging_file: Option<String>,
     /// Maximum message field length, if set: message field will be cut if len() exceed this limit
     pub msg_length: Option<usize>,
     /// Sets limit for [`tracing_appender::non_blocking::NonBlocking`]
@@ -54,6 +61,12 @@ impl<'de> Deserialize<'de> for ObservabilityConfig {
         let trace_level = config.pointer_and_deserialize(TRACE_LEVEL_PTR)?;
         let service_name = config.pointer_and_deserialize(SERVICE_NAME_PTR)?;
         let component_name = config.pointer_and_deserialize(COMPONENT_NAME_PTR)?;
+        let logging_file = config
+            .pointer_and_deserialize::<_, D::Error>(LOGGING_FILE_PTR)
+            .unwrap_or_default();
+        let logging_path = config
+            .pointer_and_deserialize::<_, D::Error>(LOGGING_PATH_PTR)
+            .unwrap_or_default();
         let cgroup_metrics = config
             .pointer_and_deserialize::<_, D::Error>(CGROUP_METRICS_PTR)
             .unwrap_or_default();
@@ -78,6 +91,8 @@ impl<'de> Deserialize<'de> for ObservabilityConfig {
 
         Ok(ObservabilityConfig {
             log_level,
+            logging_path,
+            logging_file,
             msg_length,
             version,
             trace_level,

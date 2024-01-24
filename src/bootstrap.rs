@@ -42,6 +42,8 @@ where
 
     let ObservabilityConfig {
         log_level,
+        logging_path,
+        logging_file,
         version,
         trace_level,
         service_name,
@@ -64,6 +66,8 @@ where
         *msg_length,
         *buffered_lines_limit,
         headers_filter.clone(),
+        logging_path.as_deref(),
+        logging_file.as_deref(),
     )?;
 
     config.worker_guard.replace(worker_guard);
