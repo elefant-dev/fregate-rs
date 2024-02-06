@@ -24,6 +24,7 @@ enum RollingStrategy {
 
 /// Log writer to the segmented file.
 /// Contains also policy to keep only fixed number of files or some newest with fixed age.
+#[derive(Debug)]
 pub struct RollingFileWriter {
     file: RwLock<Option<File>>,
     strategy: RollingStrategyImpl,
@@ -309,6 +310,7 @@ impl FileNameUtils {
     }
 }
 
+#[derive(Debug)]
 struct RollingStrategyImpl {
     strategy: RollingStrategy,
     pub(self) created: SystemTime,
@@ -500,7 +502,7 @@ impl RetentionPolicyImpl {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct ZipFiles {
     handle: Option<JoinHandle<()>>,
 }

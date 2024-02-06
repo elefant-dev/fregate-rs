@@ -13,6 +13,7 @@ pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
 ///```rust
 /// use fregate::observability::init_tracing;
 /// use fregate::observability::TracingFields;
+/// use fregate::LoggerConfig;
 /// use fregate::valuable::Valuable;
 /// use fregate::{tokio, tracing::info};
 /// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -22,9 +23,30 @@ pub(crate) const TRACING_FIELDS_STRUCTURE_NAME: &str =
 ///
 /// #[tokio::main]
 /// async fn main() {
+///    let logger_config = LoggerConfig {
+///         log_level: "info".to_string(),
+///         logging_path: None,
+///         logging_file: None,
+///         msg_length: None,
+///         buffered_lines_limit: None,
+///         logging_interval: None,
+///         logging_limit: None,
+///         logging_max_age: None,
+///         logging_max_count: None,
+///         logging_enable_zip: false,
+///         headers_filter: None,
+///     };
+///
 ///     let _guard = init_tracing(
-///         "info", "info", "0.0.0", "fregate", "marker", None, None, None, None, None, None
-///     ).unwrap();
+///         &logger_config,
+///         "info",
+///         "0.0.0",
+///         "fregate",
+///         "marker",
+///         None,
+///     )
+///     .unwrap();
+///
 ///
 ///     let mut marker = TracingFields::with_capacity(10);
 ///     let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);

@@ -11,6 +11,7 @@ pub use event_formatter::*;
 pub use log_layer::*;
 pub use otlp_layer::*;
 pub use tracing_fields::*;
+pub use writer::*;
 
 use crate::error::Result;
 use crate::observability::HEADERS_FILTER;

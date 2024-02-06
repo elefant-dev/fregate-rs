@@ -10,11 +10,11 @@ const LOG_LEVEL_PTR: &str = "/log/level";
 const LOG_MSG_LENGTH_PTR: &str = "/log/msg/length";
 const LOGGING_FILE_PTR: &str = "/logging/file";
 const LOGGING_PATH_PTR: &str = "/logging/path";
-const LOGGING_FILE_INTERVAL_PTR: &str = "/logging/file/interval";
-const LOGGING_FILE_LIMIT_PTR: &str = "/logging/file/limit";
-const LOGGING_FILE_MAX_AGE_PTR: &str = "/logging/file/max/age";
-const LOGGING_FILE_MAX_COUNT_PTR: &str = "/logging/file/max/count";
-const LOGGING_FILE_ENABLE_ZIP_PTR: &str = "/logging/file/enable/zip";
+const LOGGING_INTERVAL_PTR: &str = "/logging/interval";
+const LOGGING_LIMIT_PTR: &str = "/logging/limit";
+const LOGGING_MAX_AGE_PTR: &str = "/logging/max/age";
+const LOGGING_MAX_COUNT_PTR: &str = "/logging/max/count";
+const LOGGING_ENABLE_ZIP_PTR: &str = "/logging/enable/zip";
 const BUFFERED_LINES_LIMIT_PTR: &str = "/buffered/lines/limit";
 const TRACE_LEVEL_PTR: &str = "/trace/level";
 const SERVICE_NAME_PTR: &str = "/service/name";
@@ -60,15 +60,15 @@ pub struct LoggerConfig {
     /// Sets limit for [`tracing_appender::non_blocking::NonBlocking`]
     pub buffered_lines_limit: Option<usize>,
     /// interval to split file into chunks with fixed interval
-    pub logging_file_interval: Option<Duration>,
+    pub logging_interval: Option<Duration>,
     /// file size limit in bytes
-    pub logging_file_limit: Option<usize>,
+    pub logging_limit: Option<usize>,
     /// maximum duration files kept in seconds
-    pub logging_file_max_age: Option<Duration>,
+    pub logging_max_age: Option<Duration>,
     /// maximum number of files kept
-    pub logging_file_max_count: Option<usize>,
+    pub logging_max_count: Option<usize>,
     /// enable files zipping
-    pub logging_file_enable_zip: bool,
+    pub logging_enable_zip: bool,
     /// initialize [`crate::observability::HEADERS_FILTER`] static variable in [`crate::bootstrap()`] or [`crate::observability::init_tracing()`] fn.
     pub headers_filter: Option<HeadersFilter>,
 }
@@ -135,22 +135,22 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             .pointer_and_deserialize::<_, D::Error>(HEADERS_PTR)
             .ok();
 
-        let logging_file_interval = config
-            .pointer_and_deserialize::<u64, D::Error>(LOGGING_FILE_INTERVAL_PTR)
+        let logging_interval = config
+            .pointer_and_deserialize::<u64, D::Error>(LOGGING_INTERVAL_PTR)
             .ok()
             .map(Duration::from_secs);
-        let logging_file_limit = config
-            .pointer_and_deserialize::<_, D::Error>(LOGGING_FILE_LIMIT_PTR)
+        let logging_limit = config
+            .pointer_and_deserialize::<_, D::Error>(LOGGING_LIMIT_PTR)
             .ok();
-        let logging_file_max_age = config
-            .pointer_and_deserialize::<u64, D::Error>(LOGGING_FILE_MAX_AGE_PTR)
+        let logging_max_age = config
+            .pointer_and_deserialize::<u64, D::Error>(LOGGING_MAX_AGE_PTR)
             .ok()
             .map(Duration::from_secs);
-        let logging_file_max_count = config
-            .pointer_and_deserialize::<_, D::Error>(LOGGING_FILE_MAX_COUNT_PTR)
+        let logging_max_count = config
+            .pointer_and_deserialize::<_, D::Error>(LOGGING_MAX_COUNT_PTR)
             .ok();
-        let logging_file_enable_zip = config
-            .pointer_and_deserialize::<_, D::Error>(LOGGING_FILE_ENABLE_ZIP_PTR)
+        let logging_enable_zip = config
+            .pointer_and_deserialize::<_, D::Error>(LOGGING_ENABLE_ZIP_PTR)
             .unwrap_or_default();
 
         Ok(LoggerConfig {
@@ -159,11 +159,11 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             buffered_lines_limit,
             logging_file,
             logging_path,
-            logging_file_interval,
-            logging_file_limit,
-            logging_file_max_age,
-            logging_file_max_count,
-            logging_file_enable_zip,
+            logging_interval,
+            logging_limit,
+            logging_max_age,
+            logging_max_count,
+            logging_enable_zip,
             headers_filter,
         })
     }
