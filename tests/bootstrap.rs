@@ -11,13 +11,13 @@ mod bootstrap_fn_test {
         assert_eq!(config.host, IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)));
         assert_eq!(config.private, Empty {});
 
-        let logger = &config.observability_cfg;
-        assert_eq!(logger.traces_endpoint, None);
-        assert_eq!(logger.service_name, "default".to_owned());
-        assert_eq!(logger.version, "default".to_owned());
-        assert_eq!(logger.component_name, "default".to_owned());
-        assert_eq!(logger.trace_level, "info".to_owned());
-        assert_eq!(logger.log_level, "info".to_owned());
+        let observ = &config.observability_cfg;
+        assert_eq!(observ.traces_endpoint, None);
+        assert_eq!(observ.service_name, "default".to_owned());
+        assert_eq!(observ.version, "default".to_owned());
+        assert_eq!(observ.component_name, "default".to_owned());
+        assert_eq!(observ.trace_level, "info".to_owned());
+        assert_eq!(observ.logger_config.log_level, "info".to_owned());
 
         assert!(LOG_LAYER_HANDLE.get().is_some());
     }

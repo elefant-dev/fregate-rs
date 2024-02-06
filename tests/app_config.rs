@@ -17,21 +17,28 @@ mod app_config_tests {
         assert_eq!(config.host, IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)));
         assert_eq!(config.private, Empty {});
 
-        let logger = config.observability_cfg;
+        let observ = config.observability_cfg;
+        let logger = observ.logger_config;
         let mngmnt = config.management_cfg;
 
-        assert_eq!(logger.traces_endpoint, None);
+        assert_eq!(observ.traces_endpoint, None);
+        assert_eq!(observ.service_name, "default".to_owned());
+        assert_eq!(observ.version, "default".to_owned());
+        assert_eq!(observ.component_name, "default".to_owned());
+        assert_eq!(observ.trace_level, "info".to_owned());
+        assert!(!observ.cgroup_metrics);
+
         assert_eq!(logger.buffered_lines_limit, None);
-        assert_eq!(logger.service_name, "default".to_owned());
-        assert_eq!(logger.version, "default".to_owned());
-        assert_eq!(logger.component_name, "default".to_owned());
-        assert_eq!(logger.trace_level, "info".to_owned());
         assert_eq!(logger.log_level, "info".to_owned());
         assert_eq!(logger.msg_length, Some(8192));
         assert_eq!(logger.logging_file, None);
         assert_eq!(logger.logging_path, None);
-        assert_eq!(logger.msg_length, Some(8192));
-        assert_eq!(logger.cgroup_metrics, false);
+        assert_eq!(logger.logging_file_limit, None);
+        assert_eq!(logger.logging_file_interval, None);
+        assert_eq!(logger.logging_file_max_age, None);
+        assert_eq!(logger.logging_file_max_count, None);
+        assert!(!logger.logging_file_enable_zip);
+
         assert_eq!(mngmnt.endpoints.health.as_ref(), "/health");
         assert_eq!(mngmnt.endpoints.ready.as_ref(), "/ready");
         assert_eq!(mngmnt.endpoints.live.as_ref(), "/live");
@@ -55,14 +62,14 @@ mod app_config_tests {
         assert_eq!(config.host, IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)));
         assert_eq!(config.private, Empty {});
 
-        let logger = config.observability_cfg;
+        let observ = config.observability_cfg;
 
-        assert_eq!(logger.traces_endpoint, None);
-        assert_eq!(logger.service_name, "default".to_owned());
-        assert_eq!(logger.version, "default".to_owned());
-        assert_eq!(logger.component_name, "default".to_owned());
-        assert_eq!(logger.trace_level, "info".to_owned());
-        assert_eq!(logger.log_level, "info".to_owned());
+        assert_eq!(observ.traces_endpoint, None);
+        assert_eq!(observ.service_name, "default".to_owned());
+        assert_eq!(observ.version, "default".to_owned());
+        assert_eq!(observ.component_name, "default".to_owned());
+        assert_eq!(observ.trace_level, "info".to_owned());
+        assert_eq!(observ.logger_config.log_level, "info".to_owned());
     }
 
     #[test]
@@ -80,14 +87,14 @@ mod app_config_tests {
         );
         assert_eq!(config.private, Empty {});
 
-        let logger = config.observability_cfg;
+        let observ = config.observability_cfg;
 
-        assert_eq!(logger.traces_endpoint, None);
-        assert_eq!(logger.service_name, "Test".to_owned());
-        assert_eq!(logger.version, "default".to_owned());
-        assert_eq!(logger.component_name, "default".to_owned());
-        assert_eq!(logger.trace_level, "debug".to_owned());
-        assert_eq!(logger.log_level, "trace".to_owned());
+        assert_eq!(observ.traces_endpoint, None);
+        assert_eq!(observ.service_name, "Test".to_owned());
+        assert_eq!(observ.version, "default".to_owned());
+        assert_eq!(observ.component_name, "default".to_owned());
+        assert_eq!(observ.trace_level, "debug".to_owned());
+        assert_eq!(observ.logger_config.log_level, "trace".to_owned());
     }
 
     #[test]
@@ -103,13 +110,13 @@ mod app_config_tests {
         );
         assert_eq!(config.private, Empty {});
 
-        let logger = config.observability_cfg;
+        let observ = config.observability_cfg;
 
-        assert_eq!(logger.traces_endpoint, None);
-        assert_eq!(logger.service_name, "Test".to_owned());
-        assert_eq!(logger.version, "default".to_owned());
-        assert_eq!(logger.component_name, "default".to_owned());
-        assert_eq!(logger.trace_level, "debug".to_owned());
-        assert_eq!(logger.log_level, "trace".to_owned());
+        assert_eq!(observ.traces_endpoint, None);
+        assert_eq!(observ.service_name, "Test".to_owned());
+        assert_eq!(observ.version, "default".to_owned());
+        assert_eq!(observ.component_name, "default".to_owned());
+        assert_eq!(observ.trace_level, "debug".to_owned());
+        assert_eq!(observ.logger_config.log_level, "trace".to_owned());
     }
 }

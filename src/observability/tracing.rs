@@ -5,6 +5,7 @@ pub mod floor_char_boundary;
 mod log_layer;
 mod otlp_layer;
 mod tracing_fields;
+mod writer;
 
 pub use event_formatter::*;
 pub use log_layer::*;
@@ -12,7 +13,8 @@ pub use otlp_layer::*;
 pub use tracing_fields::*;
 
 use crate::error::Result;
-use crate::observability::{HeadersFilter, HEADERS_FILTER};
+use crate::observability::HEADERS_FILTER;
+use crate::LoggerConfig;
 use opentelemetry::global::set_error_handler;
 use std::sync::OnceLock;
 use tracing_appender::non_blocking::WorkerGuard;
@@ -51,28 +53,15 @@ pub type TraceLayerHandle = Handle<EnvFilter, Registry>;
 /// Uses [`tracing_appender`] crate to do non blocking writes to stdout, so returns [`WorkerGuard`]. Read more here: [`https://docs.rs/tracing-appender/latest/tracing_appender/non_blocking/struct.WorkerGuard.html`]
 #[allow(clippy::too_many_arguments)]
 pub fn init_tracing(
-    log_level: &str,
+    logger_config: &LoggerConfig,
     trace_level: &str,
     version: &str,
     service_name: &str,
     component_name: &str,
     traces_endpoint: Option<&str>,
-    log_msg_length: Option<usize>,
-    buffered_lines_limit: Option<usize>,
-    headers_filter: Option<HeadersFilter>,
-    logging_path: Option<&str>,
-    logging_file: Option<&str>,
 ) -> Result<WorkerGuard> {
-    let (log_layer, log_reload, worker) = log_layer(
-        log_level,
-        version,
-        service_name,
-        component_name,
-        log_msg_length,
-        buffered_lines_limit,
-        logging_path,
-        logging_file,
-    )?;
+    let (log_layer, log_reload, worker) =
+        log_layer(logger_config, version, service_name, component_name)?;
     let (otlp_layer, otlp_reload) = otlp_layer(trace_level, component_name, traces_endpoint)?;
     registry().with(otlp_layer).with(log_layer).try_init()?;
 
@@ -80,7 +69,7 @@ pub fn init_tracing(
     if let Some(otlp_reload) = otlp_reload {
         let _ = OTLP_LAYER_HANDLE.get_or_init(|| otlp_reload);
     }
-    if let Some(headers_filter) = headers_filter {
+    if let Some(headers_filter) = logger_config.headers_filter.clone() {
         let _ = HEADERS_FILTER.get_or_init(|| headers_filter);
     }
 

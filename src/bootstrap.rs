@@ -83,33 +83,23 @@ where
     let mut config = AppConfig::<ConfigExt>::load_from(sources)?;
     callback(&mut config);
     let ObservabilityConfig {
-        log_level,
-        logging_path,
-        logging_file,
-        version,
-        trace_level,
         service_name,
         component_name,
+        version,
+        logger_config,
         cgroup_metrics,
         metrics_update_interval,
+        trace_level,
         traces_endpoint,
-        msg_length,
-        buffered_lines_limit,
-        headers_filter,
     } = &config.observability_cfg;
 
     let worker_guard = init_tracing(
-        log_level,
+        logger_config,
         trace_level,
         version,
         service_name,
         component_name,
         traces_endpoint.as_deref(),
-        *msg_length,
-        *buffered_lines_limit,
-        headers_filter.clone(),
-        logging_path.as_deref(),
-        logging_file.as_deref(),
     )?;
 
     config.worker_guard.replace(worker_guard);

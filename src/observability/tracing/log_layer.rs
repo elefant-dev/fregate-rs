@@ -1,7 +1,9 @@
 use crate::error::Result;
+use crate::observability::tracing::writer::RollingFileWriter;
 use crate::observability::tracing::{
     event_formatter::EventFormatter, COMPONENT, INSTANCE_ID, SERVICE, VERSION,
 };
+use crate::LoggerConfig;
 use std::io::Write;
 use std::str::FromStr;
 use tracing::Subscriber;
@@ -16,14 +18,10 @@ use uuid;
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
 pub fn log_layer<S>(
-    log_level: &str,
+    logger_config: &LoggerConfig,
     version: &str,
     service_name: &str,
     component_name: &str,
-    log_msg_length: Option<usize>,
-    buffered_lines_limit: Option<usize>,
-    logging_path: Option<&str>,
-    logging_file: Option<&str>,
 ) -> Result<(
     Filtered<Box<dyn Layer<S> + Send + Sync>, reload::Layer<EnvFilter, S>, S>,
     Handle<EnvFilter, S>,
@@ -32,7 +30,21 @@ pub fn log_layer<S>(
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    let mut formatter = EventFormatter::new_with_limit(log_msg_length);
+    let LoggerConfig {
+        ref log_level,
+        ref logging_path,
+        ref logging_file,
+        msg_length,
+        buffered_lines_limit,
+        logging_file_interval,
+        logging_file_limit,
+        logging_file_max_age,
+        logging_file_max_count,
+        logging_file_enable_zip: enable_zip,
+        headers_filter: _,
+    } = logger_config;
+
+    let mut formatter = EventFormatter::new_with_limit(*msg_length);
 
     formatter.add_default_field_to_events(VERSION, version)?;
     formatter.add_default_field_to_events(SERVICE, service_name)?;
@@ -42,10 +54,19 @@ where
 
     let dest: Box<dyn Write + Send + Sync + 'static> = if let Some(logging_path) = logging_path {
         let file_name_prefix = logging_file
+            .as_deref()
             .map(|v| v.to_owned())
             .unwrap_or(format!("{component_name}.log"));
 
-        let to_file = tracing_appender::rolling::hourly(logging_path, file_name_prefix);
+        let to_file = RollingFileWriter::new(
+            logging_path,
+            file_name_prefix,
+            *logging_file_interval,
+            *logging_file_limit,
+            *logging_file_max_age,
+            *logging_file_max_count,
+            *enable_zip,
+        );
         Box::new(to_file) as _
     } else {
         Box::new(std::io::stdout()) as _
