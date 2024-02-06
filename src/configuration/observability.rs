@@ -11,10 +11,10 @@ const LOG_MSG_LENGTH_PTR: &str = "/log/msg/length";
 const LOGGING_FILE_PTR: &str = "/logging/file";
 const LOGGING_PATH_PTR: &str = "/logging/path";
 const LOGGING_INTERVAL_PTR: &str = "/logging/interval";
-const LOGGING_LIMIT_PTR: &str = "/logging/limit";
-const LOGGING_MAX_AGE_PTR: &str = "/logging/max/age";
-const LOGGING_MAX_COUNT_PTR: &str = "/logging/max/count";
-const LOGGING_ENABLE_ZIP_PTR: &str = "/logging/enable/zip";
+const LOGGING_MAX_FILE_SIZE_PTR: &str = "/logging/max/file/size";
+const LOGGING_MAX_HISTORY_PTR: &str = "/logging/max/history";
+const LOGGING_MAX_FILE_COUNT_PTR: &str = "/logging/max/file/count";
+const LOGGING_ENABLE_COMPRESSION_PTR: &str = "/logging/enable/compression";
 const BUFFERED_LINES_LIMIT_PTR: &str = "/buffered/lines/limit";
 const TRACE_LEVEL_PTR: &str = "/trace/level";
 const SERVICE_NAME_PTR: &str = "/service/name";
@@ -62,13 +62,13 @@ pub struct LoggerConfig {
     /// interval to split file into chunks with fixed interval
     pub logging_interval: Option<Duration>,
     /// file size limit in bytes
-    pub logging_limit: Option<usize>,
+    pub logging_max_file_size: Option<usize>,
     /// maximum duration files kept in seconds
-    pub logging_max_age: Option<Duration>,
+    pub logging_max_history: Option<Duration>,
     /// maximum number of files kept
-    pub logging_max_count: Option<usize>,
-    /// enable files zipping
-    pub logging_enable_zip: bool,
+    pub logging_max_file_count: Option<usize>,
+    /// enable files compression
+    pub logging_enable_compression: bool,
     /// initialize [`crate::observability::HEADERS_FILTER`] static variable in [`crate::bootstrap()`] or [`crate::observability::init_tracing()`] fn.
     pub headers_filter: Option<HeadersFilter>,
 }
@@ -139,18 +139,18 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             .pointer_and_deserialize::<u64, D::Error>(LOGGING_INTERVAL_PTR)
             .ok()
             .map(Duration::from_secs);
-        let logging_limit = config
-            .pointer_and_deserialize::<_, D::Error>(LOGGING_LIMIT_PTR)
+        let logging_max_file_size = config
+            .pointer_and_deserialize::<_, D::Error>(LOGGING_MAX_FILE_SIZE_PTR)
             .ok();
-        let logging_max_age = config
-            .pointer_and_deserialize::<u64, D::Error>(LOGGING_MAX_AGE_PTR)
+        let logging_max_history = config
+            .pointer_and_deserialize::<u64, D::Error>(LOGGING_MAX_HISTORY_PTR)
             .ok()
             .map(Duration::from_secs);
-        let logging_max_count = config
-            .pointer_and_deserialize::<_, D::Error>(LOGGING_MAX_COUNT_PTR)
+        let logging_max_file_count = config
+            .pointer_and_deserialize::<_, D::Error>(LOGGING_MAX_FILE_COUNT_PTR)
             .ok();
-        let logging_enable_zip = config
-            .pointer_and_deserialize::<_, D::Error>(LOGGING_ENABLE_ZIP_PTR)
+        let logging_enable_compression = config
+            .pointer_and_deserialize::<_, D::Error>(LOGGING_ENABLE_COMPRESSION_PTR)
             .unwrap_or_default();
 
         Ok(LoggerConfig {
@@ -160,10 +160,10 @@ impl<'de> Deserialize<'de> for LoggerConfig {
             logging_file,
             logging_path,
             logging_interval,
-            logging_limit,
-            logging_max_age,
-            logging_max_count,
-            logging_enable_zip,
+            logging_max_file_size,
+            logging_max_history,
+            logging_max_file_count,
+            logging_enable_compression,
             headers_filter,
         })
     }

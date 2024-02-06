@@ -37,10 +37,10 @@ where
         msg_length,
         buffered_lines_limit,
         logging_interval: logging_file_interval,
-        logging_limit: logging_file_limit,
-        logging_max_age: logging_file_max_age,
-        logging_max_count: logging_file_max_count,
-        logging_enable_zip: enable_zip,
+        logging_max_file_size: logging_file_limit,
+        logging_max_history: logging_file_max_age,
+        logging_max_file_count: logging_file_max_count,
+        logging_enable_compression: enable_zip,
         headers_filter: _,
     } = logger_config;
 

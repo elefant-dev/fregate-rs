@@ -49,10 +49,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         msg_length: None,
         buffered_lines_limit: None,
         logging_interval: None,
-        logging_limit: None,
-        logging_max_age: None,
-        logging_max_count: None,
-        logging_enable_zip: false,
+        logging_max_file_size: None,
+        logging_max_history: None,
+        logging_max_file_count: None,
+        logging_enable_compression: false,
         headers_filter: None,
     };
 

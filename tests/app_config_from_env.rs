@@ -26,10 +26,10 @@ mod app_config_from_env {
         std::env::set_var("TEST_LOGGING_FILE", "as213%^&*(");
         std::env::set_var("TEST_LOGGING_PATH", "./a/b/c");
         std::env::set_var("TEST_LOGGING_INTERVAL", "100");
-        std::env::set_var("TEST_LOGGING_LIMIT", "2");
-        std::env::set_var("TEST_LOGGING_MAX_AGE", "10");
-        std::env::set_var("TEST_LOGGING_MAX_COUNT", "1");
-        std::env::set_var("TEST_LOGGING_ENABLE_ZIP", "true");
+        std::env::set_var("TEST_LOGGING_MAX_FILE_SIZE", "2");
+        std::env::set_var("TEST_LOGGING_MAX_HISTORY", "10");
+        std::env::set_var("TEST_LOGGING_MAX_FILE_COUNT", "1");
+        std::env::set_var("TEST_LOGGING_ENABLE_COMPRESSION", "true");
         std::env::set_var("TEST_LOGGING_PATH", "./a/b/c");
 
         let config = AppConfig::<TestStruct>::load_from([ConfigSource::EnvPrefix("TEST")])
@@ -58,10 +58,10 @@ mod app_config_from_env {
         assert_eq!(logger.logging_file, Some("as213%^&*(".to_owned()));
         assert_eq!(logger.logging_path, Some("./a/b/c".to_owned()));
         assert_eq!(logger.logging_interval, Some(Duration::from_secs(100)));
-        assert_eq!(logger.logging_limit, Some(2));
-        assert_eq!(logger.logging_max_age, Some(Duration::from_secs(10)));
-        assert_eq!(logger.logging_max_count, Some(1));
-        assert!(logger.logging_enable_zip);
+        assert_eq!(logger.logging_max_file_size, Some(2));
+        assert_eq!(logger.logging_max_history, Some(Duration::from_secs(10)));
+        assert_eq!(logger.logging_max_file_count, Some(1));
+        assert!(logger.logging_enable_compression);
         assert_eq!(logger.msg_length, Some(0));
         assert_eq!(logger.buffered_lines_limit, Some(999));
         assert!(observ.cgroup_metrics);

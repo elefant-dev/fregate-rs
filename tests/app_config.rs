@@ -33,11 +33,11 @@ mod app_config_tests {
         assert_eq!(logger.msg_length, Some(8192));
         assert_eq!(logger.logging_file, None);
         assert_eq!(logger.logging_path, None);
-        assert_eq!(logger.logging_limit, None);
+        assert_eq!(logger.logging_max_file_size, None);
         assert_eq!(logger.logging_interval, None);
-        assert_eq!(logger.logging_max_age, None);
-        assert_eq!(logger.logging_max_count, None);
-        assert!(!logger.logging_enable_zip);
+        assert_eq!(logger.logging_max_history, None);
+        assert_eq!(logger.logging_max_file_count, None);
+        assert!(!logger.logging_enable_compression);
 
         assert_eq!(mngmnt.endpoints.health.as_ref(), "/health");
         assert_eq!(mngmnt.endpoints.ready.as_ref(), "/ready");
