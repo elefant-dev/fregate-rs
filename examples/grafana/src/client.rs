@@ -1,7 +1,7 @@
 use fregate::extensions::{ReqwestExt, TonicReqExt};
 use fregate::hyper::StatusCode;
 use fregate::observability::init_tracing;
-use fregate::{tokio, tonic, tracing};
+use fregate::{tokio, tonic, tracing, LoggerConfig};
 use opentelemetry::global::shutdown_tracer_provider;
 use reqwest::Url;
 use resources::proto::hello::{hello_client::HelloClient, HelloRequest, HelloResponse};
@@ -42,18 +42,27 @@ async fn send_hello(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let logger_config = LoggerConfig {
+        log_level: "info".to_string(),
+        logging_path: None,
+        logging_file: None,
+        msg_length: None,
+        buffered_lines_limit: None,
+        logging_interval: None,
+        logging_max_file_size: None,
+        logging_max_history: None,
+        logging_max_file_count: None,
+        logging_enable_compression: false,
+        headers_filter: None,
+    };
+
     let _guard = init_tracing(
-        "info",
+        &logger_config,
         "info",
         "0.0.0",
         "fregate",
         "client",
         Some("http://0.0.0.0:4317"),
-        None,
-        None,
-        None,
-        None,
-        None,
     )
     .unwrap();
 

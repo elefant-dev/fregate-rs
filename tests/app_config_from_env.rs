@@ -2,6 +2,7 @@ mod app_config_from_env {
     use fregate::{bootstrap, AppConfig, ConfigSource, Empty};
     use serde::Deserialize;
     use std::net::{IpAddr, Ipv6Addr};
+    use std::time::Duration;
 
     #[derive(Deserialize, Debug, PartialEq, Eq)]
     pub struct TestStruct {
@@ -24,6 +25,12 @@ mod app_config_from_env {
         std::env::set_var("TEST_BUFFERED_LINES_LIMIT", "999");
         std::env::set_var("TEST_LOGGING_FILE", "as213%^&*(");
         std::env::set_var("TEST_LOGGING_PATH", "./a/b/c");
+        std::env::set_var("TEST_LOGGING_INTERVAL", "100");
+        std::env::set_var("TEST_LOGGING_MAX_FILE_SIZE", "2");
+        std::env::set_var("TEST_LOGGING_MAX_HISTORY", "10");
+        std::env::set_var("TEST_LOGGING_MAX_FILE_COUNT", "1");
+        std::env::set_var("TEST_LOGGING_ENABLE_COMPRESSION", "true");
+        std::env::set_var("TEST_LOGGING_PATH", "./a/b/c");
 
         let config = AppConfig::<TestStruct>::load_from([ConfigSource::EnvPrefix("TEST")])
             .expect("Failed to build AppConfig");
@@ -35,23 +42,29 @@ mod app_config_from_env {
         );
         assert_eq!(config.private, TestStruct { number: 100 });
 
-        let logger = config.observability_cfg;
+        let observ = config.observability_cfg;
+        let logger = observ.logger_config;
 
         assert_eq!(
-            logger.traces_endpoint,
+            observ.traces_endpoint,
             Some("http://0.0.0.0:4317".to_owned())
         );
-        assert_eq!(logger.service_name, "TEST".to_owned());
-        assert_eq!(logger.component_name, "COMPONENT_TEST".to_owned());
-        assert_eq!(logger.version, "1.0.0".to_owned());
-        assert_eq!(logger.service_name, "TEST".to_owned());
-        assert_eq!(logger.trace_level, "debug".to_owned());
+        assert_eq!(observ.service_name, "TEST".to_owned());
+        assert_eq!(observ.component_name, "COMPONENT_TEST".to_owned());
+        assert_eq!(observ.version, "1.0.0".to_owned());
+        assert_eq!(observ.service_name, "TEST".to_owned());
+        assert_eq!(observ.trace_level, "debug".to_owned());
         assert_eq!(logger.log_level, "trace".to_owned());
         assert_eq!(logger.logging_file, Some("as213%^&*(".to_owned()));
         assert_eq!(logger.logging_path, Some("./a/b/c".to_owned()));
+        assert_eq!(logger.logging_interval, Some(Duration::from_secs(100)));
+        assert_eq!(logger.logging_max_file_size, Some(2));
+        assert_eq!(logger.logging_max_history, Some(Duration::from_secs(10)));
+        assert_eq!(logger.logging_max_file_count, Some(1));
+        assert!(logger.logging_enable_compression);
         assert_eq!(logger.msg_length, Some(0));
         assert_eq!(logger.buffered_lines_limit, Some(999));
-        assert!(logger.cgroup_metrics);
+        assert!(observ.cgroup_metrics);
     }
 
     #[test]
@@ -59,14 +72,14 @@ mod app_config_from_env {
         std::env::set_var("WRONG_NEGATIVE_LOG_MSG_LENGTH", "-123");
         let config =
             AppConfig::<Empty>::load_from([ConfigSource::EnvPrefix("WRONG_NEGATIVE")]).unwrap();
-        assert!(config.observability_cfg.msg_length.is_none());
+        assert!(config.observability_cfg.logger_config.msg_length.is_none());
     }
 
     #[test]
     fn wrong_msg_length() {
         std::env::set_var("WRONG_STR_LOG_MSG_LENGTH", "1a123");
         let config = AppConfig::<Empty>::load_from([ConfigSource::EnvPrefix("WRONG_STR")]).unwrap();
-        assert!(config.observability_cfg.msg_length.is_none());
+        assert!(config.observability_cfg.logger_config.msg_length.is_none());
     }
 
     #[tokio::test]

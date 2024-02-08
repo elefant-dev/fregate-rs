@@ -1,6 +1,6 @@
 [package]
 name = "fregate"
-version = "0.19.0-2"
+version = "0.19.0-3"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/elefant-dev/fregate-rs"
@@ -48,6 +48,7 @@ use_rustls_tls12 = [
 [dependencies]
 ahash = { version = "0.8.*", optional = true }
 axum = { version = "0.6.*", features = ["headers", "http1", "http2", "json", "matched-path", "original-uri", "ws"] }
+chrono = "0.4.*"
 config = "0.13.*"
 hyper = { version = "0.14.*", features = ["full"] }
 metrics = "0.21.*"
@@ -76,6 +77,7 @@ tracing-subscriber = { version = "0.3.*", features = ["env-filter", "fmt", "time
 valuable = "0.1.*"
 valuable-serde = "0.1.*"
 uuid = {version = "1.4.*", features=["v4"]}
+zip = "0.6.*"
 
 tokio-metrics = { version = "0.2.*", optional = true }
 
